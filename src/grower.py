@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-# from IPython import display
 import sys
 sys.path.insert(0, '.')
 
@@ -13,7 +12,6 @@ import signal
 import time
 
 
-# import tqdm
 def show_state(env, step=0, name='', info=''):
     plt.figure(3)
     plt.clf()

@@ -9,14 +9,14 @@ def setup_logger(_name, _logfile='LOGFILENAME'):
     _logger = logging.getLogger(_name)
     _logger.setLevel(logging.DEBUG)
 
-    _filename = datetime.today().strftime('[%Y-%m-%d %H:%M:%S]')
+    _filename = datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
     # create file handler which logs even DEBUG messages
     while True:
         try:
-            _fh = logging.FileHandler(f'log/{_logfile}/{_filename}.log')
+            _fh = logging.FileHandler(f'log\\{_logfile}\\{_filename}.log')
             break
         except FileNotFoundError:
-            os.makedirs(f'log/{_logfile}')
+            os.makedirs(f'log\\{_logfile}')
 
     _fh.setLevel(logging.INFO)
     _fh_formatter = logging.Formatter('%(asctime)s, %(levelname)s, %(filename)s, %(message)s')
