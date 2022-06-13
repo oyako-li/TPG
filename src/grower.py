@@ -6,7 +6,7 @@ sys.path.insert(0, '.')
 
 import time
 import gym
-from _tpg.trainer import Trainer1, Trainer
+from _tpg.trainer import Trainer
 from _tpg.base_log import setup_logger
 from tqdm import tqdm
 import signal
@@ -75,7 +75,7 @@ def generation(_trainer, _env, _logger=None, _episodes=20, _frames= 100, _show=F
     return _scores 
 
 
-def growing(_trainer:Trainer1 or Trainer, _task:str, _generations:int=1000, _episodes:int=20, _frames:int=200, _show=False):
+def growing(_trainer:Trainer, _task:str, _generations:int=1000, _episodes:int=20, _frames:int=200, _show=False):
     logger, filename = setup_logger(__name__, _task)
     env = gym.make(_task) # make the environment
     action_space = env.action_space
