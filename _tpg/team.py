@@ -19,8 +19,6 @@ class Team:
         self.id = uuid.uuid4()
 
         self.genCreate = initParams["generation"]
-    
-
 
     '''
     A team is equal to another object if that object:
@@ -405,8 +403,7 @@ class Team:
 
             # Filter out learners we just deleted
             selection_pool = list(filter(lambda x: x not in deleted_learners, selection_pool))
-            
-            added_learners = self.mutation_add(mutateParams["pLrnAdd"], selection_pool)
+            if len(selection_pool)!=0:  added_learners = self.mutation_add(mutateParams["pLrnAdd"], selection_pool)
 
             # give chance to mutate all learners
             mutated_learners, mutation_added_learners = self.mutation_mutate(mutateParams["pLrnMut"], mutateParams, teams)
@@ -434,7 +431,7 @@ class Team:
     """
     @classmethod
     def configFunctions(cls, functionsDict):
-        from tpg.configuration.conf_team import ConfTeam
+        from _tpg.configuration.conf_team import ConfTeam
 
         if functionsDict["init"] == "def":
             cls.__init__ = ConfTeam.init_def
@@ -464,7 +461,6 @@ from _tpg.learner import Learner1
 class Team1:
 
     def __init__(self, initParams:dict): pass
-
     """
     Returns an action to use based on the current state.
     NOTE: Do not set visited = list() because that will only be
@@ -615,7 +611,6 @@ class Team1:
         original_learners = list(self.learners)
         new_learners = []
         for learner in original_learners:
-
             if flip(probability):
 
                 # If we only have one learner with an atomic action and the current learner is it
@@ -636,7 +631,6 @@ class Team1:
 
                 # mutate it
                 newLearner.mutate(mutateParams, self, teams, pActAtom0)
-
                 # Remove the existing learner from the team
                 self.removeLearner(learner)
 

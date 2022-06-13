@@ -363,7 +363,6 @@ class ConfActionObject1:
             return self.teamAction.act(state, visited, actVars=actVars, path_trace=path_trace)
         else:
             # atomic action
-
             if self.actionLength == 0:
                 return self.actionCode, None
             else:

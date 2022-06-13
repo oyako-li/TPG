@@ -226,7 +226,7 @@ class Program1:
     def __eq__(self, __o:object) -> bool:
 
         # The other object must be an instance of the Program class
-        if not isinstance(__o, Program): return False
+        if not isinstance(__o, Program1): return False
 
         # Compare instructions
         return np.array_equal(self.instructions, __o.instructions)

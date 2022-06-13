@@ -25,7 +25,7 @@ def setup_logger(_name, _logfile='LOGFILENAME'):
     # create console handler with a INFO log level
     _ch = logging.StreamHandler()
     _ch.setLevel(logging.INFO)
-    _ch_formatter = logging.Formatter('{}[%(levelname)s](%(filename)s:%(lineno)s) %(name)s,%(funcName)s:%(message)s'.format(_filename))
+    _ch_formatter = logging.Formatter('[{}](%(filename)s:%(lineno)s) %(name)s,%(funcName)s:%(message)s'.format(_filename))
     _ch.setFormatter(_ch_formatter)
 
     # add the handlers to the logger

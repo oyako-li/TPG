@@ -333,13 +333,13 @@ class Learner1:
     def __eq__(self, o: object) -> bool:
         
         # Object must be an instance of Learner
-        if not isinstance(o, Learner1):     return False
+        if not isinstance(o, Learner1): return False
 
         # The object must have been created the same generation as us
         if self.genCreate != o.genCreate:   return False
 
         # The object's program must be equal to ours
-        if self.program != o.program:       return False
+        if self.program != o.program:   return False
 
         # The object's action object must be equal to ours
         if self.actionObj != o.actionObj:   return False
@@ -358,7 +358,7 @@ class Learner1:
         if collections.Counter(self.inTeams) != collections.Counter(o.inTeams): return False
 
         # The other object's id must be equal to ours
-        if self.id != o.id:                 return False
+        if self.id != o.id: return False
         
         return True
 

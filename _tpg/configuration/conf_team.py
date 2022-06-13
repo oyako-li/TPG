@@ -396,15 +396,11 @@ class ConfTeam1:
         '''
         TODO log the attempt to remove a learner that doesn't appear in this team
         '''
-        if learner not in self.learners:
-            raise Exception("Attempted to remove a learner ({}) not referenced by team {}".format(
-            str(learner.id), str(self.id)
-        ))
+        if learner not in self.learners: raise Exception("Attempted to remove a learner ({}) not referenced by team {}".format(str(learner.id), str(self.id)))
 
         # Find the learner to remove
         to_remove = [cursor for  cursor in self.learners if cursor == learner]
-        if len(to_remove) != 1:
-            raise Exception("Duplicate learner detected during team.removeLearner. {} duplicates".format(len(to_remove)))
+        if len(to_remove) != 1: raise Exception("Duplicate learner detected during team.removeLearner. {} duplicates".format(len(to_remove)))
         to_remove = to_remove[0]
 
         # Build a new list of learners containing only learners that are not the learner
