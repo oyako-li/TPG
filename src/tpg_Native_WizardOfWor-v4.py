@@ -1,6 +1,6 @@
 import sys
 sys.path.insert(0, '.')
-from _tpg.trainer import Trainer1, Trainer
+from _tpg.trainer import Trainer
 from src.grower import growing
 
 task = 'WizardOfWor-v4'
