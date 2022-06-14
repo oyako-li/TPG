@@ -136,18 +136,22 @@ from _tpg.action_object import ActionObject1
 
 
 class ConfLearner1:
-    def init_def(self, initParams, program, actionObj, numRegisters, learner_id=None):
+    def init_def(self, initParams, program, actionObj, numRegisters, _learner_id=None, _states:list=[], _inTeams:list=[], _frameNum:int=0, _ancestor=None):
         self.program = Program1(
             instructions=program.instructions
         ) #Each learner should have their own copy of the program
-        self.actionObj = ActionObject1(action=actionObj, initParams=initParams) #Each learner should have their own copy of the action object
+        self.actionObj = ActionObject1(
+            action=actionObj, 
+            initParams=initParams
+        ) #Each learner should have their own copy of the action object
         self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
 
-        self.ancestor = None #By default no ancestor
-        self.states = []
-        self.inTeams = [] # Store a list of teams that reference this learner, incoming edges
+        self.ancestor = _ancestor #By default no ancestor
+        self.states = _states
+        self.inTeams = _inTeams # Store a list of teams that reference this learner, incoming edges
         self.genCreate = initParams["generation"] # Store the generation that this learner was created on
-        self.frameNum = 0 # Last seen frame is 0
+        # self.actionCodes = initParams["actionCodes"]
+        self.frameNum = _frameNum # Last seen frame is 0
         self.id = uuid.uuid4()
 
 
@@ -211,10 +215,5 @@ class ConfLearner1:
         return self
 
     def clone_def(self):
-        _clone = self.__init__(initParams={"generation":self.genCreate}, program=self.program, actionObj=self.actionObj, numRegisters=len(self.registers))
-        _clone.registers = self.registers
-        _clone.ancestor = self.ancestor
-        _clone.states = self.states
-        # _clone.inTeams = self.inTeams # ここが変わるはず
-        _clone.frameNum = self.frameNum
+        _clone = copy.deepcopy(self)
         return _clone

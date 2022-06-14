@@ -1,9 +1,11 @@
 # import learner
-from _tpg.learner import Learner1
+from _tpg.learner import Learner, Learner1
+# from _tpg.team import Team, Team1
 from _tpg.utils import flip
 # from learner import Learner
 import random
 import uuid
+import copy
 
 """
 The main building block of TPG. Each team has multiple learning which decide the
@@ -54,8 +56,9 @@ class ConfTeam:
                     print("Team: " + str(learner.getActionTeam().id))
             print("")"""
         
-        if len(valid_learners)==0: raise Exception("empty of valid_learners")
-
+        if len(valid_learners)==0: 
+            raise Exception("empty of valid_learners")
+            # # self.addLearner(Learner1())
 
 
         top_learner = max(valid_learners, key=lambda lrnr: lrnr.bid(state, actVars=actVars))
@@ -260,14 +263,15 @@ class ConfTeam:
 
 class ConfTeam1:
 
-    def init_def(self, initParams):
-        self.learners = []
-        self.outcomes = {} # scores at various tasks
-        self.fitness = None
-        self.inLearners = [] # ids of learners referencing this team
+    def init_def(self, _genCreate:int or dict, _learners:list=[], _outcomes:dict={}, _fitness=None, _inLearners:list=[]):
+        self.learners = _learners
+        self.outcomes = _outcomes # scores at various tasks
+        self.fitness = _fitness
+        self.inLearners = _inLearners # ids of learners referencing this team
         self.id = uuid.uuid4()
 
-        self.genCreate = initParams["generation"]
+        if isinstance(_genCreate, dict):  self.genCreate = _genCreate["generation"]
+        elif isinstance(_genCreate, int):  self.genCreate = _genCreate
 
     """
     Returns an action to use based on the current state. Team traversal.
@@ -500,7 +504,8 @@ class ConfTeam1:
         return rampantReps, mutation_delta, new_learners
 
     def clone_def(self):
-        _clone = self.__init__(initParams={"generation":self.genCreate})
+        _clone = copy.deepcopy(self)
+        # assert type(_clone)== Tiem1
+        self.inLearners = []
 
-        for _learner in self.learners: _clone.addLearner(_learner.clone())
         return _clone

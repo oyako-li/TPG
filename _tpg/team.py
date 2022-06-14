@@ -460,7 +460,7 @@ from _tpg.learner import Learner1
 
 class Team1:
 
-    def __init__(self, initParams:dict): pass
+    def __init__(self, _genCreate:dict or int,  _learners:list=[], _outcomes:dict={}, _fitness=None, _inLearners:list=[]): pass
     """
     Returns an action to use based on the current state.
     NOTE: Do not set visited = list() because that will only be
@@ -691,6 +691,9 @@ class Team1:
     '''
     def __ne__(self, o: object) -> bool:
         return not self.__eq__(o)
+
+    def __deepcopy__(self, __o):
+        return Team1(copy.deepcopy(self.genCreate, self.learners, self.outcomes, self.fitness, self.inLearners))
 
     def zeroRegisters(self):
         for learner in self.learners:

@@ -468,11 +468,11 @@ class Trainer:
 
         #print("BEFORE SELECTION:")        
 
-        pre_orphans = [learner for learner in self.learners if learner.numTeamsReferencing() == 0]
+        # pre_orphans = [learner for learner in self.learners if learner.numTeamsReferencing() == 0]
 
-        #print("Number of orphans before selection: {}".format(len(pre_orphans)))
+        # #print("Number of orphans before selection: {}".format(len(pre_orphans)))
 
-        orphan_teams = [team for team in self.teams if len(team.inLearners) == 0 and team not in self.rootTeams]
+        # orphan_teams = [team for team in self.teams if len(team.inLearners) == 0 and team not in self.rootTeams]
         #print("Number of orphan teams before selection: {}".format(len(orphan_teams)))
 
         #print("Learners:")
@@ -1128,7 +1128,7 @@ class Trainer1:
             self.learners.append(l2)
 
             # create team and add initial learners
-            team = Team1(initParams=self.mutateParams)
+            team = Team1(_genCreate=self.mutateParams)
             team.addLearner(l1)
             team.addLearner(l2)
 
@@ -1340,7 +1340,7 @@ class Trainer1:
             # ここをランダムではなく、階層上あるいは、過去の経験よりセレクトする。
             # rootTeamsを混ぜて、新しい、チームを作る。この時、そのチームは、プログラムへの１階層目のポインタを混ぜるだけである。
             parent = random.choice(self.rootTeams)
-            child = Team1(initParams=self.mutateParams)
+            child = Team1(_genCreate=self.mutateParams)
 
             # child starts just like parent
             for learner in parent.learners: child.addLearner(learner)
@@ -1350,12 +1350,17 @@ class Trainer1:
             rampantReps, mutation_delta, new_learners = child.mutate(self.mutateParams, oLearners, oTeams)
 
             # then clone the referenced rootTeams
-            for learner in new_learners:
-                if learner.actionObj.teamAction is not None and learner.actionObj.teamAction in self.rootTeams:
-                    rt = learner.actionObj.teamAction
-                    clone = rt.clone()
+            for new_learner in new_learners:
+                if new_learner.actionObj.teamAction is not None and new_learner.actionObj.teamAction in self.rootTeams:
+                    referenced_rt = new_learner.actionObj.teamAction
+                    clone = referenced_rt.clone()
+
+                    # new_learner's teamAction change to clone
+                    new_learner.actionObj.teamAction = clone
+
+
                     self.teams.append(clone)
-                    self.rootTeams.remove(rt)
+                    # self.rootTeams.remove(rt)
 
             self.teams.append(child)
 
@@ -1485,6 +1490,7 @@ class Trainer1:
     def countRootTeams(self):
         numRTeams = 0
         for team in self.teams:
+            print(team)
             if team.numLearnersReferencing() == 0: numRTeams += 1
 
         return numRTeams

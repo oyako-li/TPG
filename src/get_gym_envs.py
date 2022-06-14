@@ -117,10 +117,10 @@ if __name__ == '__main__':
     # import gym
 
     task = 'MountainCarContinuous-v0'
-    task = 'Pendulum-v1'
-    # task = 'CartPole-v0'
+    # task = 'Pendulum-v1'
+    task = 'CartPole-v0'
     env = gym.make(task) # make the environment
     # print(get_space_list(env.action_space))
-    get_gym_envs()
+    # get_gym_envs()
 
-    # print_spaces('行動空間', env.action_space)
+    print_spaces('行動空間', env.action_space)

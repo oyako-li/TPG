@@ -206,16 +206,13 @@ class ActionObject1:
     def __eq__(self, o:object)->bool:
 
         # The other object must be an instance of the ActionObject class
-        if not isinstance(o, ActionObject1):
-            return False
+        if not isinstance(o, ActionObject1):    return False
         
         # The other object's action code must be equal to ours
-        if self.actionCode != o.actionCode:
-            return False
+        if self.actionCode != o.actionCode:     return False
         
         # The other object's team action must be equal to ours
-        if self.teamAction != o.teamAction:
-            return False
+        if self.teamAction != o.teamAction:     return False
 
         return True
 
