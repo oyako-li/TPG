@@ -1,5 +1,6 @@
 from _tpg.program import Program
 from _tpg.action_object import ActionObject
+from _tpg.team import Team1
 from _tpg.utils import flip
 import numpy as np
 import random
@@ -136,7 +137,16 @@ from _tpg.action_object import ActionObject1
 
 
 class ConfLearner1:
-    def init_def(self, initParams, program, actionObj, numRegisters, _learner_id=None, _states:list=[], _inTeams:list=[], _frameNum:int=0, _ancestor=None):
+    def init_def(self, 
+        initParams:int or dict, 
+        program:Program1, 
+        actionObj:Team1 or ActionObject1 or int, 
+        numRegisters:int or np.ndarray, 
+        _ancestor=None,
+        _states:list=[],
+        _inTeams:list=[],
+        _frameNum:int=0
+    ):
         self.program = Program1(
             instructions=program.instructions
         ) #Each learner should have their own copy of the program
@@ -144,12 +154,14 @@ class ConfLearner1:
             action=actionObj, 
             initParams=initParams
         ) #Each learner should have their own copy of the action object
-        self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
+        if isinstance(numRegisters, int): self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
+        else: self.registers = numRegisters
+        if isinstance(initParams, int): self.genCreate = initParams # Store the generation that this learner was created on
+        elif isinstance(initParams, dict): self.genCreate = initParams["generation"] # Store the generation that this learner was created on
 
         self.ancestor = _ancestor #By default no ancestor
         self.states = _states
         self.inTeams = _inTeams # Store a list of teams that reference this learner, incoming edges
-        self.genCreate = initParams["generation"] # Store the generation that this learner was created on
         # self.actionCodes = initParams["actionCodes"]
         self.frameNum = _frameNum # Last seen frame is 0
         self.id = uuid.uuid4()
@@ -215,5 +227,10 @@ class ConfLearner1:
         return self
 
     def clone_def(self):
-        _clone = copy.deepcopy(self)
-        return _clone
+        # _clone = self.__init__(initParams={"generation":self.genCreate}, program=self.program, actionObj=self.actionObj, numRegisters=len(self.registers))
+        # _clone.registers = self.registers
+        # _clone.ancestor = self.ancestor
+        # _clone.states = self.states
+        # # _clone.inTeams = self.inTeams # ここが変わるはず
+        # _clone.frameNum = self.frameNum
+        return self

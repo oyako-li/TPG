@@ -1,8 +1,8 @@
-from _tpg.agent import Agent
-from _tpg.team import Team
-from _tpg.learner import Learner
-from _tpg.program import Program
-from _tpg.action_object import ActionObject
+from _tpg.agent import Agent, Agent1
+from _tpg.team import Team, Team1
+from _tpg.learner import Learner, Learner1
+from _tpg.program import Program, Program1
+from _tpg.action_object import ActionObject, ActionObject1
 from _tpg.configuration import configurer
 import random
 import pickle
@@ -804,18 +804,10 @@ class Trainer:
     def saveToFile(self, fileName):
         pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
 
-
 def loadTrainer(fileName:str):
     trainer = pickle.load(open(f'log/{fileName}.pickle', 'rb'))
     trainer.configFunctions()
     return trainer
-
-from _tpg.agent import Agent1
-from _tpg.team import Team1
-from _tpg.learner import Learner1
-from _tpg.program import Program1
-from _tpg.action_object import ActionObject1
-from _tpg.configuration import configurer
 
 
 class Trainer1:
@@ -848,7 +840,7 @@ class Trainer1:
         prevPops=None, mutatePrevs=True,
         initMaxActProgSize:int=6,           # *
         nActRegisters:int=4
-        ):
+    ):
 
 
         '''
@@ -982,10 +974,6 @@ class Trainer1:
 
         self._initializePopulations()
 
-    """
-    Gets rootTeams/agents. Sorts decending by sortTasks, and skips individuals
-    who don't have scores for all skipTasks.
-    """
     def getAgents(self, sortTasks=[], multiTaskType='min', skipTasks=[]):
         # remove those that get skipped
         rTeams = [team for team in self.rootTeams
@@ -1012,9 +1000,6 @@ class Trainer1:
                         for i,team in enumerate(sorted(rTeams,
                                         key=lambda tm: tm.fitness, reverse=True))]
 
-    """ 
-    Gets the single best team at the given task, regardless of if its root or not.
-    """
     def getEliteAgent(self, task):
         
         teams = [t for t in self.teams if task in t.outcomes]
@@ -1023,9 +1008,6 @@ class Trainer1:
                         key=lambda t: t.outcomes[task]),
                      self.functionsDict, num=0, actVars=self.actVars)
 
-    """
-    Apply saved scores from list to the agents.
-    """
     def applyScores(self, scores): # used when multiprocessing
         for score in scores:
             for rt in self.rootTeams:
@@ -1036,47 +1018,37 @@ class Trainer1:
 
         return self.rootTeams
 
-    """
-    Evolve the populations for improvements.
-    """
     def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None):
-        self._scoreIndividuals(tasks, multiTaskType=multiTaskType,
-                doElites=self.doElites) # assign scores to individuals
+        self._scoreIndividuals(
+            tasks, 
+            multiTaskType=multiTaskType,
+            doElites=self.doElites
+        ) # assign scores to individuals
         self._saveFitnessStats() # save fitness stats
         self._select(extraTeams) # select individuals to keep
         self._generate(extraTeams) # create new individuals from those kept
         self._nextEpoch() # set up for next generation
 
-    '''
-    Validation Method
-    '''
     def _must_be_integer_greater_than_zero(self, name, value):
         if type(value) is not int or value <= 0:
             raise Exception(name + " must be integer greater than zero. Got " + str(value), name, value)
 
-    '''
-    Validation Method
-    '''
     def _validate_probability(self, name,  value):
         if type(value) is not float or value > 1.0 or value < 0.0:
             raise Exception(name + " is a probability, it must not be greater than 1.0 or less than 0.0", name, value)
 
-    """
-    Sets up the actions properly, splitting action codes, and if needed, action
-    lengths. Returns whether doing real actions.
-    """
     def _setUpActions(self, actions):
         if isinstance(actions, int):
             # all discrete actions
             self.actionCodes:list = range(actions)
-            self.doReal = False
+            doReal = False
         else: # list of lengths of each action
             # some may be real actions
             self.actionCodes:list = range(len(actions))
             self.actionLengths = list(actions)
-            self.doReal = True
-
-        return self.doReal
+            doReal = True
+            
+        return doReal
     
     def reSetActions(self, actions):
         if isinstance(actions, int):
@@ -1093,60 +1065,66 @@ class Trainer1:
         self.nActRegisters = self.nActRegisters
         configurer.configure1(self, Trainer1, Agent1, Team1, Learner1, ActionObject1, Program1, 
             self.memType is not None, self.memType, self.doReal, self.operationSet, self.traversal)
-        # self._initializePopulations()
 
-    """
-    Initializes a popoulation of teams and learners generated randomly with only
-    atomic actions.
-    """
     def _initializePopulations(self):
-        for i in range(self.teamPopSize):
+        for _ in range(self.teamPopSize):
             # create 2 unique actions and learners
             a1,a2 = random.sample(range(len(self.actionCodes)), 2)
 
-            l1 = Learner1(self.mutateParams,
-                        program=Program1(
-                            maxProgramLength=self.initMaxProgSize,
-                            nOperations=self.nOperations,
-                            nDestinations=self.nRegisters,
-                            inputSize=self.inputSize,
-                            initParams=self.mutateParams
-                        ),
-                        actionObj=ActionObject1(action=a1, initParams=self.mutateParams),
-                        numRegisters=self.nRegisters)
-            l2 = Learner1(self.mutateParams,
-                        program=Program1(maxProgramLength=self.initMaxProgSize,
-                                         nOperations=self.nOperations,
-                                         nDestinations=self.nRegisters,
-                                         inputSize=self.inputSize,
-                                         initParams=self.mutateParams),
-                        actionObj=ActionObject1(action=a2, initParams=self.mutateParams),
-                        numRegisters=self.nRegisters)
+            l1 = Learner1(
+                initParams=self.mutateParams,
+                program=Program1(
+                    maxProgramLength=self.initMaxProgSize,
+                    nOperations=self.nOperations,
+                    nDestinations=self.nRegisters,
+                    inputSize=self.inputSize,
+                    initParams=self.mutateParams),
+                actionObj=ActionObject1(
+                    action=a1, 
+                    initParams=self.mutateParams),
+                numRegisters=self.nRegisters)
+            
+            l2 = Learner1(
+                initParams=self.mutateParams,
+                program=Program1(
+                    maxProgramLength=self.initMaxProgSize,
+                    nOperations=self.nOperations,
+                    nDestinations=self.nRegisters,
+                    inputSize=self.inputSize,
+                    initParams=self.mutateParams),
+                actionObj=ActionObject1(
+                    action=a2, 
+                    initParams=self.mutateParams),
+                numRegisters=self.nRegisters)
 
             # save learner population
             self.learners.append(l1)
             self.learners.append(l2)
 
             # create team and add initial learners
-            team = Team1(_genCreate=self.mutateParams)
+            team = Team1(initParams=self.mutateParams)
             team.addLearner(l1)
             team.addLearner(l2)
 
             # add more learners
             moreLearners = random.randint(0, self.initMaxTeamSize-2)
-            for i in range(moreLearners):
+            for __ in range(moreLearners):
                 # select action
                 act = random.choice(range(len(self.actionCodes)))
 
                 # create new learner
-                learner = Learner1(initParams=self.mutateParams,
-                            program=Program1(maxProgramLength=self.initMaxProgSize,
-                                             nOperations=self.nOperations,
-                                             nDestinations=self.nRegisters,
-                                             inputSize=self.inputSize,
-                                             initParams=self.mutateParams),
-                            actionObj=ActionObject1(action=act, initParams=self.mutateParams),
-                            numRegisters=self.nRegisters)
+                learner = Learner1(
+                    initParams=self.mutateParams,
+                    program=Program1(
+                        maxProgramLength=self.initMaxProgSize,
+                        nOperations=self.nOperations,
+                        nDestinations=self.nRegisters,
+                        inputSize=self.inputSize,
+                        initParams=self.mutateParams),
+                    actionObj=ActionObject1(
+                        action=act, 
+                        initParams=self.mutateParams),  
+                    numRegisters=self.nRegisters)
 
                 team.addLearner(learner)
                 self.learners.append(learner)
@@ -1155,10 +1133,6 @@ class Trainer1:
             self.teams.append(team)
             self.rootTeams.append(team)
 
-    """
-    Assigns a fitness to each agent based on performance at the tasks. Assigns
-    fitness values, or just returns sorted root teams.
-    """
     def _scoreIndividuals(self, tasks, multiTaskType='min', doElites=True):
         # handle generation of new elites, typically just done in evolution
         if doElites:
@@ -1184,9 +1158,6 @@ class Trainer1:
             elif multiTaskType == 'lexicaseDynamic':
                 self._lexicaseDynamicScorer(tasks)
 
-    """
-    Gets either the min, max, or average score from each individual for ranking.
-    """
     def _simpleScorer(self, tasks, multiTaskType='min'):
         # first find min and max in each task
         mins = []
@@ -1210,9 +1181,6 @@ class Trainer1:
                             for i,task in enumerate(tasks)]
                 rt.fitness = sum(scores)/len(scores)
 
-    """
-    Rank agents based on how many other agents it dominates
-    """
     def _paretoDominateScorer(self, tasks):
         for t1 in self.rootTeams:
             t1.fitness = 0
@@ -1225,9 +1193,6 @@ class Trainer1:
                          for task in tasks]):
                     t1.fitness += 1
 
-    """
-    Rank agents based on how many other agents don't dominate it
-    """
     def _paretoNonDominatedScorer(self, tasks):
         for t1 in self.rootTeams:
             t1.fitness = 0
@@ -1250,9 +1215,6 @@ class Trainer1:
     def _lexicaseDynamicScorer(self, tasks):
         pass
 
-    """
-    Save some stats on the fitness.
-    """
     def _saveFitnessStats(self):
         fitnesses = []
         for rt in self.rootTeams:
@@ -1264,9 +1226,6 @@ class Trainer1:
         self.fitnessStats['max'] = max(fitnesses)
         self.fitnessStats['average'] = sum(fitnesses)/len(fitnesses)
 
-    """
-    Gets stats on some task.
-    """
     def getTaskStats(self, task):
         scores = []
         for rt in self.rootTeams:
@@ -1280,9 +1239,6 @@ class Trainer1:
 
         return scoreStats
 
-    """
-    Select a portion of the root team population to keep according to gap size.
-    """
     def _select(self, extraTeams=None):
 
         rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.fitness, reverse=True)
@@ -1303,13 +1259,9 @@ class Trainer1:
                 cursor.actionObj.teamAction.inLearners.remove(str(cursor.id))
 
         # Finaly, purge the orphans
-        self.learners = [learner for learner in self.learners if learner.numTeamsReferencing() > 0]
         # AtomicActionのLearnerはどのように生成すれば良いのだろうか？ -> actionObj.mutate()による
+        self.learners = [learner for learner in self.learners if learner.numTeamsReferencing() > 0]
                 
-
-    """
-    Generates new rootTeams based on existing teams.
-    """
     def _generate(self, extraTeams=None):
 
         # extras who are already part of the team population
@@ -1340,7 +1292,7 @@ class Trainer1:
             # ここをランダムではなく、階層上あるいは、過去の経験よりセレクトする。
             # rootTeamsを混ぜて、新しい、チームを作る。この時、そのチームは、プログラムへの１階層目のポインタを混ぜるだけである。
             parent = random.choice(self.rootTeams)
-            child = Team1(_genCreate=self.mutateParams)
+            child = Team1(initParams=self.mutateParams)
 
             # child starts just like parent
             for learner in parent.learners: child.addLearner(learner)
@@ -1350,17 +1302,17 @@ class Trainer1:
             rampantReps, mutation_delta, new_learners = child.mutate(self.mutateParams, oLearners, oTeams)
 
             # then clone the referenced rootTeams
-            for new_learner in new_learners:
-                if new_learner.actionObj.teamAction is not None and new_learner.actionObj.teamAction in self.rootTeams:
-                    referenced_rt = new_learner.actionObj.teamAction
-                    clone = referenced_rt.clone()
+            # for new_learner in new_learners:
+            #     if new_learner.actionObj.teamAction is not None and new_learner.actionObj.teamAction in self.rootTeams:
+            #         referenced_rt = new_learner.actionObj.teamAction
+            #         clone = referenced_rt.clone()
 
-                    # new_learner's teamAction change to clone
-                    new_learner.actionObj.teamAction = clone
+            #         # new_learner's teamAction change to clone
+            #         new_learner.actionObj.teamAction = clone
 
 
-                    self.teams.append(clone)
-                    # self.rootTeams.remove(rt)
+            #         self.teams.append(clone)
+            #         # self.rootTeams.remove(rt)
 
             self.teams.append(child)
 
@@ -1371,9 +1323,6 @@ class Trainer1:
                 if team.numLearnersReferencing() == 0 and team not in protectedExtras:
                     self.teams.remove(team)
 
-    """
-    Finalize populations and prepare for next generation/epoch.
-    """
     def _nextEpoch(self):
         # add in newly added learners, and decide root teams
         self.rootTeams = []
@@ -1390,12 +1339,6 @@ class Trainer1:
 
         self.generation += 1
 
-    """
-    Removes hitchhikers, learners that are never used, except for the last atomic action on the team.
-    teamLearnerVisists is a dict with team keys and values represending the learners that are
-    actually visited on the team. Any learner on a team not in this list gets deleted.
-    Evolve should be called right after to properly remove the learners from the population.
-    """
     def removeHitchhikers(self, teams, visitedLearners):
         learnersRemoved = []
         teamsAffected = []
@@ -1416,10 +1359,6 @@ class Trainer1:
 
         return learnersRemoved, teamsAffected
     
-    '''
-    Go through all teams and learners and make sure their inTeams/inLearners correspond with 
-    their team.learner/teamActions as expected.
-    '''
     def validate_graph(self):
         print("Validating graph")
 
@@ -1484,9 +1423,6 @@ class Trainer1:
                     print("Learner {} does not point to team {}".format(expected_learner, cursor[0]))
             print("team {} inLearners valid [{}/{}]".format(cursor[0], i, len(team_map.items())-1))
     
-    """
-    Get the number of root teams currently residing in the teams population.
-    """
     def countRootTeams(self):
         numRTeams = 0
         for team in self.teams:
@@ -1564,18 +1500,9 @@ class Trainer1:
         #     json.dump(result, out_file)
         return result
 
-    """
-    Function to cleanup anything that may interfere with another trainer run in
-    the same thread of execution. Currently just sets tpg module functions to defaults.
-    """
     def cleanup(self):
         configurer._configureDefaults1(self, Trainer1, Agent1, Team1, Learner1, ActionObject1, Program1)
 
-    """
-    Ensures proper functions are in place for all classes. Ran after loading from a file,
-    and may need to be ran in other cases such as multiprocessing (though in out typical use
-    that is done at the agent level).
-    """
     def configFunctions(self):
         # first set up Agent functions
         Agent1.configFunctions(self.functionsDict["Agent"])
@@ -1592,9 +1519,6 @@ class Trainer1:
         # set up Program functions
         Program1.configFunctions(self.functionsDict["Program"])
 
-    """
-    Save the trainer to the file, saving any class values to the instance.
-    """
     def saveToFile(self, fileName):
         pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
 

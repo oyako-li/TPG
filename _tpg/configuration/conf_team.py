@@ -263,15 +263,16 @@ class ConfTeam:
 
 class ConfTeam1:
 
-    def init_def(self, _genCreate:int or dict, _learners:list=[], _outcomes:dict={}, _fitness=None, _inLearners:list=[]):
+    # team learners not has this id dont 
+    def init_def(self, initParams:int or dict, _learners:list=[], _outcomes:dict={}, _fitness=None, _inLearners:list=[]):
         self.learners = _learners
         self.outcomes = _outcomes # scores at various tasks
         self.fitness = _fitness
         self.inLearners = _inLearners # ids of learners referencing this team
         self.id = uuid.uuid4()
 
-        if isinstance(_genCreate, dict):  self.genCreate = _genCreate["generation"]
-        elif isinstance(_genCreate, int):  self.genCreate = _genCreate
+        if isinstance(initParams, dict):    self.genCreate = initParams["generation"]
+        elif isinstance(initParams, int):   self.genCreate = initParams
 
     """
     Returns an action to use based on the current state. Team traversal.
@@ -385,11 +386,11 @@ class ConfTeam1:
     """
     Adds learner to the team and updates number of references to that program.
     """
-    def addLearner_def(self, learner=None):
-
+    def addLearner_def(self, learner:Learner1=None):
         self.learners.append(learner)
-        learner.inTeams.append(str(self.id)) # Add this team's id to the list of teams that reference the learner
-
+        learner.inTeams.append(str(self.id)) 
+        # Add this team's id to the list of teams that reference the learner
+        print(learner.inTeams)
         return True
 
     """
@@ -420,6 +421,7 @@ class ConfTeam1:
     """
     def removeLearners_def(self):
         for learner in self.learners:
+            print(learner.inTeams, str(self.id))
             learner.inTeams.remove(str(self.id))
 
         del self.learners[:]
