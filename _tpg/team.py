@@ -460,56 +460,28 @@ from _tpg.learner import Learner1
 
 class Team1:
 
-    def __init__(self, initParams, _learners:list=[], _outcomes:dict={}, _fitness=None, _inLearners:list=[]): pass
-    """
-    Returns an action to use based on the current state.
-    NOTE: Do not set visited = list() because that will only be
-    evaluated once, and thus won't create a new list every time.
-    """
+    def __init__(self, 
+        initParams:int or dict=0, 
+        _learners:list=[], 
+        _outcomes:dict={}, 
+        _fitness=None, 
+        _inLearners:list=[]
+    ): pass
+   
     def act(self, state, visited, actVars=None, path_trace=None): pass
 
-    """
-    Adds learner to the team and updates number of references to that program.
-    """
     def addLearner(self, learner=None): pass
 
-    """
-    Removes learner from the team and updates number of references to that program.
-    """
     def removeLearner(self, learner): pass
 
-    """
-    Bulk removes learners from the team.
-    """
     def removeLearners(self): pass
 
-    """
-    Number of learners with atomic actions on this team.
-    """
     def numAtomicActions(self): pass
 
-    """
-    Mutates the learner set of this team.
-    """
     def mutate(self, mutateParams, allLearners, teams): pass
 
     def clone(self): pass
 
-    '''
-    Executes a delete mutation with a certain probability. 
-        - Returns immediately if the probability of deletion is 0.0
-        - Raises an exception if the probability of deleition is 1.0 or greater as that would
-          simply remove most learners from the team.
-        - Probability to delete compounds, that is, if the given probability of deletion is 0.5
-          there is a 0.5 * (0.5)^2 probability of 2 learners being erased. 
-          0.5 * (0.5)^2 * (0.5)^3 probability of 3 learners being erased, and so on.
-        - Will not delete any learners if there are 2 or fewer learners on the team
-        - Verifies that there is always at least one learner pointing to an atomic action on a team
-          raises an exception otherwise.
-        - If there is only one learner pointing to an atomic action filter it out and pick from the 
-          remaining learners.
-        - Returns a list of learners removed from the team
-    '''
     def _mutation_delete(self, probability):
 
             original_probability = float(probability)
@@ -550,18 +522,6 @@ class Team1:
 
             return deleted_learners
 
-
-    ''' 
-    A learner is added from the provided selection pool with a given 
-    probability. 
-        - Returns the learners that have been added.
-        - Returns immediately if the probability of addition is 0.0
-        - Raises an exception if the probability of addition is 1.0 or greater
-        - Returns immediately if the selection pool is empty
-        - Probability to add compounds, that is, if the given probability of addition is 0.5
-          there is a 0.5 * (0.5)^2 probability of 2 learners being added. 
-          0.5 * (0.5)^2 * (0.5)^3 probability of 3 learners being added, and so on.
-    '''
     def _mutation_add(self, probability, maxTeamSize, selection_pool):
 
         original_probability = float(probability)
@@ -589,17 +549,6 @@ class Team1:
 
         return added_learners
 
-    '''
-    Iterates through  this team's learners and mutates them with a given probability.
-        - Returns a map of the mutations that occured (key: originalLearner)->(value:mutatedLearner)
-        - Ensures that if we only have one atomic action the corresponding learner doesn't mutate to a non-atomic action
-        - Mutation: 
-            - clones the target learner
-            - adds the clone to the team
-            - mutates the clone
-            - removed the target learner
-            - records the target and it's mutated result in mutated_learners 
-    '''
     def _mutation_mutate(self, probability, mutateParams, teams):
         mutated_learners = {}
         '''
@@ -639,13 +588,6 @@ class Team1:
       
         return mutated_learners, new_learners
     
-    '''
-    A team is equal to another object if that object:
-        - is an instance of the team class
-        - was created on the same generation
-        - has the same list of learners it references
-        - has the same list of learners referecing it
-    '''
     def __eq__(self, o: object) -> bool:
 
         # Object must be instance of Team
@@ -686,9 +628,6 @@ class Team1:
 
         return True
 
-    '''
-    Negation of __eq__
-    '''
     def __ne__(self, o: object) -> bool:
         return not self.__eq__(o)
 
@@ -699,15 +638,9 @@ class Team1:
         for learner in self.learners:
             learner.zeroRegisters()
 
-    '''
-    Returns the number of learners referencing this team
-    '''
     def numLearnersReferencing(self):
         return len(self.inLearners)
 
-    """
-    Ensures proper functions are used in this class as set up by configurer.
-    """
     @classmethod
     def configFunctions(cls, functionsDict):
         from _tpg.configuration.conf_team import ConfTeam1

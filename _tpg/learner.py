@@ -1,5 +1,6 @@
-from _tpg.program import Program
-from _tpg.action_object import ActionObject
+from _tpg.program import Program, Program1
+from _tpg.action_object import ActionObject, ActionObject1
+from _tpg.team import Team, Team1
 from _tpg.utils import flip
 import numpy as np
 import collections
@@ -277,12 +278,19 @@ inTeams:\n""".format(
         if functionsDict["mutate"] == "def":
             cls.mutate = ConfLearner.mutate_def
 
-from _tpg.program import Program1
-from _tpg.action_object import ActionObject1
 
 class Learner1:
 
-    def __init__(self, initParams, program, actionObj, numRegisters, learner_id=None)->None: pass
+    def __init__(self, 
+        initParams:int or dict, 
+        program:Program1, 
+        actionObj:Team1 or ActionObject1 or int, 
+        numRegisters:int or np.ndarray, 
+        _ancestor=None, 
+        _states:list=[], 
+        _inTeams:list=[], 
+        _frameNum:int=0
+    )->None: pass
 
     """
     Get the bid value, highest gets its action selected.

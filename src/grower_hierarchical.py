@@ -62,7 +62,7 @@ def episode(_agents, _env, _logger=None, _scores={}, _frames:int=100, _show=Fals
 
     return _scores
 
-def generation(_trainer, _env, _logger=None, _episodes=20, _frames= 100, _show=False):
+def generation(_trainer:Trainer1, _env, _logger=None, _episodes=20, _frames= 100, _show=False):
     _scores = {}
     agents = _trainer.getAgents()
     _task = _env.spec.id

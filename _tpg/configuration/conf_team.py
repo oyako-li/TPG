@@ -264,7 +264,13 @@ class ConfTeam:
 class ConfTeam1:
 
     # team learners not has this id dont 
-    def init_def(self, initParams:int or dict, _learners:list=[], _outcomes:dict={}, _fitness=None, _inLearners:list=[]):
+    def init_def(self, 
+        initParams:int or dict, 
+        _learners:list=[], 
+        _outcomes:dict={}, 
+        _fitness=None, 
+        _inLearners:list=[]
+    ):
         self.learners = _learners
         self.outcomes = _outcomes # scores at various tasks
         self.fitness = _fitness

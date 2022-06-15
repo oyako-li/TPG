@@ -1,5 +1,5 @@
-from _tpg.program import Program
-from _tpg.action_object import ActionObject
+from _tpg.program import Program, Program1
+from _tpg.action_object import ActionObject, ActionObject1
 from _tpg.team import Team1
 from _tpg.utils import flip
 import numpy as np
@@ -131,10 +131,6 @@ class ConfLearner:
                 self.actionObj.mutate(mutateParams, parentTeam, teams, pActAtom, learner_id=self.id)
 
         return self
-
-from _tpg.program import Program1
-from _tpg.action_object import ActionObject1
-
 
 class ConfLearner1:
     def init_def(self, 

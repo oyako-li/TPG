@@ -5,6 +5,6 @@ from src.grower import growing
 
 task = 'ALE/Centipede-v5'
 trainer = Trainer(teamPopSize=200)
-filename = growing(trainer, task, _generations=1000,_episodes=20, _frames=500)
+filename = growing(trainer, task, _generations=1000,_episodes=20, _frames=200)
 trainer.saveToFile(f'{task}/{filename}')
 

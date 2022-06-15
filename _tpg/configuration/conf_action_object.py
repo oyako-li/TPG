@@ -1,5 +1,5 @@
-from _tpg.program import Program
-from _tpg.action_object import ActionObject
+from _tpg.program import Program, Program1
+from _tpg.action_object import ActionObject, ActionObject1
 from _tpg.utils import flip
 import numpy as np
 import random
@@ -248,12 +248,9 @@ class ConfActionObject:
         
         return self
 
-from _tpg.program import Program1
-from _tpg.action_object import ActionObject1
-
 class ConfActionObject1:
 
-    def init_def(self, initParams=None, action = None):
+    def init_def(self, initParams:dict or int =None, action = None):
 
         '''
         Defer importing the Team class to avoid circular dependency.
