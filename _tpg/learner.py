@@ -1,6 +1,6 @@
 from _tpg.program import Program, Program1
 from _tpg.action_object import ActionObject, ActionObject1
-from _tpg.team import Team, Team1
+# from _tpg.team import Team, Team1
 from _tpg.utils import flip
 import numpy as np
 import collections
@@ -284,7 +284,7 @@ class Learner1:
     def __init__(self, 
         initParams:int or dict, 
         program:Program1, 
-        actionObj:Team1 or ActionObject1 or int, 
+        actionObj, 
         numRegisters:int or np.ndarray, 
         _ancestor=None, 
         _states:list=[], 

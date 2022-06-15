@@ -4,6 +4,6 @@ from _tpg.trainer import Trainer
 from src.grower import growing
 
 task = 'CartPole-v0'
-trainer = Trainer()
-filename = growing(trainer, task, _frames=300)
+trainer = Trainer(teamPopSize=200)
+filename = growing(trainer, task, _generations=1000,_episodes=20, _frames=200)
 trainer.saveToFile(f'{task}/{filename}')
