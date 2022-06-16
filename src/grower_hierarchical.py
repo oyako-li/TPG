@@ -103,6 +103,7 @@ def growing(_trainer:Trainer1, _task:str, _generations:int=1000, _episodes:int=2
         score = (min(scores.values()), max(scores.values()), sum(scores.values())/len(scores))
 
         logger.info(f'generation:{gen}, score:{score}')
+        print('データ取得中')
         summaryScores.append(score)
 
 

@@ -1,4 +1,3 @@
-
 import sys
 sys.path.insert(0, '.')
 from _tpg.trainer import Trainer1
