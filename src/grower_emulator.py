@@ -5,7 +5,7 @@ sys.path.insert(0, '.')
 
 import time
 import gym
-from _tpg.trainer import Trainer1
+from _tpg.trainer import Trainer2
 from _tpg.base_log import setup_logger
 from tqdm import tqdm
 import signal
@@ -62,7 +62,7 @@ def episode(_agents, _env, _logger=None, _scores={}, _frames:int=100, _show=Fals
 
     return _scores
 
-def generation(_trainer:Trainer1, _env, _logger=None, _episodes=20, _frames= 100, _show=False):
+def generation(_trainer:Trainer2, _env, _logger=None, _episodes=20, _frames= 100, _show=False):
     _scores = {}
     agents = _trainer.getAgents()
     _task = _env.spec.id
@@ -74,7 +74,7 @@ def generation(_trainer:Trainer1, _env, _logger=None, _episodes=20, _frames= 100
     return _scores 
 
 
-def growing(_trainer:Trainer1, _task:str, _generations:int=1000, _episodes:int=20, _frames:int=200, _show=False, _test=False, _load=True):
+def growing(_trainer:Trainer2, _task:str, _generations:int=1000, _episodes:int=20, _frames:int=200, _show=False, _test=False, _load=True):
     logger, filename = setup_logger(__name__, _task, test=_test, load=_load)
     env = gym.make(_task) # make the environment
     action_space = env.action_space
@@ -122,7 +122,7 @@ if __name__ == '__main__':
         if arg=='show': show = True
         if arg=='test': test=True
         if arg=='load': load=True
-    trainer = Trainer1(teamPopSize=10)
+    trainer = Trainer2(teamPopSize=10)
     _filename = growing(trainer, task, _episodes=1, _show=show, _test=test, _load=load)
     trainer.saveToFile(f'{task}/{_filename}')
 

@@ -5,32 +5,35 @@ from datetime import datetime
 # LOG = logging
 # LOG.basicConfig(format='[%(asctime)s][%(levelname)s](%(filename)s:%(lineno)s) %(name)s:%(message)s')
 
-def setup_logger(_name, _logfile='LOGFILENAME'):
+def setup_logger(_name, _logfile='LOGFILENAME', test=False, load=True):
     _logger = logging.getLogger(_name)
     _logger.setLevel(logging.DEBUG)
 
     _filename = datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
     # create file handler which logs even DEBUG messages
-    while True:
-        try:
-            _fh = logging.FileHandler(f'log/{_logfile}/{_filename}.log')
-            break
-        except FileNotFoundError:
-            os.makedirs(f'log/{_logfile}')
+    if not test:
+        while True:
+            try:
+                _fh = logging.FileHandler(f'log/{_logfile}/{_filename}.log')
+                break
+            except FileNotFoundError:
+                os.makedirs(f'log/{_logfile}')
 
-    _fh.setLevel(logging.INFO)
-    _fh_formatter = logging.Formatter('%(asctime)s, %(levelname)s, %(filename)s, %(message)s')
-    _fh.setFormatter(_fh_formatter)
+        _fh.setLevel(logging.INFO)
+        _fh_formatter = logging.Formatter('%(asctime)s, %(levelname)s, %(filename)s, %(message)s')
+        _fh.setFormatter(_fh_formatter)
+        _logger.addHandler(_fh)
+
 
     # create console handler with a INFO log level
-    _ch = logging.StreamHandler()
-    _ch.setLevel(logging.INFO)
-    _ch_formatter = logging.Formatter('[{}](%(filename)s:%(lineno)s) %(name)s,%(funcName)s:%(message)s'.format(_filename))
-    _ch.setFormatter(_ch_formatter)
+    if load:
+        _ch = logging.StreamHandler()
+        _ch.setLevel(logging.INFO)
+        _ch_formatter = logging.Formatter('[{}](%(filename)s:%(lineno)s) %(name)s,%(funcName)s:%(message)s'.format(_filename))
+        _ch.setFormatter(_ch_formatter)
 
-    # add the handlers to the logger
-    _logger.addHandler(_fh)
-    _logger.addHandler(_ch)
+        # add the handlers to the logger
+        _logger.addHandler(_ch)
     return _logger, _filename
 
 # logger = setup_logger(__name__, 2)

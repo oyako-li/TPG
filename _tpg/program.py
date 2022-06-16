@@ -275,3 +275,82 @@ class Program1:
         elif functionsDict["memWriteProbFunc"] == "cauchyHalf":
             cls.memWriteProbFunc = ConfProgram1.memWriteProb_cauchyHalf
 
+class Program2:
+
+    def __init__(self, instructions=None, maxProgramLength=128, nOperations=5, nDestinations=8, inputSize=30720, initParams=None): pass
+
+    """
+    Executes the program which returns a single final value.
+    """
+    def execute(
+            inputState:np.ndarray,  # state
+            registers:np.ndarray,   # self.registers
+            modes:np.ndarray,       # self.program.instructions[:,0]
+            operations:np.ndarray,  # self.program.instructions[:,1]
+            dsts:np.ndarray,        # self.program.instructions[:,2]
+            srcs:np.ndarray         # self.program.instructions[:,3]
+        ): pass
+    
+    """
+    Potentially modifies the instructions in a few ways.
+    """
+    def mutate(self, mutateParams): pass
+
+
+    '''
+    A program is equal to another object if that object:
+        - is an instance of the program class
+        - has identical instructions
+    '''
+    def __eq__(self, __o:object) -> bool:
+
+        # The other object must be an instance of the Program class
+        if not isinstance(__o, Program2): return False
+
+        # Compare instructions
+        return np.array_equal(self.instructions, __o.instructions)
+
+    '''
+     Negation of __eq__
+    '''
+    def __ne__(self, __o: object) -> bool:
+        return not self.__eq__(__o)
+
+
+    """
+    Ensures proper functions are used in this class as set up by configurer.
+    """
+    @classmethod
+    def configFunctions(cls, functionsDict):
+        from _tpg.configuration.conf_program import ConfProgram2
+
+        if functionsDict["init"] == "def":
+            cls.__init__ = ConfProgram2.init_def
+
+        if functionsDict["execute"] == "def":
+            cls.execute = ConfProgram2.execute_def
+        elif functionsDict["execute"] == "full":
+            cls.execute = ConfProgram2.execute_full
+        elif functionsDict["execute"] == "custom":
+            cls.execute = ConfProgram2.execute_custom
+        elif functionsDict["execute"] == "robo":
+            cls.execute = ConfProgram2.execute_robo
+        elif functionsDict["execute"] == "mem":
+            cls.execute = ConfProgram2.execute_mem
+        elif functionsDict["execute"] == "mem_full":
+            cls.execute = ConfProgram2.execute_mem_full
+        elif functionsDict["execute"] == "mem_custom":
+            cls.execute = ConfProgram2.execute_mem_custom
+        elif functionsDict["execute"] == "mem_robo":
+            cls.execute = ConfProgram2.execute_mem_robo
+
+        if functionsDict["mutate"] == "def":
+            cls.mutate = ConfProgram2.mutate_def
+        
+        if functionsDict["memWriteProbFunc"] == "def":
+            cls.memWriteProbFunc = ConfProgram2.memWriteProb_def
+        elif functionsDict["memWriteProbFunc"] == "cauchy1":
+            cls.memWriteProbFunc = ConfProgram2.memWriteProb_cauchy1
+        elif functionsDict["memWriteProbFunc"] == "cauchyHalf":
+            cls.memWriteProbFunc = ConfProgram2.memWriteProb_cauchyHalf
+
