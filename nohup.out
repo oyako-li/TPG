@@ -1,0 +1,14 @@
+  0%|          | 0/1000 [00:00<?, ?it/s]/Users/matsuzawakazuki/Code/py_code/TPGAgent/./_tpg/configuration/conf_program.py:824: RuntimeWarning: divide by zero encountered in double_scalars
+  elif op == 4:           regs[dest] = x**y
+/Users/matsuzawakazuki/Code/py_code/TPGAgent/./_tpg/configuration/conf_program.py:824: RuntimeWarning: invalid value encountered in double_scalars
+  elif op == 4:           regs[dest] = x**y
+/Users/matsuzawakazuki/Code/py_code/TPGAgent/./_tpg/configuration/conf_program.py:823: RuntimeWarning: overflow encountered in double_scalars
+  elif op == 3 and y != 0:regs[dest] = x/y
+/Users/matsuzawakazuki/Code/py_code/TPGAgent/./_tpg/configuration/conf_program.py:824: RuntimeWarning: overflow encountered in double_scalars
+  elif op == 4:           regs[dest] = x**y
+/Users/matsuzawakazuki/Code/py_code/TPGAgent/./_tpg/configuration/conf_program.py:820: RuntimeWarning: overflow encountered in double_scalars
+  if op == 0:             regs[dest] = x+y
+/Users/matsuzawakazuki/Code/py_code/TPGAgent/./_tpg/configuration/conf_program.py:822: RuntimeWarning: overflow encountered in double_scalars
+  elif op == 2:           regs[dest] = x*y
+/Users/matsuzawakazuki/miniforge3/envs/tpgenv/lib/python3.10/multiprocessing/resource_tracker.py:224: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
