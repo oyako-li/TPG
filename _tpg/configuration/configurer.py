@@ -446,7 +446,6 @@ Make the appropriate changes needed to be able to use real actions.
 """
 def _configureRealAction1(trainer, ActionObject, mutateParamKeys, mutateParamVals, doMemory):
     # change functions as needed
-    print('doReal')
     ActionObject.__init__ = ConfActionObject1.init_real
     trainer.functionsDict["ActionObject"]["init"] = "real"
     ActionObject.getAction = ConfActionObject1.getAction_real
@@ -543,6 +542,7 @@ def _configureDefaults2(trainer, Trainer, Agent, Team, Learner, ActionObject, Pr
     ActionObject.getAction = ConfActionObject2.getAction_def
     ActionObject.isAtomic = ConfActionObject2.isAtomic_def
     ActionObject.mutate = ConfActionObject2.mutate_def
+    ActionObject._actions = trainer.actionCodes
 
     # set program functions
     Program.__init__ = ConfProgram2.init_def
@@ -677,7 +677,6 @@ Make the appropriate changes needed to be able to use real actions.
 """
 def _configureRealAction2(trainer, ActionObject, mutateParamKeys, mutateParamVals, doMemory):
     # change functions as needed
-    print('doReal')
     ActionObject.__init__ = ConfActionObject2.init_real
     trainer.functionsDict["ActionObject"]["init"] = "real"
     ActionObject.getAction = ConfActionObject2.getAction_real

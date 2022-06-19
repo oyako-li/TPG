@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
-sys.path.insert(0, '.')
+# sys.path.insert(0, '.')
 
 import time
 import gym
@@ -31,6 +31,9 @@ def getState(inState):
     return np.add(np.left_shift(rgbRows[0], 16),
         np.add(np.left_shift(rgbRows[1], 8), rgbRows[2]))
 
+def breakpoint(_print):
+    print(_print)
+    sys.exit()
 
 # 5 generations isn't much (not even close), but some improvements
 # should be seen.
@@ -43,6 +46,7 @@ def episode(_agents, _env, _logger=None, _scores={}, _frames:int=100, _show=Fals
         _id = str(agent.team.id)
         for _ in range(_frames): # run episodes that last 500 frames
             act = agent.act(state)
+            # breakpoint(act)
             # feedback from env
             state, reward, isDone, debug = _env.step(act)
             score += reward # accumulate reward in score
@@ -83,6 +87,7 @@ def growing(_trainer:Trainer2, _task:str, _generations:int=1000, _episodes:int=2
         action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
     elif isinstance(action_space, gym.spaces.Discrete):
         action = action_space.n
+        breakpoint(action)
     _trainer._setUpActions(actions=action)
 
     def outHandler(signum, frame):

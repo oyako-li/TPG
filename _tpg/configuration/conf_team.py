@@ -59,8 +59,9 @@ class ConfTeam:
         
         if len(valid_learners)==0: 
 
-            mutate_learner = random.choice([lrnr for lrnr in self.learners if lrnr.isActionAtomic()])
+            mutate_learner = random.choice(self.learners)
             clone = mutate_learner.clone()
+            if not clone.isActionAtomic(): clone.actionObj.teamAction.inLearner.remove(str(clone.id))
             clone.actionObj.mutate()
 
             self.addLearner(clone)
@@ -303,8 +304,9 @@ class ConfTeam1:
         
         if len(valid_learners)==0: 
 
-            mutate_learner = random.choice([lrnr for lrnr in self.learners if lrnr.isActionAtomic()])
+            mutate_learner = random.choice(self.learners)
             clone = mutate_learner.clone()
+            if not clone.isActionAtomic(): clone.actionObj.teamAction.inLearner.remove(str(clone.id))
             clone.actionObj.mutate()
 
             self.addLearner(clone)
@@ -562,13 +564,13 @@ class ConfTeam2:
         
         if len(valid_learners)==0: 
 
-            mutate_learner = random.choice([lrnr for lrnr in self.learners if lrnr.isActionAtomic()])
+            mutate_learner = random.choice(self.learners)
             clone = mutate_learner.clone()
+            if not clone.isActionAtomic(): clone.actionObj.teamAction.inLearner.remove(str(clone.id))
             clone.actionObj.mutate()
 
             self.addLearner(clone)
             valid_learners.append(clone)
-
 
         top_learner = max(valid_learners, key=lambda lrnr: lrnr.bid(state, actVars=actVars))
 
