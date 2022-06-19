@@ -548,8 +548,8 @@ class ConfActionObject2:
             if "actionCodes" not in initParams: raise Exception('action codes not found in init params', initParams)
 
             try:
-                ActionObject2._actions = initParams["actionCodes"]
-                self.actionCode = initParams["actionCodes"][action]
+                # ActionObject2._actions = initParams["actionCodes"]
+                self.actionCode = ActionObject2._actions[action]
                 self.teamAction = None
             except IndexError as err:
                 '''

@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 # from IPython import display
 import sys
-sys.path.insert(0, '.')
+# sys.path.insert(0, '.')
 
 import time
 import gym
@@ -75,8 +75,8 @@ def generation(_trainer, _env, _logger=None, _episodes=20, _frames= 100, _show=F
     return _scores 
 
 
-def growing(_trainer:Trainer, _task:str, _generations:int=1000, _episodes:int=20, _frames:int=200, _show=False):
-    logger, filename = setup_logger(__name__, _task)
+def growing(_trainer:Trainer, _task:str, _generations:int=1000, _episodes:int=20, _frames:int=200, _show=False, _test=False, _load=True):
+    logger, filename = setup_logger(__name__, _task, test=_test, load=_load)
     env = gym.make(_task) # make the environment
     action_space = env.action_space
     action = 0
@@ -84,7 +84,7 @@ def growing(_trainer:Trainer, _task:str, _generations:int=1000, _episodes:int=20
         action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
     elif isinstance(action_space, gym.spaces.Discrete):
         action = action_space.n
-    _trainer._setUpActions(actions=action)
+    _trainer.resetActions(actions=action)
 
     def outHandler(signum, frame):
         _trainer.saveToFile(f'{_task}/{filename}')
@@ -115,8 +115,17 @@ def growing(_trainer:Trainer, _task:str, _generations:int=1000, _episodes:int=20
 
 if __name__ == '__main__':
 
-    task = 'CartPole-v0'
-    trainer = Trainer(teamPopSize=20)
-    _filename = growing(trainer, task, _episodes=1, _show=True)
+    # task = 'CartPole-v0'
+    task = sys.argv[1]
+    show = False
+    test = False
+    load = False
+
+    for arg in sys.argv[2:]:
+        if arg=='show': show = True
+        if arg=='test': test=True
+        if arg=='load': load=True
+    trainer = Trainer(teamPopSize=10)
+    _filename = growing(trainer, task, _episodes=1, _show=show, _test=test, _load=load)
     trainer.saveToFile(f'{task}/{_filename}')
 

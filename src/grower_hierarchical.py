@@ -34,7 +34,7 @@ def getState(inState):
 
 # 5 generations isn't much (not even close), but some improvements
 # should be seen.
-def episode(_agents, _env, _logger=None, _scores={}, _frames:int=100, _show=False):
+def episode(_agents, _env, _logger=None, _scores={}, _frames:int=500, _show=False):
     
     for agent in _agents: # to multi-proccess
         
@@ -62,7 +62,7 @@ def episode(_agents, _env, _logger=None, _scores={}, _frames:int=100, _show=Fals
 
     return _scores
 
-def generation(_trainer:Trainer1, _env, _logger=None, _episodes=20, _frames= 100, _show=False):
+def generation(_trainer:Trainer1, _env, _logger=None, _episodes=1, _frames= 500, _show=False):
     _scores = {}
     agents = _trainer.getAgents()
     _task = _env.spec.id
@@ -74,7 +74,7 @@ def generation(_trainer:Trainer1, _env, _logger=None, _episodes=20, _frames= 100
     return _scores 
 
 
-def growing(_trainer:Trainer1, _task:str, _generations:int=1000, _episodes:int=20, _frames:int=200, _show=False, _test=False, _load=True):
+def growing(_trainer:Trainer1, _task:str, _generations:int=1000, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True):
     logger, filename = setup_logger(__name__, _task, test=_test, load=_load)
     env = gym.make(_task) # make the environment
     action_space = env.action_space
@@ -83,7 +83,7 @@ def growing(_trainer:Trainer1, _task:str, _generations:int=1000, _episodes:int=2
         action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
     elif isinstance(action_space, gym.spaces.Discrete):
         action = action_space.n
-    _trainer._setUpActions(actions=action)
+    _trainer.resetActions(actions=action)
 
     def outHandler(signum, frame):
         _trainer.saveToFile(f'{_task}/{filename}')

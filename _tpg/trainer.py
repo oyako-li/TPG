@@ -207,6 +207,22 @@ class Trainer:
             doReal = True
 
         return doReal
+    
+    def resetActions(self, actions):
+        if isinstance(actions, int):
+            # all discrete actions
+            self.actionCodes:list = range(actions)
+            self.doReal = False
+        else: # list of lengths of each action
+            # some may be real actions
+            self.actionCodes:list = range(len(actions))
+            self.actionLengths = list(actions)
+            self.doReal = True
+        
+        if self.doReal: self.nActRegisters = max(max(self.actionLengths), self.nActRegisters)
+        self.nActRegisters = self.nActRegisters
+        configurer.configure(self, Trainer, Agent, Team, Learner, ActionObject, Program, 
+            self.memType is not None, self.memType, self.doReal, self.operationSet, self.traversal)
 
     """
     Initializes a popoulation of teams and learners generated randomly with only
@@ -1049,7 +1065,7 @@ class Trainer1:
             
         return doReal
     
-    def reSetActions(self, actions):
+    def resetActions(self, actions):
         if isinstance(actions, int):
             # all discrete actions
             self.actionCodes:list = range(actions)
@@ -1549,7 +1565,8 @@ class Trainer2:
         traversal:str="team", 
         prevPops=None, mutatePrevs=True,
         initMaxActProgSize:int=6,           # *
-        nActRegisters:int=4
+        nActRegisters:int=4,
+        thinkingTime:int=5
     ):
 
 
@@ -1633,6 +1650,8 @@ class Trainer2:
         # max team size possible throughout evolution
         self.maxTeamSize = maxTeamSize
 
+        self.thinkingTime = thinkingTime
+
         # params for continued evolution
         self.pLrnDel = pLrnDel
         self.pLrnAdd = pLrnAdd
@@ -1676,6 +1695,7 @@ class Trainer2:
         self.actVars:       dict = {}
         self.functionsDict: dict = {}
         self.nOperations = None
+
 
 
 
@@ -1760,7 +1780,7 @@ class Trainer2:
             
         return doReal
     
-    def reSetActions(self, actions):
+    def resetActions(self, actions):
         if isinstance(actions, int):
             # all discrete actions
             self.actionCodes:list = range(actions)
@@ -2230,3 +2250,12 @@ class Trainer2:
 
     def saveToFile(self, fileName):
         pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
+    
+    # def thinker(self, state):
+    #     agents = self.getAgents()
+    #     emulators = self.getEmulators()
+    #     for _ in range(self.thinkingTime):
+
+
+    # def actor(self, _bestAction, _env): pass
+    # def getEmulators(self): pass

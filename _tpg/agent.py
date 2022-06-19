@@ -196,38 +196,19 @@ class Agent1:
 
 class Agent2:
 
-    """
-    Create an agent with a team.
-    """
     def __init__(self, team, functionsDict:dict, num:int=1, actVars:dict=None)->None: pass
 
-    """
-    Gets an action from the root team of this agent / this agent.
-    """
     def act(self, state, path_trace=None): pass
 
-    """
-    Give this agent/root team a reward for the given task
-    """
     def reward(self, score, task='task')->None: pass
 
-    """
-    Check if agent completed this task already, to skip.
-    """
     def taskDone(self, task): pass
 
-    """
-    Save the agent to the file, saving any relevant class values to the instance.
-    """
     def saveToFile(self, fileName): pass
 
     def zeroRegisters(self)->None:
         self.team.zeroRegisters()
 
-    """
-    Should be called when the agent is loaded from a file or when loaded into 
-    another process/thread, to ensure proper function used in all classes.
-    """
     def configFunctionsSelf(self)->None:
         from _tpg.team import Team2
         from _tpg.learner import Learner2
@@ -249,9 +230,6 @@ class Agent2:
         # set up Program functions
         Program2.configFunctions(self.functionsDict["Program"])
 
-    """
-    Ensures proper functions are used in this class as set up by configurer.
-    """
     @classmethod
     def configFunctions(cls, functionsDict):
         from _tpg.configuration.conf_agent import ConfAgent2
@@ -270,9 +248,7 @@ class Agent2:
 
         if functionsDict["saveToFile"] == "def":
             cls.saveToFile = ConfAgent2.saveToFile_def
-"""
-Load some agent from the file, returning it and repopulate class values.
-"""
+
 def loadAgent(fileName):
     agent = pickle.load(open(fileName, 'rb'))
     agent.configFunctionsSelf()

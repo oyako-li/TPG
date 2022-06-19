@@ -1,9 +1,5 @@
-# import learner
-# from _tpg.learner import Learner, Learner1, 
 from _tpg.team import Team1, Team2
-# from _tpg.team import Team, Team1
 from _tpg.utils import flip
-# from learner import Learner
 import random
 import uuid
 import copy
@@ -97,7 +93,6 @@ class ConfTeam:
             path_trace.append(path_segment)
 
         return top_learner.getAction(state, visited=visited, actVars=actVars, path_trace=path_trace) 
-
 
     """
     Returns an action to use based on the current state. Learner traversal.
@@ -538,11 +533,6 @@ class ConfTeam2:
         if isinstance(initParams, dict): self.genCreate = initParams["generation"]
         elif isinstance(initParams, int): self.genCreate = initParams
 
-    """
-    Returns an action to use based on the current state. Team traversal.
-    NOTE: Do not set visited = list() because that will only be
-    evaluated once, and thus won't create a new list every time.
-    """
     def act_def(self, state, visited:list, actVars=None, path_trace=None):
 
         # If we've already visited me, throw an exception

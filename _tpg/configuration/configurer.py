@@ -82,6 +82,8 @@ def _configureDefaults(trainer, Trainer, Agent, Team, Learner, ActionObject, Pro
     ActionObject.getAction = ConfActionObject.getAction_def
     ActionObject.isAtomic = ConfActionObject.isAtomic_def
     ActionObject.mutate = ConfActionObject.mutate_def
+    ActionObject._actions = trainer.actionCodes
+
 
     # set program functions
     Program.__init__ = ConfProgram.init_def
@@ -312,6 +314,8 @@ def _configureDefaults1(trainer, Trainer, Agent, Team, Learner, ActionObject, Pr
     ActionObject.getAction = ConfActionObject1.getAction_def
     ActionObject.isAtomic = ConfActionObject1.isAtomic_def
     ActionObject.mutate = ConfActionObject1.mutate_def
+    ActionObject._actions = trainer.actionCodes
+
 
     # set program functions
     Program.__init__ = ConfProgram1.init_def
