@@ -4,7 +4,7 @@ from _tpg.trainer import Trainer1
 from src.grower_hierarchical import growing
 
 task = 'Asterix-v4'
-trainer = Trainer1(teamPopSize=200)
-filename = growing(trainer, task, _generations=1000,_episodes=20, _frames=200, _load=False)
+trainer = Trainer1(teamPopSize=100)
+filename = growing(trainer, task, _generations=1000,_episodes=1, _frames=500, _load=False)
 trainer.saveToFile(f'{task}/{filename}')
 
