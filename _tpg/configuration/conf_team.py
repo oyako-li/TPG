@@ -554,6 +554,7 @@ class ConfTeam2:
         
         if len(valid_learners)==0: 
 
+            print(self.learners)
             mutate_learner = random.choice(self.learners)
             clone = mutate_learner.clone()
             if not clone.isActionAtomic(): clone.actionObj.teamAction.inLearner.remove(str(clone.id))
