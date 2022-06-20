@@ -120,12 +120,14 @@ if __name__ == '__main__':
     show = False
     test = False
     load = False
+    frame=500
 
     for arg in sys.argv[2:]:
         if arg=='show': show = True
         if arg=='test': test=True
         if arg=='load': load=True
+        if isinstance(arg, int): frame=arg
     trainer = Trainer(teamPopSize=10)
-    _filename = growing(trainer, task, _episodes=1, _frames=500, _show=show, _test=test, _load=load)
+    _filename = growing(trainer, task, _episodes=1, _frames=frame, _show=show, _test=test, _load=load)
     trainer.saveToFile(f'{task}/{_filename}')
 
