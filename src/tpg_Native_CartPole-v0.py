@@ -5,5 +5,5 @@ from src.grower import growing
 
 task = 'CartPole-v0'
 trainer = Trainer(teamPopSize=100)
-filename = growing(trainer, task, _generations=1000,_episodes=1, _frames=100)
+filename = growing(trainer, task, _generations=1000,_episodes=1, _frames=100, _load=False)
 trainer.saveToFile(f'{task}/{filename}')

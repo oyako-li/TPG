@@ -715,7 +715,7 @@ class Team2:
                     # Otherwise if we only have one, filter it out and pick from the remaining learners
                     valid_choices = list(filter(lambda x: not x.isActionAtomic(), self.learners)) # isActionAtomic以外から削除を決定。
                     learner = random.choice(valid_choices)
-                assert len(self.learners)<2, 'learnes extinvtion'
+                # assert len(self.learners)>2, 'learnes extinvtion'
 
                 deleted_learners.append(learner)
                 self.removeLearner(learner)

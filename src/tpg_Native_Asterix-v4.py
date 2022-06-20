@@ -5,6 +5,6 @@ from src.grower import growing
 
 task = 'Asterix-v4'
 trainer = Trainer(teamPopSize=100)
-filename = growing(trainer, task, _generations=1000,_episodes=1, _frames=500)
+filename = growing(trainer, task, _generations=1000,_episodes=1, _frames=500, _load=False)
 trainer.saveToFile(f'{task}/{filename}')
 
