@@ -21,3 +21,4 @@ _tpg/configuration/conf_program.py
 _tpg/configuration/conf_team.py
 _tpg/configuration/conf_trainer.py
 _tpg/configuration/configurer.py
+test/test.test.py
