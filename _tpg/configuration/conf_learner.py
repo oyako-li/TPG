@@ -18,37 +18,37 @@ class ConfLearner:
     Create a new learner, either copied from the original or from a program or
     action. Either requires a learner, or a program/action pair.
     """
-    def init_def(self, initParams, program, actionObj, numRegisters, learner_id=None):
+    def init_def(self, 
+        initParams:int or dict=0, 
+        program:Program=Program(), 
+        actionObj:Team or ActionObject or int=ActionObject(action=0), 
+        numRegisters:int or np.ndarray=8, 
+        _ancestor=None,
+        _states:list=[],
+        _inTeams:list=[],
+        _frameNum:int=0
+    ):
         self.program = Program(
             instructions=program.instructions
         ) #Each learner should have their own copy of the program
-        self.actionObj = ActionObject(action=actionObj, initParams=initParams) #Each learner should have their own copy of the action object
-        self.registers = np.zeros(numRegisters, dtype=float)
+        self.actionObj = ActionObject(
+            action=actionObj, 
+            initParams=initParams
+        ) #Each learner should have their own copy of the action object
+        if isinstance(numRegisters, int): self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
+        else: self.registers = numRegisters
+        if isinstance(initParams, int): self.genCreate = initParams # Store the generation that this learner was created on
+        elif isinstance(initParams, dict): self.genCreate = initParams["generation"] # Store the generation that this learner was created on
 
-        self.ancestor = None #By default no ancestor
-
-        '''
-        TODO What's self.states? 
-        '''
-        self.states = []
-
-
-        self.inTeams = [] # Store a list of teams that reference this learner, incoming edges
-        
-
-        self.genCreate = initParams["generation"] # Store the generation that this learner was created on
-
-        '''
-        TODO should this be -1 before it sees any frames?
-        '''
-        self.frameNum = 0 # Last seen frame is 0
-
-        # Assign id from initParams counter
+        self.ancestor = _ancestor #By default no ancestor
+        self.states = _states
+        self.inTeams = _inTeams # Store a list of teams that reference this learner, incoming edges
+        # self.actionCodes = initParams["actionCodes"]
+        self.frameNum = _frameNum # Last seen frame is 0
         self.id = uuid.uuid4()
 
 
-        if not self.isActionAtomic():
-            self.actionObj.teamAction.inLearners.append(str(self.id))
+        if not self.isActionAtomic(): self.actionObj.teamAction.inLearners.append(str(self.id))
 
         #print("Creating a brand new learner" if learner_id == None else "Creating a learner from {}".format(str(learner_id)))
         #print("Created learner {} [{}] -> {}".format(self.id, "atomic" if self.isActionAtomic() else "Team", self.actionObj.actionCode if self.isActionAtomic() else self.actionObj.teamAction.id))
@@ -142,10 +142,10 @@ class ConfLearner:
 class ConfLearner1:
 
     def init_def(self, 
-        initParams:int or dict, 
-        program:Program1, 
-        actionObj:Team1 or ActionObject1 or int, 
-        numRegisters:int or np.ndarray, 
+        initParams:int or dict=0, 
+        program:Program1=Program1(), 
+        actionObj:Team1 or ActionObject1 or int=ActionObject1(action=0), 
+        numRegisters:int or np.ndarray=8, 
         _ancestor=None,
         _states:list=[],
         _inTeams:list=[],
@@ -240,10 +240,10 @@ class ConfLearner1:
 class ConfLearner2:
 
     def init_def(self, 
-        initParams:int or dict, 
-        program:Program2, 
-        actionObj:Team2 or ActionObject2 or int, 
-        numRegisters:int or np.ndarray, 
+        initParams:int or dict=0, 
+        program:Program2=Program2(), 
+        actionObj:Team2 or ActionObject2 or int=ActionObject2(action=0), 
+        numRegisters:int or np.ndarray=8, 
         _ancestor=None,
         _states:list=[],
         _inTeams:list=[],

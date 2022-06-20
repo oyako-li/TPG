@@ -34,20 +34,27 @@ class ConfActionObject:
 
         # An int means the action is an index into the action codes in initParams
         if isinstance(action, int):
-            
-            if "actionCodes" not in initParams:
-                raise Exception('action codes not found in init params', initParams)
+            if initParams is not None:
+                if "actionCodes" not in initParams:
+                    raise Exception('action codes not found in init params', initParams)
 
-            try:
-                ActionObject._actions = initParams["actionCodes"]
-                self.actionCode = initParams["actionCodes"][action]
-                self.teamAction = None
-            except IndexError as err:
-                '''
-                TODO log index error
-                '''
-                print("Index error")
-            return
+                try:
+                    ActionObject._actions = initParams["actionCodes"]
+                    self.actionCode = initParams["actionCodes"][action]
+                    self.teamAction = None
+                except IndexError as err:
+                    '''
+                    TODO log index error
+                    '''
+                    print("Index error")
+                return
+            else:
+                try:
+                    self.actionCode=random.choice(ActionObject._actions)
+                    self.teamAction=None
+                except:
+                    print('諦めな・・・')
+                return
 
     def init_real(self, initParams=None, action=None):
 
@@ -289,19 +296,27 @@ class ConfActionObject1:
 
         # An int means the action is an index into the action codes in initParams
         if isinstance(action, int):
-            
-            if "actionCodes" not in initParams: raise Exception('action codes not found in init params', initParams)
+            if initParams is not None:
+                if "actionCodes" not in initParams:
+                    raise Exception('action codes not found in init params', initParams)
 
-            try:
-                ActionObject1._actions = initParams["actionCodes"]
-                self.actionCode = initParams["actionCodes"][action]
-                self.teamAction = None
-            except IndexError as err:
-                '''
-                TODO log index error
-                '''
-                print("Index error")
-            return
+                try:
+                    ActionObject1._actions = initParams["actionCodes"]
+                    self.actionCode = initParams["actionCodes"][action]
+                    self.teamAction = None
+                except IndexError as err:
+                    '''
+                    TODO log index error
+                    '''
+                    print("Index error")
+                return
+            else:
+                try:
+                    self.actionCode=random.choice(ActionObject1._actions)
+                    self.teamAction=None
+                except:
+                    print('諦めな・・・')
+                return
 
     def init_real(self, initParams=None, action=None):
 
@@ -544,19 +559,27 @@ class ConfActionObject2:
 
         # An int means the action is an index into the action codes in initParams
         if isinstance(action, int):
-            
-            if "actionCodes" not in initParams: raise Exception('action codes not found in init params', initParams)
+            if initParams is not None:
+                if "actionCodes" not in initParams:
+                    raise Exception('action codes not found in init params', initParams)
 
-            try:
-                # ActionObject2._actions = initParams["actionCodes"]
-                self.actionCode = ActionObject2._actions[action]
-                self.teamAction = None
-            except IndexError as err:
-                '''
-                TODO log index error
-                '''
-                print("Index error")
-            return
+                try:
+                    # ActionObject2._actions = initParams["actionCodes"]
+                    self.actionCode = ActionObject2._actions[action]
+                    self.teamAction = None
+                except IndexError as err:
+                    '''
+                    TODO log index error
+                    '''
+                    print("Index error")
+                return
+            else:
+                try:
+                    self.actionCode=random.choice(ActionObject2._actions)
+                    self.teamAction=None
+                except:
+                    print('諦めな・・・')
+                return
 
     def init_real(self, initParams=None, action=None):
 

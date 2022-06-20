@@ -253,9 +253,13 @@ class Team:
                     '''
                     valid_choices = list(filter(lambda x: not x.isActionAtomic(), self.learners))
                     learner = random.choice(valid_choices)
+                
+
 
                 deleted_learners.append(learner)
                 self.removeLearner(learner)
+
+            assert len(self.learners)>1, 'learnes extinvtion:mutate_deleat'
 
             return deleted_learners
 
@@ -297,6 +301,8 @@ class Team:
 
             # Ensure we don't pick the same learner twice by filtering the learners we've added from the selection pool
             selection_pool = list(filter(lambda x:x not in added_learners, selection_pool))
+
+        assert len(self.learners)>1, 'learnes extinvtion: mutaion_add'
 
         return added_learners
 
@@ -351,6 +357,9 @@ class Team:
 
                 # Add the mutated learner to our list of mutations
                 mutated_learners[str(learner.id)] = str(newLearner.id)
+        
+        assert len(self.learners)>1, 'learnes extinvtion: mutaion_mutate'
+
 
       
         return mutated_learners, new_learners              
@@ -706,6 +715,7 @@ class Team2:
                     # Otherwise if we only have one, filter it out and pick from the remaining learners
                     valid_choices = list(filter(lambda x: not x.isActionAtomic(), self.learners)) # isActionAtomic以外から削除を決定。
                     learner = random.choice(valid_choices)
+                assert len(self.learners)<2, 'learnes extinvtion'
 
                 deleted_learners.append(learner)
                 self.removeLearner(learner)

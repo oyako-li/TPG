@@ -29,7 +29,7 @@ def setup_logger(_name, _logfile='LOGFILENAME', test=False, load=True):
     if load:
         _ch = logging.StreamHandler()
         _ch.setLevel(logging.DEBUG)
-        _ch_formatter = logging.Formatter('[{}](%(filename)s:%(lineno)s) %(name)s,%(funcName)s:%(message)s'.format(_filename))
+        _ch_formatter = logging.Formatter('[{}][{}]%(name)s,%(funcName)s:%(message)s'.format(_logfile, _filename))
         _ch.setFormatter(_ch_formatter)
 
         # add the handlers to the logger

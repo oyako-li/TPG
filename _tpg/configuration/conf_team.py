@@ -1,4 +1,5 @@
 from _tpg.team import Team1, Team2
+from _tpg.learner import Learner, Learner1, Learner2
 from _tpg.utils import flip
 import random
 import uuid
@@ -8,10 +9,15 @@ import copy
 The main building block of TPG. Each team has multiple learning which decide the
 action to take in the graph.
 """
+def breakpoint(_print):
+    import sys
+    print(_print)
+    sys.exit()
 class ConfTeam:
 
     def init_def(self, initParams:dict):
         self.learners = []
+        self.children=[]
         self.outcomes = {} # scores at various tasks
         self.fitness = None
         self.inLearners = [] # ids of learners referencing this team
@@ -41,20 +47,17 @@ class ConfTeam:
             * Are action atomic
             * Whose team we have not yet visited
         '''
-        valid_learners = [lrnr for lrnr in self.learners if lrnr.isActionAtomic() or str(lrnr.getActionTeam().id) not in visited]
+        # breakpoint(self.learners)
+        # assert len(self.learners)>1, f'empty of {str(self.id)}.learners'
+        if len(self.learners)==0:
+            print('0 valid')
+            self.addLearner(Learner())
 
-        """if len(valid_learners) == 0:
-            print("checking learner visiteds")
-            print("Visited: " + str(visited))
-            for learner in self.learners:
-                if learner.isActionAtomic():
-                    print("Atomic")
-                else:
-                    print("Team: " + str(learner.getActionTeam().id))
-            print("")"""
+
+        valid_learners = [lrnr for lrnr in self.learners if lrnr.isActionAtomic() or str(lrnr.getActionTeam().id) not in visited]
         
         if len(valid_learners)==0: 
-            print(self.learners)
+
             mutate_learner = random.choice(self.learners)
             clone = mutate_learner.clone()
             if not clone.isActionAtomic(): clone.actionObj.teamAction.inLearner.remove(str(clone.id))
@@ -98,6 +101,10 @@ class ConfTeam:
     Returns an action to use based on the current state. Learner traversal.
     """
     def act_learnerTrav(self, state, visited, actVars=None, path_trace=None):
+
+        if len(self.learners)==0:
+            print('0 valid')
+            self.addLearner(Learner())
 
         valid_learners = [lrnr for lrnr in self.learners
                 if lrnr.isActionAtomic() or str(lrnr.id) not in visited]
@@ -259,6 +266,8 @@ class ConfTeam:
                 if len(cursor.inTeams) == 0 and not cursor.isActionAtomic():
                     cursor.actionObj.teamAction.inLearners.remove(str(cursor.id))
 
+        assert len(self.learners)>1, 'learnes extinvtion: mutate'
+
         # return the number of iterations of mutation
         return rampantReps, mutation_delta
 
@@ -289,7 +298,10 @@ class ConfTeam1:
 
         # Add this team's id to the list of visited ids
         visited.append(str(self.id)) 
-        
+        if len(self.learners)==0:
+            print('0 valid')
+            self.addLearner(Learner1())
+
         '''
         Valid learners are ones which:
             * Are action atomic
@@ -545,6 +557,10 @@ class ConfTeam2:
         # Add this team's id to the list of visited ids
         visited.append(str(self.id)) 
         
+        if len(self.learners)==0:
+            print('0 valid')
+            self.addLearner(Learner2())
+
         '''
         Valid learners are ones which:
             * Are action atomic

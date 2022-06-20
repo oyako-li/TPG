@@ -10,7 +10,7 @@ Action  Object has a program to produce a value for the action, program doesn't
 run if just a discrete action code.
 """
 class ActionObject:
-    _actions=[]
+    _actions=[0]
 
     '''
     An action object can be initalized by:
@@ -18,20 +18,14 @@ class ActionObject:
         - Passing an index into the action codes in initParams as the action
         - Passing a team as the action
     '''
-    def __init__(self, initParams=None, action=None):
-
-        '''
-        Defer importing the Team class to avoid circular dependency.
-        This may require refactoring to fix properly
-        '''
+    def __init__(self, initParams=None, action = None): 
         from _tpg.team import Team
 
         # The action is a team
-        '''
-        TODO handle team references somehow
-        '''
         if isinstance(action, Team):
             self.teamAction = action
+            self.actionCode = None
+            #print("chose team action")
             return
     
 
@@ -43,20 +37,27 @@ class ActionObject:
 
         # An int means the action is an index into the action codes in initParams
         if isinstance(action, int):
-            
-            if "actionCodes" not in initParams:
-                raise Exception('action codes not found in init params', initParams)
+            if initParams is not None:
+                if "actionCodes" not in initParams:
+                    raise Exception('action codes not found in init params', initParams)
 
-            try:
-                ActionObject._actions = initParams["actionCodes"]
-
-                self.actionCode = initParams["actionCodes"][action]
-                self.teamAction = None
-            except IndexError as err:
-                '''
-                TODO log index error
-                '''
-            return
+                try:
+                    ActionObject._actions = initParams["actionCodes"]
+                    self.actionCode = initParams["actionCodes"][action]
+                    self.teamAction = None
+                except IndexError as err:
+                    '''
+                    TODO log index error
+                    '''
+                    print("Index error")
+                return
+            else:
+                try:
+                    self.actionCode=random.choice(ActionObject._actions)
+                    self.teamAction=None
+                except:
+                    print('諦めな・・・')
+                return
 
     '''
     An ActionObject is equal to another object if that object:
@@ -197,7 +198,7 @@ class ActionObject:
             cls.mutate = ConfActionObject.mutate_real
 
 class ActionObject1:
-    _actions=[]
+    _actions=[0]
     '''
     An action object can be initalized by:
         - Copying another action object
@@ -293,7 +294,7 @@ class ActionObject1:
             cls.mutate = ConfActionObject1.mutate_real
 
 class ActionObject2:
-    _actions=[]
+    _actions=[0]
     '''
     An action object can be initalized by:
         - Copying another action object

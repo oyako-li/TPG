@@ -126,6 +126,6 @@ if __name__ == '__main__':
         if arg=='test': test=True
         if arg=='load': load=True
     trainer = Trainer(teamPopSize=10)
-    _filename = growing(trainer, task, _episodes=1, _show=show, _test=test, _load=load)
-    trainer.saveToFile(f'{task}/{_filename}')
+    _filename = growing(trainer, task, _episodes=1, _frames=500, _show=show, _test=test, _load=load)
+    # trainer.saveToFile(f'{task}/{_filename}')
 

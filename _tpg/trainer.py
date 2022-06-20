@@ -481,64 +481,15 @@ class Trainer:
         rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.fitness, reverse=True)
         numKeep = len(self.rootTeams) - int(len(self.rootTeams)*self.gap)
         deleteTeams = rankedTeams[numKeep:]
-
-        #print("BEFORE SELECTION:")        
-
-        # pre_orphans = [learner for learner in self.learners if learner.numTeamsReferencing() == 0]
-
-        # #print("Number of orphans before selection: {}".format(len(pre_orphans)))
-
-        # orphan_teams = [team for team in self.teams if len(team.inLearners) == 0 and team not in self.rootTeams]
-        #print("Number of orphan teams before selection: {}".format(len(orphan_teams)))
-
-        #print("Learners:")
-        #for cursor in self.learners:
-        #   print("Learner {} -> [{}]{} inTeams:".format( cursor.id, "Atomic" if cursor.isActionAtomic() else "Team", cursor.actionObj.actionCode if cursor.isActionAtomic() else cursor.actionObj.teamAction.id))
-        #    for t_id in cursor.inTeams:
-        #        print("\t{}".format(t_id ))
-
-        #for cursor in self.teams:
-        #    print("Team: {} inLearners:".format(cursor.id))
-        #    for l_id in cursor.inLearners:
-        #        print("\t{}".format(l_id))
-
-        #print("-----------------------------------------------------")  
-
-        # delete the team unless it is an elite (best at some task at-least)
-        # don't delete elites because they may not be root - TODO: elaborate
-        for team in [t for t in deleteTeams if t not in self.elites]:
-
-    
+        for team in [t for t in deleteTeams if t not in self.elites]:    
             # remove learners from team and delete team from populations
             if extraTeams is None or team not in extraTeams:
                 team.removeLearners()
             self.teams.remove(team)
             self.rootTeams.remove(team)
 
-        #print("AFTER SELECTION:")
-        # Find all learners that have no teams pointing to them
         orphans = [learner for learner in self.learners if learner.numTeamsReferencing() == 0]
-        #print("Number of orphans after selection: {}".format(len(orphans)))
 
-        #print("Orphans:")
-        #for cursor in orphans:
-        #    print("\t{}".format(cursor.id))
-
-        #print("Learners:")
-        #for cursor in self.learners:
-        #    print("Learner {} -> [{}]{} inTeams:".format( cursor.id, "Atomic" if cursor.isActionAtomic() else "Team", cursor.actionObj.actionCode if cursor.isActionAtomic() else cursor.actionObj.teamAction.id))
-        #    for t_id in cursor.inTeams:
-        #        print("\t{}".format(t_id ))
-
-        #for cursor in self.teams:
-        #    print("Team: {} inLearners:".format(cursor.id))
-        #    for l_id in cursor.inLearners:
-        #        print("\t{}".format(l_id))
-
-        #print("-----------------------------------------------------")  
-
-        # These learners will be removed, but before we can do that, we should remove 
-        # their ids from any team's inLearners that the orphans are pointing to.
         for cursor in orphans:
             if not cursor.isActionAtomic(): # If the orphan does NOT point to an atomic action
                 # Get the team the orphan is pointing to and remove the orphan's id from the team's in learner list
@@ -610,6 +561,8 @@ class Trainer:
             # maybe make root team
             if team.numLearnersReferencing() == 0 or team in self.elites:
                 self.rootTeams.append(team)
+            
+
 
         self.generation += 1
 
