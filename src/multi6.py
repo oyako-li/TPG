@@ -23,7 +23,7 @@ def _env(params, actions, state):
             print(act)
         state, reward, isDone, debug = env.step(action=act)
         # connection.send(state)
-        params['state'] = state
+        states.put(state)
         show_state(env=env)
         if isDone: state = env.reset()
 
@@ -43,9 +43,8 @@ def thinking(_state):
 def _actor(params, actions, states):
     # results = Result(actions=actions)
     with Pool(2) as pool:
-            # state = connection.recv()
-        state = states.get()
-        results = pool.apply(thinking, params['state'], callback=update_result)
+        state = states.get(timeout=0.2)
+        results = pool.apply_async(thinking, state, callback=update_result)
         while True:
             try:
                 result = results.get(timeout=10)
@@ -58,14 +57,15 @@ def _actor(params, actions, states):
 
 if __name__ == '__main__':
     actions = Queue()
+    states = Queue()
     envpipe, actorpipe = Pipe()
     manager = Manager()
     params = manager.dict()
     params['task'] = 'CartPole-v0'
-    params['state']= 0
+    # params['state']= 0
 
-    env = Process(target=_env, args=(params, actions, envpipe))
-    actor = Process(target=_actor, args=(params, actions, actorpipe))
+    env = Process(target=_env, args=(params, actions, states))
+    actor = Process(target=_actor, args=(params, actions, states))
     env.start()
     actor.start()
     env.join(timeout=10)

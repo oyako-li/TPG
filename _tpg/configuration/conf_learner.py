@@ -1,3 +1,4 @@
+from _tpg.learner import Learner1
 from _tpg.program import Program, Program1, Program2
 from _tpg.action_object import ActionObject, ActionObject1, ActionObject2
 from _tpg.team import Team, Team1, Team2
@@ -143,7 +144,7 @@ class ConfLearner1:
 
     def init_def(self, 
         initParams:int or dict=0, 
-        program:Program1=Program1(), 
+        program:Program1=Program1(initParams=None), 
         actionObj:Team1 or ActionObject1 or int=ActionObject1(action=0), 
         numRegisters:int or np.ndarray=8, 
         _ancestor=None,

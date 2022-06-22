@@ -465,7 +465,6 @@ class Team:
         if functionsDict["mutate"] == "def":
             cls.mutate = ConfTeam.mutate_def
 
-
 class Team1:
 
     def __init__(self, initParams:int or dict=0): pass

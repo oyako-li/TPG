@@ -283,12 +283,7 @@ inTeams:\n""".format(
 
 class Learner1:
 
-    def __init__(self, 
-        initParams:int or dict, 
-        program:Program1, 
-        actionObj, 
-        numRegisters:int or np.ndarray
-    )->None: pass
+    def __init__(self, initParams, program, actionObj, numRegisters, learner_id=None)->None: pass
 
     """
     Get the bid value, highest gets its action selected.
@@ -471,12 +466,7 @@ class Learner1:
 
 class Learner2:
 
-    def __init__(self, 
-        initParams:int or dict, 
-        program:Program2, 
-        actionObj, 
-        numRegisters:int or np.ndarray
-    )->None: pass
+    def __init__(self, initParams, program, actionObj, numRegisters, learner_id=None)->None: pass
 
     """
     Get the bid value, highest gets its action selected.
@@ -656,3 +646,7 @@ class Learner2:
 
         if functionsDict["clone"] == "def":
             cls.clone = ConfLearner2.clone_def
+
+if __name__=='__main__':
+    Learner1.configFunctions()
+    learner = Learner1()

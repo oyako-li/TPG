@@ -205,8 +205,51 @@ class ActionObject1:
         - Passing an index into the action codes in initParams as the action
         - Passing a team as the action
     '''
-    def __init__(self, initParams=None, action=None): pass
+    def __init__(self, initParams:dict or int =None, action = None, _task='task'):
 
+        '''
+        Defer importing the Team class to avoid circular dependency.
+        This may require refactoring to fix properly
+        '''
+        from _tpg.team import Team1
+
+        # The action is a team
+        if isinstance(action, Team1):
+            self.teamAction = action
+            self.actionCode = None
+            #print("chose team action")
+            return
+    
+
+        # The action is another action object
+        if isinstance(action, ActionObject1):
+            self.actionCode = action.actionCode
+            self.teamAction = action.teamAction
+            return
+
+        # An int means the action is an index into the action codes in initParams
+        if isinstance(action, int):
+            if initParams is not None:
+                if "actionCodes" not in initParams:
+                    raise Exception('action codes not found in init params', initParams)
+
+                try:
+                    ActionObject1._actions = initParams["actionCodes"]
+                    self.actionCode = initParams["actionCodes"][action]
+                    self.teamAction = None
+                except IndexError as err:
+                    '''
+                    TODO log index error
+                    '''
+                    print("Index error")
+                return
+            else:
+                try:
+                    self.actionCode=random.choice(ActionObject1._actions)
+                    self.teamAction=None
+                except:
+                    print('諦めな・・・')
+                return
     '''
     An ActionObject is equal to another object if that object:
         - is an instance of the ActionObject class
