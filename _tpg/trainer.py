@@ -4,8 +4,11 @@ from _tpg.learner import Learner, Learner1, Learner2
 from _tpg.program import Program, Program1, Program2
 from _tpg.action_object import ActionObject, ActionObject1, ActionObject2
 from _tpg.configuration import configurer
+from _tpg.emulator import Emulator
 import random
 import pickle
+import time
+import multiprocessing as mp
 
 """
 Functionality for actually growing TPG and evolving it to be functional.
@@ -561,8 +564,6 @@ class Trainer:
             # maybe make root team
             if team.numLearnersReferencing() == 0 or team in self.elites:
                 self.rootTeams.append(team)
-            
-
 
         self.generation += 1
 
@@ -587,8 +588,7 @@ class Trainer:
                     learnersRemoved.append(learner)
                     team.removeLearner(learner)
 
-            if affected:
-                teamsAffected.append(team)
+            if affected:    teamsAffected.append(team)
 
         return learnersRemoved, teamsAffected
     
@@ -1648,6 +1648,7 @@ class Trainer2:
         self.actVars:       dict = {}
         self.functionsDict: dict = {}
         self.nOperations = None
+        self.emulator = Emulator()
 
 
 
@@ -2204,11 +2205,39 @@ class Trainer2:
     def saveToFile(self, fileName):
         pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
     
-    # def thinker(self, state):
-    #     agents = self.getAgents()
-    #     emulators = self.getEmulators()
-    #     for _ in range(self.thinkingTime):
+    def thinker(self, state):
+        agents = self.getAgents()
+        self.now = state
+        self.actions={}
+        self.states={}
+        self.rewards={}
+        self.bestActions=[]
+        # emulators = self.getEmulators()
+        with mp.Pool(len(agents)) as pool:
+            pool.map(func=self.thinking, iterable=agents)
+        
+        best_actions = max(self.rewards, key = self.rewards.get)
+        self.bestActions = self.actions[best_actions]
+        return self.bestActions
 
+    def thinking(self, agent):
+        start_time = time.time()
+        act = agent.act(self.now)
+        state, reward = self.emulator.step(act, state)
+        self.actions[str(agent.team.id)]=[act]
+        self.states[str(agent.team.id)]=[state]
+        self.rewards[str(agent.team.id)]=reward
+        while time.time() < start_time+self.thinkingTime:
+            act = agent.act(state)
+            state, reward = self.emulator.step(act, state)
+            self.actions[str(agent.team.id)]+=[act]
+            self.states[str(agent.team.id)]+=[state]
+            self.rewards[str(agent.team.id)]+=reward
+        
+    def actor(self):
+        for act in self.bestActions:
+            yield act
+    
+    def emulator(self): pass
 
-    # def actor(self, _bestAction, _env): pass
     # def getEmulators(self): pass

@@ -344,8 +344,51 @@ class ActionObject2:
         - Passing an index into the action codes in initParams as the action
         - Passing a team as the action
     '''
-    def __init__(self, initParams=None, action=None, _task='task'): pass
+    def __init__(self, initParams:dict or int =None, action = None, _task='task'):
 
+        '''
+        Defer importing the Team class to avoid circular dependency.
+        This may require refactoring to fix properly
+        '''
+        from _tpg.team import Team2
+
+        # The action is a team
+        if isinstance(action, Team2):
+            self.teamAction = action
+            self.actionCode = None
+            #print("chose team action")
+            return
+    
+
+        # The action is another action object
+        if isinstance(action, ActionObject2):
+            self.actionCode = action.actionCode
+            self.teamAction = action.teamAction
+            return
+
+        # An int means the action is an index into the action codes in initParams
+        if isinstance(action, int):
+            if initParams is not None:
+                if "actionCodes" not in initParams:
+                    raise Exception('action codes not found in init params', initParams)
+
+                try:
+                    # ActionObject2._actions = initParams["actionCodes"]
+                    self.actionCode = ActionObject2._actions[action]
+                    self.teamAction = None
+                except IndexError as err:
+                    '''
+                    TODO log index error
+                    '''
+                    print("Index error")
+                return
+            else:
+                try:
+                    self.actionCode=random.choice(ActionObject2._actions)
+                    self.teamAction=None
+                except:
+                    print('諦めな・・・')
+                return
 
     """
     Returns the action code, and if applicable corresponding real action(s).

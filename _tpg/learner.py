@@ -649,4 +649,12 @@ class Learner2:
 
 if __name__=='__main__':
     Learner1.configFunctions()
+    functionDict={
+        "init": "def",
+        "bid":"def",
+        "getAction": "def",
+        "getAction": "def",
+        "getAction": "def",
+        "getAction": "def",
+    }
     learner = Learner1()

@@ -559,8 +559,8 @@ class ConfTeam2:
         
         if len(self.learners)==0:
             print('0 valid')
-        self.addLearner(Learner2())
-        breakpoint()
+            self.addLearner(Learner2())
+        # breakpoint()
 
         '''
         Valid learners are ones which:

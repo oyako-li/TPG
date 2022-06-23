@@ -3,6 +3,7 @@ from _tpg.configuration.conf_team import ConfTeam, ConfTeam1, ConfTeam2
 from _tpg.configuration.conf_learner import ConfLearner, ConfLearner1, ConfLearner2
 from _tpg.configuration.conf_action_object import ConfActionObject, ConfActionObject1, ConfActionObject2
 from _tpg.configuration.conf_program import ConfProgram, ConfProgram1, ConfProgram2
+from _tpg.configuration.conf_emulator import ConfEmulator
 
 import numpy as np
 
@@ -474,7 +475,7 @@ def _configureLearnerTraversal1(trainer, Agent, Team, actVarKeys, actVarVals):
     Team.act = ConfTeam1.act_learnerTrav
     trainer.functionsDict["Team"]["act"] = "learnerTrav"
 
-def configure2(trainer, Trainer, Agent, Team, Learner, ActionObject, Program,
+def configure2(trainer, Trainer, Agent, Emulator, Team, Learner, ActionObject, Program,
         doMemory, memType, doReal, operationSet, traversal):
 
     # keys and values used in key value pairs for suplementary function args
@@ -493,16 +494,16 @@ def configure2(trainer, Trainer, Agent, Team, Learner, ActionObject, Program,
     actVarVals = [0]
 
     # before doing any special configuration, set all methods to defaults
-    _configureDefaults2(trainer, Trainer, Agent, Team, Learner, ActionObject, Program)
+    _configureDefaults2(trainer, Trainer, Agent, Emulator, Team, Learner, ActionObject, Program)
 
     # configure Program execution stuff, affected by memory and operations set
-    _configureProgram2(trainer, Learner, Program, actVarKeys, actVarVals, mutateParamKeys, mutateParamVals, doMemory, memType, operationSet)
+    _configureProgram2(trainer, Emulator, Learner, Program, actVarKeys, actVarVals, mutateParamKeys, mutateParamVals, doMemory, memType, operationSet)
 
     # configure stuff for using real valued actions
-    if doReal:  _configureRealAction2(trainer, ActionObject, mutateParamKeys, mutateParamVals, doMemory)
+    if doReal:  _configureRealAction2(trainer, Emulator, ActionObject, mutateParamKeys, mutateParamVals, doMemory)
 
     # do learner traversal
-    if traversal == "learner": _configureLearnerTraversal2(trainer, Agent, Team, actVarKeys, actVarVals)
+    if traversal == "learner": _configureLearnerTraversal2(trainer, Agent, Emulator, Team, actVarKeys, actVarVals)
 
     trainer.mutateParams = dict(zip(mutateParamKeys, mutateParamVals))
     trainer.actVars = dict(zip(actVarKeys, actVarVals))
@@ -510,7 +511,7 @@ def configure2(trainer, Trainer, Agent, Team, Learner, ActionObject, Program,
 """
 For each class in TPG, sets the functions to their defaults.
 """
-def _configureDefaults2(trainer, Trainer, Agent, Team, Learner, ActionObject, Program):
+def _configureDefaults2(trainer, Trainer, Agent, Emulator, Team, Learner, ActionObject, Program):
     # set trainer functions
     # TODO: add learner configurable
 
@@ -520,6 +521,11 @@ def _configureDefaults2(trainer, Trainer, Agent, Team, Learner, ActionObject, Pr
     Agent.reward = ConfAgent2.reward_def
     Agent.taskDone = ConfAgent2.taskDone_def
     Agent.saveToFile = ConfAgent2.saveToFile_def
+
+    Emulator.__init__ = ConfEmulator.init_def
+    Emulator.step = ConfEmulator.step_def
+    Emulator.reconfirmation = ConfEmulator.reconfirmation_def
+    Emulator.saveToFile = ConfEmulator.saveToFile_def
 
     # set team functions
     Team.__init__ = ConfTeam2.init_def
@@ -561,6 +567,12 @@ def _configureDefaults2(trainer, Trainer, Agent, Team, Learner, ActionObject, Pr
         "act": "def",
         "reward": "def",
         "taskDone": "def",
+        "saveToFile": "def"
+    }
+    trainer.functionsDict["Emulator"] = {
+        "init": "def",
+        "step": "def",
+        "reconfirmation": "def",
         "saveToFile": "def"
     }
     trainer.functionsDict["Team"] = {

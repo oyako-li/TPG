@@ -144,7 +144,7 @@ class ConfLearner1:
 
     def init_def(self, 
         initParams:int or dict=0, 
-        program:Program1=Program1(initParams=None), 
+        program:Program1=Program1(), 
         actionObj:Team1 or ActionObject1 or int=ActionObject1(action=0), 
         numRegisters:int or np.ndarray=8, 
         _ancestor=None,
