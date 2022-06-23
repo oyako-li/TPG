@@ -12,18 +12,18 @@ def show_state(env, step=0, name='', info=''):
 
     
 
-def _env(params, actions, state):
+def _env(params, _actions, _states):
     env = gym.make(params['task'])
 
     state = env.reset()
     while True:
         act = env.action_space.sample()
-        if not actions.empty(): 
-            act = actions.get()
+        if not _actions.empty(): 
+            act = _actions.get()
             print(act)
         state, reward, isDone, debug = env.step(action=act)
         # connection.send(state)
-        states.put(state)
+        _states.put(state)
         show_state(env=env)
         if isDone: state = env.reset()
 
@@ -36,15 +36,19 @@ def update_result(val):
     return val
 
 
-def thinking(_state):
+def thinking(_states):
     time.sleep(0.1)
+
+    if not _states.empty(): 
+        state = _states.get(timeout=0.2)
+        return state
+
     return 0
 
 def _actor(params, actions, states):
     # results = Result(actions=actions)
     with Pool(2) as pool:
-        state = states.get(timeout=0.2)
-        results = pool.apply_async(thinking, state, callback=update_result)
+        results = pool.apply_async(thinking, states, callback=update_result)
         while True:
             try:
                 result = results.get(timeout=10)
@@ -61,7 +65,7 @@ if __name__ == '__main__':
     envpipe, actorpipe = Pipe()
     manager = Manager()
     params = manager.dict()
-    params['task'] = 'CartPole-v0'
+    params['task'] = 'CartPole-v1'
     # params['state']= 0
 
     env = Process(target=_env, args=(params, actions, states))
