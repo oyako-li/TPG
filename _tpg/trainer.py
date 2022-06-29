@@ -1652,7 +1652,7 @@ class Trainer11:
 
 
         # configure tpg functions and variable appropriately now
-        configurer.configure1(self, Trainer11, Agent11, Team11, Learner11, ActionObject11, Program11, self.memType is not None, self.memType, self.doReal, self.operationSet, self.traversal)
+        configurer.configure11(self, Trainer11, Agent11, Team11, Learner11, ActionObject11, Program11, self.memType is not None, self.memType, self.doReal, self.operationSet, self.traversal)
 
         self._initializePopulations()
 
@@ -1974,7 +1974,7 @@ class Trainer11:
             # ここをランダムではなく、階層上あるいは、過去の経験よりセレクトする。
             # rootTeamsを混ぜて、新しい、チームを作る。この時、そのチームは、プログラムへの１階層目のポインタを混ぜるだけである。
             parent = random.choice(self.rootTeams)
-            child = Team1(initParams=self.mutateParams)
+            child = Team11(initParams=self.mutateParams)
 
             # child starts just like parent
             for learner in parent.learners: child.addLearner(learner)
@@ -2182,7 +2182,7 @@ class Trainer11:
         return result
 
     def cleanup(self):
-        configurer._configureDefaults1(self, Trainer11, Agent11, Team11, Learner11, ActionObject11, Program11)
+        configurer._configureDefaults11(self, Trainer11, Agent11, Team11, Learner11, ActionObject11, Program11)
 
     def configFunctions(self):
         # first set up Agent functions

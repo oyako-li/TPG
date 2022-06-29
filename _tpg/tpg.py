@@ -52,7 +52,6 @@ class TPG:
         plt.title("%s | Step: %d %s" % (name, step, info))
         plt.axis('off')
 
-        
     # To transform pixel matrix to a single vector.
     def getState(self,inState):
         # each row is all 1 color
@@ -147,13 +146,14 @@ class TPG:
 
     def instance_valid(self, trainer)->bool: pass
 
-    def start(self, _task, _show, _test, _load, _trainer=None):
+    def start(self, _task, _show, _test, _load, _trainer=None, _generations=1000, _episodes=1, _frames=500):
         if _trainer is None : 
             if not self.trainer : raise Exception('trainer is not defined')
             _trainer = self.trainer
 
-        _filename = self.growing(_trainer, _task, _episodes=1, _show=_show, _test=_test, _load=_load)
+        _filename = self.growing(_trainer, _task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load)
         _trainer.saveToFile(f'{task}/{_filename}')
+        return _filename
 
 class NativeTPG(TPG):
 
@@ -187,6 +187,7 @@ class NativeTPG(TPG):
             prevPops=prevPops, mutatePrevs=mutatePrevs,
             initMaxActProgSize=initMaxActProgSize,           # *
             nActRegisters=nActRegisters)
+
     def instance_valid(self, trainer) -> bool:
         if not isinstance(trainer, Trainer): raise Exception('this object is not Trainer')
 
@@ -333,26 +334,34 @@ if __name__ == '__main__':
     test = False
     load = False
     trainer = None
-    tpg = NativeTPG(teamPopSize=10)
+    teamPopSize=10
+    generations=1000
+    episodes=1
+    frames=1000
+
+    tpg = NativeTPG(teamPopSize=teamPopSize)
 
 
     for arg in sys.argv[2:]:
         if arg=='show': show = True
         if arg=='test': test=True
         if arg=='load': load=True
+        if 'teamPopSize:' in arg: teamPopSize=int(arg.split(':')[1])
+        if 'generatioins:' in arg: generations=int(arg.split(':')[1])
+        if 'episodes:' in arg: episodes=int(arg.split(':')[1])
+        if 'frames:' in arg: frames=int(arg.split(':')[1])
+    
+    for arg in sys.argv[2:]:
         if arg=='native':
-            tpg = NativeTPG(teamPopSize=10)
+            tpg = NativeTPG(teamPopSize=teamPopSize)
         if arg=='hierarchy':
-            tpg = MemoryAndHierarchicalTPG(teamPopSize=10)
+            tpg = MemoryAndHierarchicalTPG(teamPopSize=teamPopSize)
         if arg=='emulator':
-            tpg = EmulatorTPG(teamPopSize=10)
+            tpg = EmulatorTPG(teamPopSize=teamPopSize)
         
         if 'model:' in arg:
             modelPath = arg.split(':')[1]
             print(modelPath)
             trainer = loadTrainer(modelPath)
 
-    tpg.instance_valid(trainer)
-
-    print("let's start")
-    tpg.start(_task=task, _show=show, _test=test, _load=load, _trainer=trainer)
+    tpg.start(_task=task, _show=show, _test=test, _load=load, _trainer=trainer, _generations=generations, _episodes=episodes, _frames=frames)
