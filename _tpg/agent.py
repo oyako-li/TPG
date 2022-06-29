@@ -198,7 +198,7 @@ class Agent2:
 
     def __init__(self, team, functionsDict:dict, num:int=1, actVars:dict=None)->None: pass
 
-    def act(self, state, path_trace=None): pass
+    def image(self, _act, _state, path_trace=None): pass
 
     def reward(self, score, task='task')->None: pass
 
@@ -213,7 +213,7 @@ class Agent2:
         from _tpg.team import Team2
         from _tpg.learner import Learner2
         from _tpg.program import Program2
-        from _tpg.action_object import ActionObject2
+        # from _tpg.action_object import ActionObject2
 
         # first set up Agent functions
         Agent2.configFunctions(self.functionsDict["Agent"])
@@ -225,7 +225,7 @@ class Agent2:
         Learner2.configFunctions(self.functionsDict["Learner"])
 
         # set up ActionObject functions
-        ActionObject2.configFunctions(self.functionsDict["ActionObject"])
+        # ActionObject2.configFunctions(self.functionsDict["ActionObject"])
 
         # set up Program functions
         Program2.configFunctions(self.functionsDict["Program"])
@@ -238,7 +238,7 @@ class Agent2:
             cls.__init__ = ConfAgent2.init_def
 
         if functionsDict["act"] == "def":
-            cls.act = ConfAgent2.act_def
+            cls.image = ConfAgent2.image_def
 
         if functionsDict["reward"] == "def":
             cls.reward = ConfAgent2.reward_def

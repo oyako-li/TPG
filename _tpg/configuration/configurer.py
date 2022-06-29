@@ -1,9 +1,9 @@
 from _tpg.configuration.conf_agent import ConfAgent, ConfAgent1, ConfAgent2
 from _tpg.configuration.conf_team import ConfTeam, ConfTeam1, ConfTeam2
 from _tpg.configuration.conf_learner import ConfLearner, ConfLearner1, ConfLearner2
-from _tpg.configuration.conf_action_object import ConfActionObject, ConfActionObject1, ConfActionObject2
+from _tpg.configuration.conf_action_object import ConfActionObject, ConfActionObject1
 from _tpg.configuration.conf_program import ConfProgram, ConfProgram1, ConfProgram2
-from _tpg.configuration.conf_emulator import ConfEmulator
+# from _tpg.configuration.conf_emulator import ConfEmulator
 
 import numpy as np
 
@@ -475,18 +475,18 @@ def _configureLearnerTraversal1(trainer, Agent, Team, actVarKeys, actVarVals):
     Team.act = ConfTeam1.act_learnerTrav
     trainer.functionsDict["Team"]["act"] = "learnerTrav"
 
-def configure2(trainer, Trainer, Agent, Emulator, Team, Learner, ActionObject, Program,
+def configure2(trainer, Trainer, Agent, Team, Learner, MemoryObject, Program,
         doMemory, memType, doReal, operationSet, traversal):
 
     # keys and values used in key value pairs for suplementary function args
     # for mutation and creation
     mutateParamKeys = ["generation", "maxTeamSize", "pLrnDel", "pLrnAdd", "pLrnMut",
-        "pProgMut", "pActMut", "pActAtom", "pInstDel", "pInstAdd", "pInstSwp", "pInstMut",
-        "actionCodes", "nDestinations", "inputSize", "initMaxProgSize",
+        "pProgMut", "pMemMut", "pMemAtom", "pInstDel", "pInstAdd", "pInstSwp", "pInstMut",
+        "memoryCodes", "nDestinations", "inputSize", "initMaxProgSize",
         "rampantGen", "rampantMin", "rampantMax", "idCountTeam", "idCountLearner", "idCountProgram"]
     mutateParamVals = [trainer.generation, trainer.maxTeamSize, trainer.pLrnDel, trainer.pLrnAdd, trainer.pLrnMut,
-        trainer.pProgMut, trainer.pActMut, trainer.pActAtom, trainer.pInstDel, trainer.pInstAdd, trainer.pInstSwp, trainer.pInstMut,
-        trainer.actionCodes, trainer.nRegisters, trainer.inputSize, trainer.initMaxProgSize,
+        trainer.pProgMut, trainer.pMemMut, trainer.pMemAtom, trainer.pInstDel, trainer.pInstAdd, trainer.pInstSwp, trainer.pInstMut,
+        trainer.memoryCodes, trainer.nRegisters, trainer.inputSize, trainer.initMaxProgSize,
         trainer.rampancy[0], trainer.rampancy[1], trainer.rampancy[2], 0, 0, 0]
 
     # additional stuff for act, like memory matrix possible
@@ -494,16 +494,16 @@ def configure2(trainer, Trainer, Agent, Emulator, Team, Learner, ActionObject, P
     actVarVals = [0]
 
     # before doing any special configuration, set all methods to defaults
-    _configureDefaults2(trainer, Trainer, Agent, Emulator, Team, Learner, ActionObject, Program)
+    _configureDefaults2(trainer, Trainer, Agent, Team, Learner, MemoryObject, Program)
 
     # configure Program execution stuff, affected by memory and operations set
-    _configureProgram2(trainer, Emulator, Learner, Program, actVarKeys, actVarVals, mutateParamKeys, mutateParamVals, doMemory, memType, operationSet)
+    _configureProgram2(trainer, Learner, Program, actVarKeys, actVarVals, mutateParamKeys, mutateParamVals, doMemory, memType, operationSet)
 
     # configure stuff for using real valued actions
-    if doReal:  _configureRealAction2(trainer, Emulator, ActionObject, mutateParamKeys, mutateParamVals, doMemory)
+    if doReal:  _configureRealMemory2(trainer, MemoryObject, mutateParamKeys, mutateParamVals, doMemory)
 
     # do learner traversal
-    if traversal == "learner": _configureLearnerTraversal2(trainer, Agent, Emulator, Team, actVarKeys, actVarVals)
+    if traversal == "learner": _configureLearnerTraversal2(trainer, Agent, Team, actVarKeys, actVarVals)
 
     trainer.mutateParams = dict(zip(mutateParamKeys, mutateParamVals))
     trainer.actVars = dict(zip(actVarKeys, actVarVals))
@@ -511,48 +511,39 @@ def configure2(trainer, Trainer, Agent, Emulator, Team, Learner, ActionObject, P
 """
 For each class in TPG, sets the functions to their defaults.
 """
-def _configureDefaults2(trainer, Trainer, Agent, Emulator, Team, Learner, ActionObject, Program):
+def _configureDefaults2(trainer, Trainer, Agent, Team, Learner, MemoryObject, Program):
     # set trainer functions
     # TODO: add learner configurable
 
     # set agent functions
     Agent.__init__ = ConfAgent2.init_def
-    Agent.act = ConfAgent2.act_def
+    Agent.image = ConfAgent2.image_def
     Agent.reward = ConfAgent2.reward_def
     Agent.taskDone = ConfAgent2.taskDone_def
     Agent.saveToFile = ConfAgent2.saveToFile_def
 
-    Emulator.__init__ = ConfEmulator.init_def
-    Emulator.step = ConfEmulator.step_def
-    Emulator.reconfirmation = ConfEmulator.reconfirmation_def
-    Emulator.saveToFile = ConfEmulator.saveToFile_def
-
     # set team functions
     Team.__init__ = ConfTeam2.init_def
-    Team.act = ConfTeam2.act_def
+    Team.image = ConfTeam2.image_def
     Team.addLearner = ConfTeam2.addLearner_def
     Team.removeLearner = ConfTeam2.removeLearner_def
     Team.removeLearners = ConfTeam2.removeLearners_def
-    Team.numAtomicActions = ConfTeam2.numAtomicActions_def
+    Team.numAtomicMemories = ConfTeam2.numAtomicMemories_def
     Team.mutate = ConfTeam2.mutate_def
     Team.clone = ConfTeam2.clone_def
 
     # set learner functions
     Learner.__init__ = ConfLearner2.init_def
     Learner.bid = ConfLearner2.bid_def
-    Learner.getAction = ConfLearner2.getAction_def
-    Learner.getActionTeam = ConfLearner2.getActionTeam_def
-    Learner.isActionAtomic = ConfLearner2.isActionAtomic_def
+    Learner.getImage = ConfLearner2.getImage_def
+    Learner.getMemoryTeam = ConfLearner2.getMemoryTeam_def
+    Learner.isMemoryAtomic = ConfLearner2.isMemoryAtomic_def
     Learner.mutate = ConfLearner2.mutate_def
     Learner.clone = ConfLearner2.clone_def
 
 
     # set action object functions
-    ActionObject.__init__ = ConfActionObject2.init_def
-    ActionObject.getAction = ConfActionObject2.getAction_def
-    ActionObject.isAtomic = ConfActionObject2.isAtomic_def
-    ActionObject.mutate = ConfActionObject2.mutate_def
-    ActionObject._actions = trainer.actionCodes
+    MemoryObject.memories = trainer.memoryCodes
 
     # set program functions
     Program.__init__ = ConfProgram2.init_def
@@ -564,40 +555,34 @@ def _configureDefaults2(trainer, Trainer, Agent, Emulator, Team, Learner, Action
     
     trainer.functionsDict["Agent"] = {
         "init": "def",
-        "act": "def",
+        "image": "def",
         "reward": "def",
         "taskDone": "def",
         "saveToFile": "def"
     }
-    trainer.functionsDict["Emulator"] = {
-        "init": "def",
-        "step": "def",
-        "reconfirmation": "def",
-        "saveToFile": "def"
-    }
     trainer.functionsDict["Team"] = {
         "init": "def",
-        "act": "def",
+        "image": "def",
         "addLearner": "def",
         "removeLearner": "def",
         "removeLearners": "def",
-        "numAtomicActions": "def",
+        "numAtomicMemories": "def",
         "mutate": "def",
         "clone": "def"
     }
     trainer.functionsDict["Learner"] = {
         "init": "def",
         "bid": "def",
-        "getAction": "def",
-        "getActionTeam": "def",
-        "isActionAtomic": "def",
+        "getImage": "def",
+        "getMemoryTeam": "def",
+        "isMemoryAtomic": "def",
         "mutate": "def",
         "clone": "def"
     }
-    trainer.functionsDict["ActionObject"] = {
+    trainer.functionsDict["MemoryObject"] = {
         "init": "def",
-        "getAction": "def",
-        "getRealAction": "None",
+        "getImage": "def",
+        "getRealImage": "None",
         "isAtomic": "def",
         "mutate": "def"
     }
@@ -691,28 +676,23 @@ def _configureProgram2(trainer, Learner, Program, actVarKeys, actVarVals,
 """
 Make the appropriate changes needed to be able to use real actions.
 """
-def _configureRealAction2(trainer, ActionObject, mutateParamKeys, mutateParamVals, doMemory):
+def _configureRealMemory2(trainer, MemoryObject, mutateParamKeys, mutateParamVals, doMemory):
     # change functions as needed
-    ActionObject.__init__ = ConfActionObject2.init_real
-    trainer.functionsDict["ActionObject"]["init"] = "real"
-    ActionObject.getAction = ConfActionObject2.getAction_real
-    trainer.functionsDict["ActionObject"]["getAction"] = "real"
+    trainer.functionsDict["MemoryObject"]["init"] = "real"
+    trainer.functionsDict["MemoryObject"]["getImage"] = "real"
     if doMemory:
-        ActionObject.getRealAction = ConfActionObject2.getRealAction_real_mem
-        trainer.functionsDict["ActionObject"]["getRealAction"] = "real_mem"
+        trainer.functionsDict["MemoryObject"]["getRealMemory"] = "real_mem"
     else:
-        ActionObject.getRealAction = ConfActionObject2.getRealAction_real
-        trainer.functionsDict["ActionObject"]["getRealAction"] = "real"
-    ActionObject.mutate = ConfActionObject2.mutate_real
-    trainer.functionsDict["ActionObject"]["mutate"] = "real"
+        trainer.functionsDict["MemoryObject"]["getRealMemory"] = "real"
+    trainer.functionsDict["MemoryObject"]["mutate"] = "real"
 
     # mutateParams needs to have lengths of actions and act program
-    mutateParamKeys += ["actionLengths", "initMaxActProgSize", "nActRegisters"]
-    mutateParamVals += [trainer.actionLengths, trainer.initMaxActProgSize, trainer.nActRegisters]
+    mutateParamKeys += ["memoryLengths", "initMaxActProgSize", "nMemRegisters"]
+    mutateParamVals += [trainer.memoryLengths, trainer.initMaxActProgSize, trainer.nMemRegisters]
 
 """
 Switch to learner traversal.
 """
 def _configureLearnerTraversal2(trainer, Agent, Team, actVarKeys, actVarVals):
-    Team.act = ConfTeam2.act_learnerTrav
-    trainer.functionsDict["Team"]["act"] = "learnerTrav"
+    Team.image = ConfTeam2.image_learnerTrav
+    trainer.functionsDict["Team"]["image"] = "learnerTrav"

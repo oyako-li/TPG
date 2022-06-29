@@ -530,7 +530,6 @@ class ConfTeam1:
         _clone.id = uuid.uuid4()
         for learner in self.learners:
             _clone.addLearner(learner.clone())
-        print('cloned')
 
         return _clone
 
@@ -545,7 +544,7 @@ class ConfTeam2:
         if isinstance(initParams, dict): self.genCreate = initParams["generation"]
         elif isinstance(initParams, int): self.genCreate = initParams
 
-    def act_def(self, state, visited:list, actVars=None, path_trace=None):
+    def image_def(self, _act, _state, visited:list, actVars=None, path_trace=None):
 
         # If we've already visited me, throw an exception
         if str(self.id) in visited:
@@ -567,20 +566,20 @@ class ConfTeam2:
             * Are action atomic
             * Whose team we have not yet visited
         '''
-        valid_learners = [lrnr for lrnr in self.learners if lrnr.isActionAtomic() or str(lrnr.getActionTeam().id) not in visited]
+        valid_learners = [lrnr for lrnr in self.learners if lrnr.isMemoryAtomic() or str(lrnr.getMemoryTeam().id) not in visited]
         
         if len(valid_learners)==0: 
 
             print(self.learners)
             mutate_learner = random.choice(self.learners)
             clone = mutate_learner.clone()
-            if not clone.isActionAtomic(): clone.actionObj.teamAction.inLearner.remove(str(clone.id))
-            clone.actionObj.mutate()
+            if not clone.isMemoryAtomic(): clone.memoryObj.teamMemory.inLearner.remove(str(clone.id))
+            clone.memoryObj.mutate()
 
             self.addLearner(clone)
             valid_learners.append(clone)
 
-        top_learner = max(valid_learners, key=lambda lrnr: lrnr.bid(state, actVars=actVars))
+        top_learner = max(valid_learners, key=lambda lrnr: lrnr.bid(_act, _state, actVars=actVars))
 
     
         # If we're tracing this path
@@ -592,8 +591,8 @@ class ConfTeam2:
             path_segment =  {
                 'team_id': str(self.id),
                 'top_learner': str(top_learner.id),
-                'top_bid': top_learner.bid(state, actVars=actVars),
-                'top_action': top_learner.actionObj.actionCode if top_learner.isActionAtomic() else str(top_learner.actionObj.teamAction.id),
+                'top_bid': top_learner.bid(_act, _state, actVars=actVars),
+                'top_memory': top_learner.memoryObj.memoryCode if top_learner.isMemoryAtomic() else str(top_learner.memoryObj.teamMemory.id),
                 'depth': last_segment['depth'] + 1 if last_segment != None else 0,# Record path depth
                 'bids': []
             }
@@ -602,26 +601,26 @@ class ConfTeam2:
             for cursor in valid_learners:
                 path_segment['bids'].append({
                     'learner_id': str(cursor.id),
-                    'bid': cursor.bid(state, actVars=actVars),
-                    'action': cursor.actionObj.actionCode if cursor.isActionAtomic() else str(cursor.actionObj.teamAction.id)
+                    'bid': cursor.bid(_act, _state, actVars=actVars),
+                    'memory': cursor.memoryObj.memoryCode if cursor.isMemoryAtomic() else str(cursor.memoryObj.teamMemory.id)
                 })
 
             # Append our path segment to the trace
             path_trace.append(path_segment)
 
-        return top_learner.getAction(state, visited=visited, actVars=actVars, path_trace=path_trace)
+        return top_learner.getImage(_act, _state, visited=visited, actVars=actVars, path_trace=path_trace)
 
 
     """
     Returns an action to use based on the current state. Learner traversal.
     """
-    def act_learnerTrav(self, state, visited, actVars=None, path_trace=None):
+    def image_learnerTrav(self, _act, _state, visited, actVars=None, path_trace=None):
 
         valid_learners = [lrnr for lrnr in self.learners
-                if lrnr.isActionAtomic() or str(lrnr.id) not in visited]
+                if lrnr.isMemoryAtomic() or str(lrnr.id) not in visited]
 
         top_learner = max(valid_learners,
-            key=lambda lrnr: lrnr.bid(state, actVars=actVars))
+            key=lambda lrnr: lrnr.bid(_act,_state, actVars=actVars))
 
         # If we're tracing this path
         if path_trace != None:
@@ -631,8 +630,8 @@ class ConfTeam2:
             path_segment =  {
                 'team_id': str(self.id),
                 'top_learner': str(top_learner.id),
-                'top_bid': top_learner.bid(state, actVars=actVars),
-                'top_action': top_learner.actionObj.actionCode if top_learner.isActionAtomic() else str(top_learner.actionObj.teamAction.id),
+                'top_bid': top_learner.bid(_act, _state, actVars=actVars),
+                'top_memory': top_learner.memoryObj.memoryCode if top_learner.isMemoryAtomic() else str(top_learner.memoryObj.teamMemory.id),
                 'depth': last_segment['depth'] + 1 if last_segment != None else 0,# Record path depth
                 'bids': []
             }
@@ -641,21 +640,20 @@ class ConfTeam2:
             for cursor in valid_learners:
                 path_segment['bids'].append({
                     'learner_id': str(cursor.id),
-                    'bid': cursor.bid(state, actVars=actVars),
-                    'action': cursor.actionObj.actionCode if cursor.isActionAtomic() else str(cursor.actionObj.teamAction.id)
+                    'bid': cursor.bid(_act, _state, actVars=actVars),
+                    'memory': cursor.memoryObj.memoryCode if cursor.isMemoryAtomic() else str(cursor.memoryObj.teamMemory.id)
                 })
 
             # Append our path segment to the trace
             path_trace.append(path_segment)
 
         visited.append(str(top_learner.id))
-        return top_learner.getAction(state, visited=visited, actVars=actVars, path_trace=path_trace)
+        return top_learner.getImage(_act, _state, visited=visited, actVars=actVars, path_trace=path_trace)
 
     """
     Adds learner to the team and updates number of references to that program.
     """
     def addLearner_def(self, learner=None):
-        program = learner.program
 
         self.learners.append(learner)
         learner.inTeams.append(str(self.id)) # Add this team's id to the list of teams that reference the learner
@@ -701,10 +699,10 @@ class ConfTeam2:
     """
     Number of learners with atomic actions on this team.
     """
-    def numAtomicActions_def(self):
+    def numAtomicMemories_def(self):
         num = 0
         for lrnr in self.learners:
-            if lrnr.isActionAtomic():
+            if lrnr.isMemoryAtomic():
                 num += 1
 
         return num
@@ -774,8 +772,8 @@ class ConfTeam2:
                 new_learners.remove(cursor)
 
         for cursor in new_learners:
-                if len(cursor.inTeams) == 0 and not cursor.isActionAtomic():
-                    cursor.actionObj.teamAction.inLearners.remove(str(cursor.id))
+                if len(cursor.inTeams) == 0 and not cursor.isMemoryAtomic():
+                    cursor.memoryObj.teamMemory.inLearners.remove(str(cursor.id))
 
         # return the number of iterations of mutation
         return rampantReps, mutation_delta, new_learners
@@ -790,6 +788,5 @@ class ConfTeam2:
         _clone.id = uuid.uuid4()
         for learner in self.learners:
             _clone.addLearner(learner.clone())
-        print('cloned')
 
         return _clone

@@ -535,53 +535,50 @@ class ConfActionObject1:
 
 class ConfActionObject2:
 
-    def init_def(self, initParams:dict or int =None, action = None, _task='task'):
+    def init_def(self, initParams:dict or int =None, _state = None, _task='task'):
 
-        '''
-        Defer importing the Team class to avoid circular dependency.
-        This may require refactoring to fix properly
-        '''
         from _tpg.team import Team2
 
         # The action is a team
-        if isinstance(action, Team2):
-            self.teamAction = action
-            self.actionCode = None
+        if isinstance(_state, Team2):
+            self.teamMemory = _state
+            self.memoryCode = None
             #print("chose team action")
             return
     
 
         # The action is another action object
-        if isinstance(action, ActionObject2):
-            self.actionCode = action.actionCode
-            self.teamAction = action.teamAction
+        if isinstance(_state, ActionObject2):
+            self.memoryCode = _state.memoryCode
+            self.teamMemory = _state.teamMemory
             return
 
         # An int means the action is an index into the action codes in initParams
-        if isinstance(action, int):
-            if initParams is not None:
-                if "actionCodes" not in initParams:
-                    raise Exception('action codes not found in init params', initParams)
+        if isinstance(_state, np.ndarray):
+            # if initParams is not None:
+            #     if "memoryCodes" not in initParams:
+            #         raise Exception('_state codes not found in init params', initParams)
 
-                try:
-                    # ActionObject2._actions = initParams["actionCodes"]
-                    self.actionCode = ActionObject2._actions[action]
-                    self.teamAction = None
-                except IndexError as err:
-                    '''
-                    TODO log index error
-                    '''
-                    print("Index error")
-                return
-            else:
-                try:
-                    self.actionCode=random.choice(ActionObject2._actions)
-                    self.teamAction=None
-                except:
-                    print('諦めな・・・')
-                return
+            #     try:
+            #         # ActionObject2._actions = initParams["actionCodes"]
+            #         self.memoryCode = ActionObject2._states[_state]
+            #         self.teamMemory = None
+            #     except IndexError as err:
+            #         '''
+            #         TODO log index error
+            #         '''
+            #         print("Index error")
+            #     return
+            # else:
+            #     try:
+            #         self.memoryCode=random.choice(ActionObject2._states)
+            #         self.teamMemory=None
+            #     except:
+            #         print('諦めな・・・')
+            #     return
+            ActionObject2._states.append([])
 
-    def init_real(self, initParams=None, action=None):
+    def init_real(self, initParams=None, _state=None):
 
         '''
         Defer importing the Team class to avoid circular dependency.
@@ -590,11 +587,11 @@ class ConfActionObject2:
         from _tpg.team import Team2
 
         
-        if isinstance(action, Team2):
+        if isinstance(_state, Team2):
             # The action is a team
             self.actionCode = None
             self.actionLength = None
-            self.teamAction = action
+            self.teamAction = _state
             self.program = Program2(
                 initParams=initParams, 
                 maxProgramLength=initParams["initMaxActProgSize"],
@@ -602,22 +599,22 @@ class ConfActionObject2:
                 nDestinations=initParams["nDestinations"],
                 inputSize=initParams["inputSize"]
             )
-        elif isinstance(action, ActionObject2):
+        elif isinstance(_state, ActionObject2):
             # The action is another action object
-            self.actionCode = action.actionCode
-            self.actionLength = action.actionLength
-            self.teamAction = action.teamAction
+            self.actionCode = _state.actionCode
+            self.actionLength = _state.actionLength
+            self.teamAction = _state.teamAction
             self.program = Program2(
-                instructions=action.program.instructions,
+                instructions=_state.program.instructions,
                 initParams=initParams
             )
-        elif isinstance(action, int):
+        elif isinstance(_state, int):
             # An int means the action is an index into the action codes in initParams
-            if "actionCodes" not in initParams: raise Exception('action codes not found in init params', initParams)
+            if "stateCodes" not in initParams: raise Exception('_state codes not found in init params', initParams)
             try:
-                ActionObject2._actions = initParams["actionCodes"]
-                self.actionCode = initParams["actionCodes"][action]
-                self.actionLength = initParams["actionLengths"][action]
+                ActionObject2.__states = initParams["stateCodes"]
+                self._stateCode = initParams["_stateCodes"][_state]
+                self.actionLength = initParams["_stateLengths"][_state]
                 self.teamAction = None
                 self.program = Program2(
                     initParams=initParams, 
@@ -634,9 +631,6 @@ class ConfActionObject2:
 
         self.registers = np.zeros(max(initParams["nActRegisters"], initParams["nDestinations"]))
 
-    """
-    Returns the action code, and if applicable corresponding real action.
-    """
     def getAction_def(self, state, visited, actVars=None, path_trace=None):
         if self.teamAction is not None:
             # action from team
@@ -645,9 +639,6 @@ class ConfActionObject2:
             # atomic action
             return self.actionCode
 
-    """
-    Returns the action code, and if applicable corresponding real action(s).
-    """
     def getAction_real(self, state, visited, actVars=None, path_trace=None):
         if self.teamAction is not None:
             # action from team
@@ -659,9 +650,6 @@ class ConfActionObject2:
             else:
                 return self.actionCode, self.getRealAction(state, actVars=actVars)
 
-    """
-    Gets the real action from a register.
-    """
     def getRealAction_real(self, state, actVars=None):
         Program2.execute(state, self.registers,
                         self.program.instructions[:,0], self.program.instructions[:,1],
@@ -669,9 +657,6 @@ class ConfActionObject2:
 
         return self.registers[:self.actionLength]
 
-    """
-    Gets the real action from a register. With memory.
-    """
     def getRealAction_real_mem(self, state, actVars=None):
         Program2.execute(state, self.registers,
                         self.program.instructions[:,0], self.program.instructions[:,1],
@@ -681,19 +666,13 @@ class ConfActionObject2:
 
         return self.registers[:self.actionLength]
 
-    """
-    Returns true if the action is atomic, otherwise the action is a team.
-    """
     def isAtomic_def(self):
         return self.teamAction is None
 
-    """
-    Change action to team or atomic action.
-    """
     def mutate_def(self, mutateParams=None, parentTeam=None, teams=None, pActAtom=None, learner_id=None):
         # mutate action
         if any(item is None for item in (mutateParams, parentTeam, teams, pActAtom, learner_id)):
-            self.actionCode = random.choice(ActionObject2._actions)
+            self.actionCode = random.choice(ActionObject2.__states)
             self.teamAction = None
             print('0 valid_learners')
 
@@ -701,14 +680,10 @@ class ConfActionObject2:
 
         if flip(pActAtom):
             # atomic
-            '''
-            If we already have an action code make sure not to pick the same one.
-            TODO handle case where there is only 1 action code.
-            '''
             if self.actionCode is not None:
-                options = list(filter(lambda code: code != self.actionCode,mutateParams["actionCodes"]))
+                options = list(filter(lambda code: code != self.actionCode,mutateParams["_stateCodes"]))
             else:
-                options = mutateParams["actionCodes"]
+                options = mutateParams["_stateCodes"]
 
             # let our current team know we won't be pointing to them anymore
             if not self.isAtomic():
@@ -739,14 +714,11 @@ class ConfActionObject2:
         
         return self
 
-    """
-    Change action to team or atomic action.
-    """
     def mutate_real(self, mutateParams, parentTeam, teams, pActAtom, learner_id):
 
         # first maybe mutate just program
         if any(item is None for item in (mutateParams, parentTeam, teams, pActAtom, learner_id)):
-            self.actionCode = random.choice(ActionObject2._actions)
+            self.actionCode = random.choice(ActionObject2.__states)
             self.teamAction = None
             print('0 valid_learners')
             return self
@@ -757,14 +729,10 @@ class ConfActionObject2:
         # mutate action
         if flip(pActAtom):
             # atomic
-            '''
-            If we already have an action code make sure not to pick the same one.
-            TODO handle case where there is only 1 action code.
-            '''
             if self.actionCode is not None:
-                options = list(filter(lambda code: code != self.actionCode, mutateParams["actionCodes"]))
+                options = list(filter(lambda code: code != self.actionCode, mutateParams["_stateCodes"]))
             else:
-                options = mutateParams["actionCodes"]
+                options = mutateParams["_stateCodes"]
 
             # let our current team know we won't be pointing to them anymore
             if not self.isAtomic():
@@ -772,7 +740,7 @@ class ConfActionObject2:
                 self.teamAction.inLearners.remove(str(learner_id))
 
             self.actionCode = random.choice(options)
-            self.actionLength = mutateParams["actionLengths"][self.actionCode]
+            self.actionLength = mutateParams["_stateLengths"][self.actionCode]
             self.teamAction = None
         else:
             # team action

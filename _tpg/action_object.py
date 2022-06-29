@@ -337,14 +337,14 @@ class ActionObject1:
             cls.mutate = ConfActionObject1.mutate_real
 
 class ActionObject2:
-    _actions=[0]
+    _states={}
     '''
     An action object can be initalized by:
         - Copying another action object
         - Passing an index into the action codes in initParams as the action
         - Passing a team as the action
     '''
-    def __init__(self, initParams:dict or int =None, action = None, _task='task'):
+    def __init__(self, initParams:dict or int =None, _state = None, _task='task'):
 
         '''
         Defer importing the Team class to avoid circular dependency.
@@ -353,28 +353,28 @@ class ActionObject2:
         from _tpg.team import Team2
 
         # The action is a team
-        if isinstance(action, Team2):
-            self.teamAction = action
+        if isinstance(_state, Team2):
+            self.teamAction = _state
             self.actionCode = None
             #print("chose team action")
             return
     
 
         # The action is another action object
-        if isinstance(action, ActionObject2):
-            self.actionCode = action.actionCode
-            self.teamAction = action.teamAction
+        if isinstance(_state, ActionObject2):
+            self.actionCode = _state.actionCode
+            self.teamAction = _state.teamAction
             return
 
         # An int means the action is an index into the action codes in initParams
-        if isinstance(action, int):
+        if isinstance(_state, int):
             if initParams is not None:
-                if "actionCodes" not in initParams:
-                    raise Exception('action codes not found in init params', initParams)
+                if "stateCodes" not in initParams:
+                    raise Exception('state codes not found in init params', initParams)
 
                 try:
                     # ActionObject2._actions = initParams["actionCodes"]
-                    self.actionCode = ActionObject2._actions[action]
+                    self.actionCode = ActionObject2._states[_state]
                     self.teamAction = None
                 except IndexError as err:
                     '''
@@ -384,7 +384,7 @@ class ActionObject2:
                 return
             else:
                 try:
-                    self.actionCode=random.choice(ActionObject2._actions)
+                    self.actionCode=random.choice(ActionObject2._states)
                     self.teamAction=None
                 except:
                     print('諦めな・・・')

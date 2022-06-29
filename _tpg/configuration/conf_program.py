@@ -1118,10 +1118,7 @@ class ConfProgram2:
         self.id = uuid.uuid4()
 
 
-    """
-    Executes the program which returns a single final value.
-    """
-    def execute_def(inpt, regs, modes, ops, dsts, srcs):
+    def execute_def(act, inpt, regs, modes, ops, dsts, srcs):
         regSize = len(regs)
         inptLen = len(inpt)
         for i in range(len(modes)):
@@ -1152,7 +1149,7 @@ class ConfProgram2:
     """
     Executes the program which returns a single final value using shared memory.
     """
-    def execute_mem(inpt, regs, modes, ops, dsts, srcs,
+    def execute_mem(act, inpt, regs, modes, ops, dsts, srcs,
             memMatrix, memRows, memCols, memWriteProbFunc):
         regSize = len(regs)
         inptLen = len(inpt)
@@ -1206,7 +1203,7 @@ class ConfProgram2:
     """
     Executes the program which returns a single final value.
     """
-    def execute_full(inpt, regs, modes, ops, dsts, srcs):
+    def execute_full(act, inpt, regs, modes, ops, dsts, srcs):
         regSize = len(regs)
         inptLen = len(inpt)
         for i in range(len(modes)):
@@ -1241,7 +1238,7 @@ class ConfProgram2:
     """
     Executes the program which returns a single final value using shared memory.
     """
-    def execute_mem_full(inpt, regs, modes, ops, dsts, srcs,
+    def execute_mem_full(act, inpt, regs, modes, ops, dsts, srcs,
             memMatrix, memRows, memCols, memWriteProbFunc):
         regSize = len(regs)
         inptLen = len(inpt)
@@ -1299,7 +1296,7 @@ class ConfProgram2:
     """
     Executes the program which returns a single final value.
     """
-    def execute_custom(inpt, regs, modes, ops, dsts, srcs):
+    def execute_custom(act, inpt, regs, modes, ops, dsts, srcs):
         regSize = len(regs)
         inptLen = len(inpt)
         for i in range(len(modes)):
@@ -1342,7 +1339,7 @@ class ConfProgram2:
     """
     Executes the program which returns a single final value using shared memory.
     """
-    def execute_mem_custom(inpt, regs, modes, ops, dsts, srcs,  memMatrix, memRows, memCols, memWriteProbFunc):
+    def execute_mem_custom(act, inpt, regs, modes, ops, dsts, srcs,  memMatrix, memRows, memCols, memWriteProbFunc):
         regSize = len(regs)
         inptLen = len(inpt)
         for i in range(len(modes)):
@@ -1404,10 +1401,7 @@ class ConfProgram2:
             elif regs[dest] == inf:     regs[dest] = finfo(float64).max
             elif regs[dest] == NINF:    regs[dest] = finfo(float64).min
 
-    """
-    Executes the program which returns a single final value.
-    """
-    def execute_robo(inpt, regs, modes, ops, dsts, srcs):
+    def execute_robo(act, inpt, regs, modes, ops, dsts, srcs):
         regSize = len(regs)
         inptLen = len(inpt)
         for i in range(len(modes)):
@@ -1436,10 +1430,7 @@ class ConfProgram2:
             elif regs[dest] == inf:     regs[dest] = finfo(float64).max
             elif regs[dest] == NINF:    regs[dest] = finfo(float64).min
 
-    """
-    Executes the program which returns a single final value.
-    """
-    def execute_mem_robo(inpt, regs, modes, ops, dsts, srcs,
+    def execute_mem_robo(act, inpt, regs, modes, ops, dsts, srcs,
             memMatrix, memRows, memCols, memWriteProbFunc):
         regSize = len(regs)
         inptLen = len(inpt)
@@ -1492,29 +1483,15 @@ class ConfProgram2:
             elif regs[dest] == inf:     regs[dest] = finfo(float64).max
             elif regs[dest] == NINF:    regs[dest] = finfo(float64).min
 
-    """
-    Returns probability of write at given index using default distribution.
-    """
     def memWriteProb_def(i):
         return 0.25 - (0.01*i)**2
 
-    """
-    Returns probability of write at given index using cauchy distribution with
-    lambda = 1.
-    """
     def memWriteProb_cauchy1(i):
         return 1/(pi*(i**2+1))
 
-    """
-    Returns probability of write at given index using cauchy distribution with
-    lambda = 1/2.
-    """
     def memWriteProb_cauchyHalf(i):
         return 0.25/(0.5*pi*(i**2+0.25))
 
-    """
-    Mutates the program, by performing some operations on the instructions.
-    """
     def mutate_def(self, mutateParams):
         # Make a copy of our original instructions
         original_instructions = copy.deepcopy(self.instructions)
@@ -1578,9 +1555,6 @@ class ConfProgram2:
             
             return self
 
-    """
-    Potentially modifies the instructions in a few ways.
-    """
     def mutateInstructions_def(self, mutateParams):
 
         changed = False

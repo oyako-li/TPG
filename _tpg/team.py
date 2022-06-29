@@ -671,7 +671,7 @@ class Team2:
 
     def __init__(self, initParams:int or dict=0): pass
    
-    def act(self, state, visited, actVars=None, path_trace=None): pass
+    def image(self, _act, _prestate, visited, actVars=None, path_trace=None): pass
 
     def addLearner(self, learner=None): pass
 
@@ -679,7 +679,7 @@ class Team2:
 
     def removeLearners(self): pass
 
-    def numAtomicActions(self): pass
+    def numAtomicMemories(self): pass
 
     def mutate(self, mutateParams, allLearners, teams): pass
 
@@ -696,7 +696,7 @@ class Team2:
                 raise Exception("pLrnDel is greater than or equal to 1.0!")
 
             # Freak out if we don't have an atomic action
-            if self.numAtomicActions() < 1: 
+            if self.numAtomicMemories() < 1: 
                 raise Exception("Less than one atomic action in team! This shouldn't happen", self)
 
 
@@ -708,11 +708,11 @@ class Team2:
 
 
                 # If we have more than one learner with an atomic action pick any learner to delete
-                if self.numAtomicActions() > 1:
+                if self.numAtomicMemories() > 1:
                     learner = random.choice(self.learners)
                 else: 
                     # Otherwise if we only have one, filter it out and pick from the remaining learners
-                    valid_choices = list(filter(lambda x: not x.isActionAtomic(), self.learners)) # isActionAtomic以外から削除を決定。
+                    valid_choices = list(filter(lambda x: not x.isMemoryAtomic(), self.learners)) # isActionAtomic以外から削除を決定。
                     learner = random.choice(valid_choices)
                 # assert len(self.learners)>2, 'learnes extinvtion'
 
@@ -750,27 +750,21 @@ class Team2:
 
     def _mutation_mutate(self, probability, mutateParams, teams):
         mutated_learners = {}
-        '''
-         This original learners thing is important, otherwise may mutate learners that we just added through mutation. 
-         This breaks reference tracking because it results in 'ghost learners' that were created during mutation, added themselves 
-         to inLearners in the teams they pointed to, but them were mutated out before being tracked by the trainer. So you end up
-         with teams hold a record in their inLearners to a learner that doesn't exist
-        '''
         original_learners = list(self.learners)
         new_learners = []
         for learner in original_learners:
             if flip(probability):
 
                 # If we only have one learner with an atomic action and the current learner is it
-                if self.numAtomicActions() == 1 and learner.isActionAtomic():
-                    pActAtom0 = 1.1 # Ensure their action remains atomic
+                if self.numAtomicMemories() == 1 and learner.isMemoryAtomic():
+                    pMemAtom0 = 1.1 # Ensure their action remains atomic
                 else:
                     # Otherwise let there be a probability that the learner's action is atomic as defined in the mutate params
-                    pActAtom0 = mutateParams['pActAtom']
+                    pMemAtom0 = mutateParams['pMemAtom']
 
                 #print("Team {} creating learner".format(self.id))
                 # Create a new new learner 
-                newLearner = Learner2(mutateParams, learner.program, learner.actionObj, len(learner.registers), learner.id)
+                newLearner = Learner2(mutateParams, learner.program, learner.memoryObj, len(learner.registers), learner.id)
                 new_learners.append(newLearner)
                 # Add the mutated learner to our learners
                 # Must add before mutate so that the new learner has this team in its inTeams
@@ -778,7 +772,7 @@ class Team2:
 
 
                 # mutate it
-                newLearner.mutate(mutateParams, self, teams, pActAtom0)
+                newLearner.mutate(mutateParams, self, teams, pMemAtom0)
                 # Remove the existing learner from the team
                 self.removeLearner(learner)
 
@@ -845,9 +839,9 @@ class Team2:
             cls.__init__ = ConfTeam2.init_def
 
         if functionsDict["act"] == "def":
-            cls.act = ConfTeam2.act_def
+            cls.image = ConfTeam2.image_def
         elif functionsDict["act"] == "learnerTrav":
-            cls.act = ConfTeam2.act_learnerTrav
+            cls.image = ConfTeam2.image_learnerTrav
 
         if functionsDict["addLearner"] == "def":
             cls.addLearner = ConfTeam2.addLearner_def
@@ -858,8 +852,8 @@ class Team2:
         if functionsDict["removeLearners"] == "def":
             cls.removeLearners = ConfTeam2.removeLearners_def
 
-        if functionsDict["numAtomicActions"] == "def":
-            cls.numAtomicActions = ConfTeam2.numAtomicActions_def
+        if functionsDict["numAtomicMemories"] == "def":
+            cls.numAtomicMemories = ConfTeam2.numAtomicMemories_def
 
         if functionsDict["mutate"] == "def":
             cls.mutate = ConfTeam2.mutate_def

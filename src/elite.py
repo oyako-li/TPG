@@ -3,10 +3,10 @@ import gym
 import matplotlib.pyplot as plt
 
 
-task = 'CartPole-v0'
+task = 'MountainCar-v0'
 env = gym.make(task)
 
-trainer = loadTrainer(f"{task}/2022-06-19_14-31-35")
+trainer = loadTrainer(f"{task}/2022-06-24_14-57-04")
 elietAgent = trainer.getEliteAgent(task)
 
 
@@ -21,8 +21,8 @@ def show_state(env, step=0, name='', info=''):
 
 state = env.reset()
 
-for _ in range(500):
-    show_state(env, _)
+while True:
+    show_state(env)
     act = elietAgent.act(state)
     state, reword, isDone, debug = env.step(act)
-    if isDone: break
+    if isDone: state = env.reset()

@@ -307,11 +307,9 @@ class Program2:
 
         self.id = uuid.uuid4()
 
-    """
-    Executes the program which returns a single final value.
-    """
     def execute(
-            inputState:np.ndarray,  # state
+            actioin:np.ndarray,     # _act
+            inputState:np.ndarray,  # _state
             registers:np.ndarray,   # self.registers
             modes:np.ndarray,       # self.program.instructions[:,0]
             operations:np.ndarray,  # self.program.instructions[:,1]
@@ -319,17 +317,8 @@ class Program2:
             srcs:np.ndarray         # self.program.instructions[:,3]
         ): pass
     
-    """
-    Potentially modifies the instructions in a few ways.
-    """
     def mutate(self, mutateParams): pass
 
-
-    '''
-    A program is equal to another object if that object:
-        - is an instance of the program class
-        - has identical instructions
-    '''
     def __eq__(self, __o:object) -> bool:
 
         # The other object must be an instance of the Program class
@@ -338,16 +327,9 @@ class Program2:
         # Compare instructions
         return np.array_equal(self.instructions, __o.instructions)
 
-    '''
-     Negation of __eq__
-    '''
     def __ne__(self, __o: object) -> bool:
         return not self.__eq__(__o)
 
-
-    """
-    Ensures proper functions are used in this class as set up by configurer.
-    """
     @classmethod
     def configFunctions(cls, functionsDict):
         from _tpg.configuration.conf_program import ConfProgram2

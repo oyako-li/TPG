@@ -244,3 +244,4 @@ def pathDepths(team, prevDepth=0, parents=[]):
         depths.extend(pathDepths(nTeam, myDepth, list(parents)))
 
     return depths
+

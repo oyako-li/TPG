@@ -1,7 +1,8 @@
 from _tpg.learner import Learner1
 from _tpg.program import Program, Program1, Program2
-from _tpg.action_object import ActionObject, ActionObject1, ActionObject2
+from _tpg.action_object import ActionObject, ActionObject1
 from _tpg.team import Team, Team1, Team2
+from _tpg.memory_object import MemoryObject
 from _tpg.utils import flip
 import numpy as np
 import random
@@ -243,7 +244,7 @@ class ConfLearner2:
     def init_def(self, 
         initParams:int or dict=0, 
         program:Program2=Program2(), 
-        actionObj:Team2 or ActionObject2 or int=ActionObject2(action=0), 
+        memoryObj:Team2 or MemoryObject or int =MemoryObject(), 
         numRegisters:int or np.ndarray=8, 
         _ancestor=None,
         _states:list=[],
@@ -251,11 +252,11 @@ class ConfLearner2:
         _frameNum:int=0
     ):
         self.program = Program2(
-            instructions=program.instructions
+            instructions = program.instructions
         ) #Each learner should have their own copy of the program
-        self.actionObj = ActionObject2(
-            action=actionObj, 
-            initParams=initParams
+        self.memoryObj = MemoryObject(
+            _state = memoryObj, 
+            initParams = initParams
         ) #Each learner should have their own copy of the action object
         if isinstance(numRegisters, int): self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
         else: self.registers = numRegisters
@@ -270,29 +271,29 @@ class ConfLearner2:
         self.id = uuid.uuid4()
 
 
-        if not self.isActionAtomic(): self.actionObj.teamAction.inLearners.append(str(self.id))
+        if not self.isMemoryAtomic(): self.memoryObj.teamMemory.inLearners.append(str(self.id))
 
-    def bid_def(self, state, actVars=None):
+    def bid_def(self, _act, _state, actVars=None):
         # exit early if we already got bidded this frame
         if self.frameNum == actVars["frameNum"]:
             return self.registers[0]
 
         self.frameNum = actVars["frameNum"]
 
-        Program2.execute(state, self.registers,
+        Program2.execute(_act, _state, self.registers,
                         self.program.instructions[:,0], self.program.instructions[:,1],
                         self.program.instructions[:,2], self.program.instructions[:,3])
 
         return self.registers[0]
 
-    def bid_mem(self, state, actVars=None):
+    def bid_mem(self, _act, _state, actVars=None):
         # exit early if we already got bidded this frame
         if self.frameNum == actVars["frameNum"]:
             return self.registers[0]
 
         self.frameNum = actVars["frameNum"]
 
-        Program2.execute(state, self.registers,
+        Program2.execute(_act, _state, self.registers,
                         self.program.instructions[:,0], self.program.instructions[:,1],
                         self.program.instructions[:,2], self.program.instructions[:,3],
                         actVars["memMatrix"], actVars["memMatrix"].shape[0], actVars["memMatrix"].shape[1],
@@ -300,16 +301,16 @@ class ConfLearner2:
 
         return self.registers[0]
 
-    def getAction_def(self, state, visited, actVars=None, path_trace=None):
-        return self.actionObj.getAction(state, visited, actVars=actVars, path_trace=path_trace)
+    def getImage_def(self, _act, _state, visited, actVars=None, path_trace=None):
+        return self.memoryObj.getImage(_act, _state, visited, actVars=actVars, path_trace=path_trace)
 
-    def getActionTeam_def(self):
-        return self.actionObj.teamAction
+    def getMemoryTeam_def(self):
+        return self.memoryObj.teamMemory
 
-    def isActionAtomic_def(self):
-        return self.actionObj.isAtomic()
+    def isMemoryAtomic_def(self):
+        return self.memoryObj.isAtomic()
 
-    def mutate_def(self, mutateParams, parentTeam, teams, pActAtom):
+    def mutate_def(self, mutateParams, parentTeam, teams, pMemAtom):
 
         changed = False
         while not changed:
@@ -321,11 +322,11 @@ class ConfLearner2:
                 self.program.mutate(mutateParams)
 
             # mutate the action
-            if flip(mutateParams["pActMut"]):
+            if flip(mutateParams["pMemMut"]):
 
                 changed = True
                 
-                self.actionObj.mutate(mutateParams, parentTeam, teams, pActAtom, learner_id=self.id)
+                self.memoryObj.mutate(mutateParams, parentTeam, teams, pMemAtom, learner_id=self.id)
 
         return self
 
@@ -333,6 +334,6 @@ class ConfLearner2:
         _clone = copy.deepcopy(self)
         _clone.inTeams = []
         _clone.id = uuid.uuid4()
-        if _clone.actionObj.teamAction : _clone.actionObj.teamAction.inLearners.append(str(_clone.id))
+        if _clone.memoryObj.teamMemory : _clone.memoryObj.teamMemory.inLearners.append(str(_clone.id))
         return _clone
 

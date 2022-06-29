@@ -5,10 +5,6 @@ import numpy as np
 import collections
 import uuid
 
-"""
-A team has multiple learners, each learner has a program which is executed to
-produce the bid value for this learner's action.
-"""
 class Learner:
 
     def __init__(self, initParams, program, actionObj, numRegisters, learner_id=None):
@@ -280,7 +276,6 @@ inTeams:\n""".format(
         if functionsDict["mutate"] == "def":
             cls.mutate = ConfLearner.mutate_def
 
-
 class Learner1:
 
     def __init__(self, initParams, program, actionObj, numRegisters, learner_id=None)->None: pass
@@ -466,40 +461,23 @@ class Learner1:
 
 class Learner2:
 
-    def __init__(self, initParams, program, actionObj, numRegisters, learner_id=None)->None: pass
+    def __init__(self, initParams, program, memoryObj, numRegisters, learner_id=None)->None: pass
 
-    """
-    Get the bid value, highest gets its action selected.
-    """
-    def bid(self, state, actVars=None): pass
+    def bid(self, _act, _state, actVars=None): pass
 
-    """
-    Returns the action of this learner, either atomic, or requests the action
-    from the action team.
-    """
-    def getAction(self, state, visited, actVars=None, path_trace=None): pass
+    def getImage(self, _act, _state, visited, actVars=None, path_trace=None): pass
 
-    """
-    Gets the team that is the action of the learners action object.
-    """
-    def getActionTeam(self): pass
+    def getMemoryTeam(self): pass
 
-    """
-    Returns true if the action is atomic, otherwise the action is a team.
-    """
-    def isActionAtomic(self): pass
+    def isMemoryAtomic(self): pass
 
-    """
-    Mutates either the program or the action or both. 
-    A mutation creates a new instance of the learner, removes it's anscestor and adds itself to the team.
-    """
-    def mutate(self, mutateParams, parentTeam, teams, pActAtom): pass
+    def mutate(self, mutateParams, parentTeam, teams, pMemAtom): pass
 
     def clone(self): pass
 
     def zeroRegisters(self):
         self.registers = np.zeros(len(self.registers), dtype=float)
-        self.actionObj.zeroRegisters()
+        self.memoryObj.zeroRegisters()
 
     def numTeamsReferencing(self):
         return len(self.inTeams)
@@ -516,7 +494,7 @@ class Learner2:
         if self.program != o.program:   return False
 
         # The object's action object must be equal to ours
-        if self.actionObj != o.actionObj:   return False
+        if self.memoryObj != o.memoryObj:   return False
 
         '''
         The other object's inTeams must match our own, therefore:
@@ -554,7 +532,7 @@ class Learner2:
             return False
 
         # The object's action object must be equal to ours
-        if self.actionObj != o.actionObj:
+        if self.memoryObj != o.memoryObj:
             print("other object has a different action object")
             return False
 
@@ -586,29 +564,23 @@ class Learner2:
         
         return True
 
-    '''
-    Negation of __eq__
-    '''
     def __ne__(self, o:object)-> bool:
         return not self.__eq__(o)
 
-    '''
-    String representation of a learner
-    '''
     def __str__(self):
         
         result = """id: {}
                     created_at_gen: {}
                     program_id: {}
                     type: {}
-                    action: {}
+                    memory: {}
                     numTeamsReferencing: {}
                     inTeams:\n""".format(
                 self.id,
                 self.genCreate,
                 self.program.id,
-                "actionCode" if self.isActionAtomic() else "teamAction",
-                self.actionObj.actionCode if self.isActionAtomic() else self.actionObj.teamAction.id,
+                "memoryCode" if self.isMemoryAtomic() else "teamMemory",
+                self.memoryObj.memoryCode if self.isMemoryAtomic() else self.memoryObj.teamMemory.id,
                 self.numTeamsReferencing()
             )
 
@@ -617,9 +589,6 @@ class Learner2:
         
         return result
     
-    """
-    Ensures proper functions are used in this class as set up by configurer.
-    """
     @classmethod
     def configFunctions(cls, functionsDict):
         from _tpg.configuration.conf_learner import ConfLearner2
@@ -632,29 +601,17 @@ class Learner2:
         elif functionsDict["bid"] == "mem":
             cls.bid = ConfLearner2.bid_mem
 
-        if functionsDict["getAction"] == "def":
-            cls.getAction = ConfLearner2.getAction_def
+        if functionsDict["get"] == "def":
+            cls.getImage = ConfLearner2.getImage_def
 
-        if functionsDict["getActionTeam"] == "def":
-            cls.getActionTeam = ConfLearner2.getActionTeam_def
+        if functionsDict["getMemoryTeam"] == "def":
+            cls.getMemoryTeam = ConfLearner2.getMemoryTeam_def
 
-        if functionsDict["isActionAtomic"] == "def":
-            cls.isActionAtomic = ConfLearner2.isActionAtomic_def
+        if functionsDict["isMemoryAtomic"] == "def":
+            cls.isMemoryAtomic = ConfLearner2.isMemoryAtomic_def
 
         if functionsDict["mutate"] == "def":
             cls.mutate = ConfLearner2.mutate_def
 
         if functionsDict["clone"] == "def":
             cls.clone = ConfLearner2.clone_def
-
-if __name__=='__main__':
-    Learner1.configFunctions()
-    functionDict={
-        "init": "def",
-        "bid":"def",
-        "getAction": "def",
-        "getAction": "def",
-        "getAction": "def",
-        "getAction": "def",
-    }
-    learner = Learner1()
