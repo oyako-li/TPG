@@ -3,6 +3,9 @@ from _tpg.trainer import loadTrainer
 from _tpg.tpg import NativeTPG, MemoryAndHierarchicalTPG, EmulatorTPG
 import sys
 
+def breakpoint(_print):
+    print(_print)
+    sys.exit()
 
 if __name__ == '__main__':
     task = 'CartPole-v0'
@@ -25,7 +28,7 @@ if __name__ == '__main__':
         if 'generatioins:' in arg: generations=int(arg.split(':')[1])
         if 'episodes:' in arg: episodes=int(arg.split(':')[1])
         if 'frames:' in arg: frames=int(arg.split(':')[1])
-        if 'CubeCrash_pattern:' in arg: pattern = arg.split(':')[1]
+        # if 'CubeCrash_pattern:' in arg: pattern = arg.split(':')[1]
 
 
     for arg in sys.argv[1:]:
@@ -35,56 +38,56 @@ if __name__ == '__main__':
             tpg = MemoryAndHierarchicalTPG(teamPopSize=teamPopSize)
         elif arg=='emulator':
             tpg = EmulatorTPG(teamPopSize=teamPopSize)
-        elif 'model:' in arg:
+        if 'model:' in arg:
             modelPath = arg.split(':')[1]
-            if ''.join(modelPath.split('/')[:-1]) == "Acrobot-v1":
+            task = '/'.join(modelPath.split('/')[:-1])
+            # breakpoint(task)
+            if task == "Acrobot-v1":
                 tasks = [
                     "ALE/Centipede-v5",
                     "ALE/Freeway-v5",
                     "ALE/Riverraid-v5",
                     "Asterix-v4",
                     "Boxing-v0",
-                    "CartPole-v0",
-                    "CubeCrash-v0"
+                    "CartPole-v0"
                 ]
-            if ''.join(modelPath.split('/')[:-1]) == "ALE/Centipede-v5":
+            elif task=="CartPole-v0":
                 tasks = [
-                    "ALE/Freeway-v5",
-                    "CubeCrash-v0"
-                ]
-            if ''.join(modelPath.split('/')[:-1]) == "Boxing-v0":
-                tasks = [
-                    "CubeCrash-v0"
-                ]
-            if ''.join(modelPath.split('/')[:-1]) == "CubeCrash-v0":
-                if not pattern: raise Exception('prease define CubeCrash pattern')
-                elif pattern=='1':
-                    tasks = [
-                    "RoadRunner-v4",
+                    "CubeCrash-v0",
                     "WizardOfWor-v4"
-                    ]
-                elif pattern=='2':
-                    tasks = [
-                        "WizardOfWor-v4"
-                        "ALE/Freeway-v5",
-                        "ALE/Riverraid-v5",
-                        "Acrobot-v1",
-                        "Asterix-v4",
-                        "CartPole-v0",
-                        "ALE/Centipede-v5",
-                        "RoadRunner-v4"
-                    ]
+                    "ALE/Freeway-v5",
+                    "ALE/Riverraid-v5",
+                    "Acrobot-v1",
+                    "Asterix-v4",
+                    "CartPole-v0",
+                    "ALE/Centipede-v5",
+                    "RoadRunner-v4"
+                ]
+            if task == "ALE/Freeway-v5":
+                tasks = [
+                    "ALE/Centipede-v5"
+                ]
+            elif task == "ALE/Centipede-v5":
+                tasks = [
+                    "CubeCrash-v0",
+                    "RoadRunner-v4",
+                    "WizardOfWor-v4",
+                    "Acrobot-v1",
+                    "RoadRunner-v4",
+                    "CartPole-v0"
+                ]
 
-                elif pattern=='3':
-                    tasks = [
-                        "Asterix-v4",
-                        "Boxing-v0",
-                        "ALE/Riverraid-v5",
-                        "WizardOfWor-v4",
-                        "Acrobot-v1",
-                        "RoadRunner-v4",
-                        "CartPole-v0",
-                    ]
+            if task=="Boxing-v0":
+                tasks = [
+                    "CubeCrash-v0",
+                    "Asterix-v4",
+                    "Boxing-v0",
+                    "ALE/Riverraid-v5",
+                    "WizardOfWor-v4",
+                    "Acrobot-v1",
+                    "RoadRunner-v4",
+                    "CartPole-v0",
+                ]
             # filename = modelPath.split('/')[-1]
             trainer = loadTrainer(modelPath)
 
