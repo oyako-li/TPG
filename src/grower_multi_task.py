@@ -45,9 +45,7 @@ if __name__ == '__main__':
                     "Asterix-v4",
                     "Boxing-v0",
                     "CartPole-v0",
-                    "CubeCrash-v0",
-                    "RoadRunner-v4",
-                    "WizardOfWor-v4"
+                    "CubeCrash-v0"
                 ]
             if ''.join(modelPath.split('/')[:-1]) == "ALE/Centipede-v5":
                 tasks = [
@@ -60,6 +58,11 @@ if __name__ == '__main__':
                 ]
             if ''.join(modelPath.split('/')[:-1]) == "CubeCrash-v0":
                 if not pattern: raise Exception('prease define CubeCrash pattern')
+                elif pattern=='1':
+                    tasks = [
+                    "RoadRunner-v4",
+                    "WizardOfWor-v4"
+                    ]
                 elif pattern=='2':
                     tasks = [
                         "WizardOfWor-v4"
@@ -71,6 +74,7 @@ if __name__ == '__main__':
                         "ALE/Centipede-v5",
                         "RoadRunner-v4"
                     ]
+
                 elif pattern=='3':
                     tasks = [
                         "Asterix-v4",
