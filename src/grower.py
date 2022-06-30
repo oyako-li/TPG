@@ -44,6 +44,8 @@ def episode(_agents, _env, _logger=None, _scores={}, _frames:int=100, _show=Fals
         _id = str(agent.team.id)
         for _ in range(_frames): # run episodes that last 500 frames
             act = agent.act(state)
+            # もしここでActionObjectに入っていないActionが返されたら、env.action_space
+
             # feedback from env
             state, reward, isDone, debug = _env.step(act)
             score += reward # accumulate reward in score
@@ -129,5 +131,5 @@ if __name__ == '__main__':
         if isinstance(arg, int): frame=arg
     trainer = Trainer(teamPopSize=10)
     _filename = growing(trainer, task, _episodes=1, _frames=frame, _show=show, _test=test, _load=load)
-    trainer.saveToFile(f'{task}/{_filename}')
+    if not test:    trainer.saveToFile(f'{task}/{_filename}')
 

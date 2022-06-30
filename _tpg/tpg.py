@@ -152,7 +152,7 @@ class TPG:
             _trainer = self.trainer
 
         _filename = self.growing(_trainer, _task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load)
-        _trainer.saveToFile(f'{task}/{_filename}')
+        if not test: _trainer.saveToFile(f'{task}/{_filename}')
         return _filename
 
 class NativeTPG(TPG):
