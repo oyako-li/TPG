@@ -79,6 +79,7 @@ def generation(_trainer, _env, _logger=None, _episodes=20, _frames= 100, _show=F
 
 def growing(_trainer:Trainer, _task:str, _generations:int=1000, _episodes:int=20, _frames:int=200, _show=False, _test=False, _load=True):
     logger, filename = setup_logger(__name__, _task, test=_test, load=_load)
+    print(filename)
     env = gym.make(_task) # make the environment
     action_space = env.action_space
     action = 0
