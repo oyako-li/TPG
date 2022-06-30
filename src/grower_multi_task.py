@@ -70,7 +70,7 @@ if __name__ == '__main__':
             elif task == "ALE/Centipede-v5":
                 tasks = [
                     "CubeCrash-v0",
-                    "RoadRunner-v4",
+                    "ALE/Riverraid-v5",
                     "WizardOfWor-v4",
                     "Acrobot-v1",
                     "RoadRunner-v4",
