@@ -92,6 +92,7 @@ if __name__ == '__main__':
                         "RoadRunner-v4",
                         "CartPole-v0"
                     ]
+                else: raise Exception('preas setting CubeCrash-v0 pattern paramater')
             # filename = modelPath.split('/')[-1]
             trainer = loadTrainer(modelPath)
 
