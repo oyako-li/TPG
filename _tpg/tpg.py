@@ -108,6 +108,7 @@ class TPG:
     def growing(self, _trainer, _task:str, _generations:int=1000, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True):
         self.instance_valid(_trainer)
         logger, filename = setup_logger(__name__, _task, test=_test, load=_load)
+        print(filename)
         env = gym.make(_task) # make the environment
         action_space = env.action_space
         action = 0
@@ -118,7 +119,7 @@ class TPG:
         _trainer.resetActions(actions=action)
 
         def outHandler(signum, frame):
-            _trainer.saveToFile(f'{_task}/{filename}')
+            if not _test: _trainer.saveToFile(f'{_task}/{filename}')
             print('exit')
             sys.exit()
         
