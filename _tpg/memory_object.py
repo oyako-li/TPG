@@ -1,9 +1,12 @@
+import pickle
 import numpy as np
 import random
 from _tpg.utils import flip
 
 class MemoryObject:
     memories=[{}]
+    weights=np.array([], dtype=float)
+    
     def __init__(self, state=0, initParam=None):
         from _tpg.team import Team2
 
@@ -22,21 +25,12 @@ class MemoryObject:
             self.teamMemory = None
             return
         elif isinstance(state, np.ndarray):
-            if initParam is not None:
-                if "stateRandomMemorizeTimes" not in initParam: raise Exception('stateRandomMemorizeTimes not found in init params', initParam)
-                memory={}
-                for _ in initParam['stateRandomMemorizeTimes']:
-                    key = random.randint(0,len(state)-1)
-                    memory[key]=state[key]
-                MemoryObject.memories.append(memory)
-                self.memoryCode = len(MemoryObject.memories)-1
-                self.teamMemory = None
-
-            else:
-                memory = dict(zip(range(len(state)), state))
-                MemoryObject.memories.append(memory)
-                self.memoryCode = len(MemoryObject.memories)-1
-                self.teamMemory = None
+            key = np.random.choices(range(state.size), random.randint(1, state.size-1))
+            memory=dict(zip(key, state[key]))
+            MemoryObject.memories.append(memory)
+            np.append(MemoryObject.weights, 1)
+            self.memoryCode = len(MemoryObject.memories)-1
+            self.teamMemory = None
 
     def __eq__(self, __o: object) -> bool:
         if not isinstance(__o, MemoryObject) and not isinstance(__o, np.ndarray): False
@@ -57,14 +51,19 @@ class MemoryObject:
         if self.teamMemory is not None:
             return self.teamMemory.image(_act, _pre_state, visited, path_trace)
         else:
-            return MemoryObject.memories[self.memoryCode]
+            MemoryObject.weights[self.memoryCode]*=0.9
+            MemoryObject.weights*=1.1
+            for key, val in MemoryObject.memories[self.memoryCode].items():
+                _pre_state[key]=val
+
+            return _pre_state
 
     def isAtomic(self):
         return self.teamMemory is None
 
     def mutate(self, mutateParams, parentTeam, teams, pMemAtom, learner_id):
         if any(item is None for item in (mutateParams, parentTeam, teams, pMemAtom, learner_id)):
-            self.memoryCode=random.randint(0,len(MemoryObject.memories)-1)
+            self.memoryCode=random.randint(0,len(MemoryObject.memories), )
             self.teamMemory=None
             print('0 valid_learners')
             return self
@@ -89,3 +88,7 @@ class MemoryObject:
                 self.teamMemory.inLearners.append(str(learner_id))
 
         return self
+    
+    @classmethod
+    def buckup(cls, fileName):
+        pickle.dump(cls, open(f'log/{fileName}.pickle', 'wb'))
