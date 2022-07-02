@@ -1,8 +1,8 @@
-from _tpg.configuration.conf_agent import ConfAgent, ConfAgent1, ConfAgent2
-from _tpg.configuration.conf_team import ConfTeam, ConfTeam1, ConfTeam2
-from _tpg.configuration.conf_learner import ConfLearner, ConfLearner1, ConfLearner2
-from _tpg.configuration.conf_action_object import ConfActionObject, ConfActionObject1
-from _tpg.configuration.conf_program import ConfProgram, ConfProgram1, ConfProgram2
+from _tpg.configuration.conf_agent import ConfAgent, ConfAgent1, ConfAgent11, ConfAgent2
+from _tpg.configuration.conf_team import ConfTeam, ConfTeam1, ConfTeam11, ConfTeam2
+from _tpg.configuration.conf_learner import ConfLearner, ConfLearner1, ConfLearner11, ConfLearner2
+from _tpg.configuration.conf_action_object import ConfActionObject, ConfActionObject11, ConfActionObject1
+from _tpg.configuration.conf_program import ConfProgram, ConfProgram1, ConfProgram11, ConfProgram2
 # from _tpg.configuration.conf_emulator import ConfEmulator
 
 import numpy as np
@@ -473,6 +473,238 @@ Switch to learner traversal.
 """
 def _configureLearnerTraversal1(trainer, Agent, Team, actVarKeys, actVarVals):
     Team.act = ConfTeam1.act_learnerTrav
+    trainer.functionsDict["Team"]["act"] = "learnerTrav"
+
+def configure11(trainer, Trainer, Agent, Team, Learner, ActionObject, Program,
+        doMemory, memType, doReal, operationSet, traversal):
+
+    # keys and values used in key value pairs for suplementary function args
+    # for mutation and creation
+    mutateParamKeys = ["generation", "maxTeamSize", "pLrnDel", "pLrnAdd", "pLrnMut",
+        "pProgMut", "pActMut", "pActAtom", "pInstDel", "pInstAdd", "pInstSwp", "pInstMut",
+        "actionCodes", "nDestinations", "inputSize", "initMaxProgSize",
+        "rampantGen", "rampantMin", "rampantMax", "idCountTeam", "idCountLearner", "idCountProgram"]
+    mutateParamVals = [trainer.generation, trainer.maxTeamSize, trainer.pLrnDel, trainer.pLrnAdd, trainer.pLrnMut,
+        trainer.pProgMut, trainer.pActMut, trainer.pActAtom, trainer.pInstDel, trainer.pInstAdd, trainer.pInstSwp, trainer.pInstMut,
+        trainer.actionCodes, trainer.nRegisters, trainer.inputSize, trainer.initMaxProgSize,
+        trainer.rampancy[0], trainer.rampancy[1], trainer.rampancy[2], 0, 0, 0]
+
+    # additional stuff for act, like memory matrix possible
+    actVarKeys = ["frameNum"]
+    actVarVals = [0]
+
+    # before doing any special configuration, set all methods to defaults
+    _configureDefaults11(trainer, Trainer, Agent, Team, Learner, ActionObject, Program)
+
+    # configure Program execution stuff, affected by memory and operations set
+    _configureProgram11(trainer, Learner, Program, actVarKeys, actVarVals, mutateParamKeys, mutateParamVals, doMemory, memType, operationSet)
+
+    # configure stuff for using real valued actions
+    if doReal:  _configureRealAction11(trainer, ActionObject, mutateParamKeys, mutateParamVals, doMemory)
+
+    # do learner traversal
+    if traversal == "learner": _configureLearnerTraversal11(trainer, Agent, Team, actVarKeys, actVarVals)
+
+    trainer.mutateParams = dict(zip(mutateParamKeys, mutateParamVals))
+    trainer.actVars = dict(zip(actVarKeys, actVarVals))
+
+"""
+For each class in TPG, sets the functions to their defaults.
+"""
+def _configureDefaults11(trainer, Trainer, Agent, Team, Learner, ActionObject, Program):
+    # set trainer functions
+    # TODO: add learner configurable
+
+    # set agent functions
+    Agent.__init__ = ConfAgent11.init_def
+    Agent.act = ConfAgent11.act_def
+    Agent.reward = ConfAgent11.reward_def
+    Agent.taskDone = ConfAgent11.taskDone_def
+    Agent.saveToFile = ConfAgent11.saveToFile_def
+
+    # set team functions
+    Team.__init__ = ConfTeam11.init_def
+    Team.act = ConfTeam11.act_def
+    Team.addLearner = ConfTeam11.addLearner_def
+    Team.removeLearner = ConfTeam11.removeLearner_def
+    Team.removeLearners = ConfTeam11.removeLearners_def
+    Team.numAtomicActions = ConfTeam11.numAtomicActions_def
+    Team.mutate = ConfTeam11.mutate_def
+    Team.clone = ConfTeam11.clone_def
+
+    # set learner functions
+    Learner.__init__ = ConfLearner11.init_def
+    Learner.bid = ConfLearner11.bid_def
+    Learner.getAction = ConfLearner11.getAction_def
+    Learner.getActionTeam = ConfLearner11.getActionTeam_def
+    Learner.isActionAtomic = ConfLearner11.isActionAtomic_def
+    Learner.mutate = ConfLearner11.mutate_def
+    Learner.clone = ConfLearner11.clone_def
+
+
+    # set action object functions
+    ActionObject.__init__ = ConfActionObject11.init_def
+    ActionObject.getAction = ConfActionObject11.getAction_def
+    ActionObject.isAtomic = ConfActionObject11.isAtomic_def
+    ActionObject.mutate = ConfActionObject11.mutate_def
+    ActionObject.actions = trainer.actionCodes
+
+
+    # set program functions
+    Program.__init__ = ConfProgram11.init_def
+    Program.execute = ConfProgram11.execute_def
+    Program.mutate = ConfProgram11.mutate_def
+    Program.memWriteProbFunc = ConfProgram11.memWriteProb_def
+
+    # let trainer know what functions are set for each one
+    
+    trainer.functionsDict["Agent"] = {
+        "init": "def",
+        "act": "def",
+        "reward": "def",
+        "taskDone": "def",
+        "saveToFile": "def"
+    }
+    trainer.functionsDict["Team"] = {
+        "init": "def",
+        "act": "def",
+        "addLearner": "def",
+        "removeLearner": "def",
+        "removeLearners": "def",
+        "numAtomicActions": "def",
+        "mutate": "def",
+        "clone": "def"
+    }
+    trainer.functionsDict["Learner"] = {
+        "init": "def",
+        "bid": "def",
+        "getAction": "def",
+        "getActionTeam": "def",
+        "isActionAtomic": "def",
+        "mutate": "def",
+        "clone": "def"
+    }
+    trainer.functionsDict["ActionObject"] = {
+        "init": "def",
+        "getAction": "def",
+        "getRealAction": "None",
+        "isAtomic": "def",
+        "mutate": "def"
+    }
+    trainer.functionsDict["Program"] = {
+        "init": "def",
+        "execute": "def",
+        "mutate": "def",
+        "memWriteProbFunc": "def"
+    }
+
+"""
+Decides the operations and functions to be used in program execution.
+"""
+def _configureProgram11(trainer, Learner, Program, actVarKeys, actVarVals,
+        mutateParamKeys, mutateParamVals, doMemory, memType, operationSet):
+    # change functions as needed
+    if doMemory:
+        # default (reduced) or full operation set
+        if operationSet == "def":
+            Program.execute = ConfProgram11.execute_mem
+            trainer.functionsDict["Program"]["execute"] = "mem"
+            trainer.nOperations = 7
+            trainer.operations = ["ADD", "SUB", "MULT", "DIV", "NEG", "MEM_READ", "MEM_WRITE"]
+        elif operationSet == "full":
+            Program.execute = ConfProgram11.execute_mem_full
+            trainer.functionsDict["Program"]["execute"] = "mem_full"
+            trainer.nOperations = 10
+            trainer.operations = ["ADD", "SUB", "MULT", "DIV", "NEG", "COS", "LOG", "EXP", "MEM_READ", "MEM_WRITE"]
+        elif operationSet == "robo":
+            Program.execute = ConfProgram11.execute_mem_robo
+            trainer.functionsDict["Program"]["execute"] = "mem_robo"
+            trainer.nOperations = 8
+            trainer.operations = ["ADD", "SUB", "MULT", "DIV", "NEG", "COS", "MEM_READ", "MEM_WRITE"]
+        elif operationSet == "custom":
+            Program.execute = ConfProgram11.execute_mem_custom
+            trainer.functionsDict["Program"]["execute"] = "mem_custom"
+            trainer.nOperations = 18
+            trainer.operations = ["ADD", "SUB", "MULT", "DIV", "POW", "NEG", "INV_NEG", "SIN", "COS", "TANH", "LN", "SQRT", "EXP", "POWY2", "POWY3", "ABS", "MEM_READ", "MEM_WRITE"]
+
+        # select appropriate memory write function
+        if memType == "cauchy1":
+            Program.memWriteProbFunc = ConfProgram11.memWriteProb_cauchy1
+            trainer.functionsDict["Program"]["memWriteProbFunc"] = "cauchy1"
+        elif memType == "cauchyHalf":
+            Program.memWriteProbFunc = ConfProgram11.memWriteProb_cauchyHalf
+            trainer.functionsDict["Program"]["memWriteProbFunc"] = "cauchyHalf"
+        else:
+            Program.memWriteProbFunc = ConfProgram11.memWriteProb_def
+            trainer.functionsDict["Program"]["memWriteProbFunc"] = "def"
+
+        # change bid function to accomodate additional parameters needed for memory
+        Learner.bid = ConfLearner11.bid_mem
+        trainer.functionsDict["Learner"]["bid"] = "mem"
+
+        # trainer needs to have memory
+        trainer.memMatrix = np.zeros(shape=trainer.memMatrixShape)
+        # agents need access to memory too, and to pass through act
+        actVarKeys += ["memMatrix"]
+        actVarVals += [trainer.memMatrix]
+
+    else:
+        # default (reduced) or full operation set
+        if operationSet == "def":
+            Program.execute = ConfProgram11.execute_def
+            trainer.functionsDict["Program"]["execute"] = "def"
+            trainer.nOperations = 5
+            trainer.operations = ["ADD", "SUB", "MULT", "DIV", "NEG"]
+        elif operationSet == "full":
+            Program.execute = ConfProgram11.execute_full
+            trainer.functionsDict["Program"]["execute"] = "full"
+            trainer.nOperations = 8
+            trainer.operations = ["ADD", "SUB", "MULT", "DIV", "NEG", "COS", "LOG", "EXP"]
+        elif operationSet == "robo":
+            Program.execute = ConfProgram11.execute_robo
+            trainer.functionsDict["Program"]["execute"] = "robo"
+            trainer.nOperations = 6
+            trainer.operations = ["ADD", "SUB", "MULT", "DIV", "NEG", "COS"]
+        elif operationSet == "custom":
+            Program.execute = ConfProgram11.execute_custom
+            trainer.functionsDict["Program"]["execute"] = "custom"
+            trainer.nOperations = 16
+            trainer.operations = ["ADD", "SUB", "MULT", "DIV", "POW", "NEG", "INV_NEG", "SIN", "COS", "TANH", "LN", "SQRT", "EXP", "POWY2", "POWY3", "ABS"]
+
+
+        Learner.bid = ConfLearner11.bid_def
+        trainer.functionsDict["Learner"]["bid"] = "def"
+
+    mutateParamKeys += ["nOperations"]
+    mutateParamVals += [trainer.nOperations]
+
+"""
+Make the appropriate changes needed to be able to use real actions.
+"""
+def _configureRealAction11(trainer, ActionObject, mutateParamKeys, mutateParamVals, doMemory):
+    # change functions as needed
+    ActionObject.__init__ = ConfActionObject11.init_real
+    trainer.functionsDict["ActionObject"]["init"] = "real"
+    ActionObject.getAction = ConfActionObject11.getAction_real
+    trainer.functionsDict["ActionObject"]["getAction"] = "real"
+    if doMemory:
+        ActionObject.getRealAction = ConfActionObject11.getRealAction_real_mem
+        trainer.functionsDict["ActionObject"]["getRealAction"] = "real_mem"
+    else:
+        ActionObject.getRealAction = ConfActionObject11.getRealAction_real
+        trainer.functionsDict["ActionObject"]["getRealAction"] = "real"
+    ActionObject.mutate = ConfActionObject11.mutate_real
+    trainer.functionsDict["ActionObject"]["mutate"] = "real"
+
+    # mutateParams needs to have lengths of actions and act program
+    mutateParamKeys += ["actionLengths", "initMaxActProgSize", "nActRegisters"]
+    mutateParamVals += [trainer.actionLengths, trainer.initMaxActProgSize, trainer.nActRegisters]
+
+"""
+Switch to learner traversal.
+"""
+def _configureLearnerTraversal11(trainer, Agent, Team, actVarKeys, actVarVals):
+    Team.act = ConfTeam11.act_learnerTrav
     trainer.functionsDict["Team"]["act"] = "learnerTrav"
 
 def configure2(trainer, Trainer, Agent, Team, Learner, MemoryObject, Program,

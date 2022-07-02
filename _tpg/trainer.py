@@ -1,15 +1,15 @@
-from _tpg.agent import Agent, Agent1, Agent2
-from _tpg.team import Team, Team1, Team2
-from _tpg.learner import Learner, Learner1, Learner2
-from _tpg.program import Program, Program1, Program2
-from _tpg.action_object import ActionObject, ActionObject1, ActionObject2
+from _tpg.agent import Agent, Agent1, Agent11, Agent2
+from _tpg.team import Team, Team1, Team11, Team2
+from _tpg.learner import Learner, Learner1, Learner11, Learner2
+from _tpg.program import Program, Program1, Program11, Program2
+from _tpg.action_object import ActionObject, ActionObject1, ActionObject11, ActionObject2
 from _tpg.memory_object import MemoryObject
 from _tpg.configuration import configurer
 # from _tpg.emulator import Emulator
 import random
 import pickle
-import time
-import multiprocessing as mp
+# import time
+# import multiprocessing as mp
 
 """
 Functionality for actually growing TPG and evolving it to be functional.
@@ -1745,7 +1745,7 @@ class Trainer11:
         
         if self.doReal: self.nActRegisters = max(max(self.actionLengths), self.nActRegisters)
         self.nActRegisters = self.nActRegisters
-        configurer.configure1(self, Trainer11, Agent11, Team11, Learner11, ActionObject11, Program11, 
+        configurer.configure11(self, Trainer11, Agent11, Team11, Learner11, ActionObject11, Program11, 
             self.memType is not None, self.memType, self.doReal, self.operationSet, self.traversal)
 
     def _initializePopulations(self):

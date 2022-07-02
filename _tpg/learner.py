@@ -459,6 +459,189 @@ class Learner1:
         if functionsDict["clone"] == "def":
             cls.clone = ConfLearner1.clone_def
 
+class Learner11:
+
+    def __init__(self, initParams, program, actionObj, numRegisters, learner_id=None)->None: pass
+
+    """
+    Get the bid value, highest gets its action selected.
+    """
+    def bid(self, state, actVars=None): pass
+
+    """
+    Returns the action of this learner, either atomic, or requests the action
+    from the action team.
+    """
+    def getAction(self, state, visited, actVars=None, path_trace=None): pass
+
+    """
+    Gets the team that is the action of the learners action object.
+    """
+    def getActionTeam(self): pass
+
+    """
+    Returns true if the action is atomic, otherwise the action is a team.
+    """
+    def isActionAtomic(self): pass
+
+    """
+    Mutates either the program or the action or both. 
+    A mutation creates a new instance of the learner, removes it's anscestor and adds itself to the team.
+    """
+    def mutate(self, mutateParams, parentTeam, teams, pActAtom): pass
+
+    def clone(self): pass
+
+    def zeroRegisters(self):
+        self.registers = np.zeros(len(self.registers), dtype=float)
+        self.actionObj.zeroRegisters()
+
+    def numTeamsReferencing(self):
+        return len(self.inTeams)
+
+    def __eq__(self, o: object) -> bool:
+        
+        # Object must be an instance of Learner
+        if not isinstance(o, Learner11): return False
+
+        # The object must have been created the same generation as us
+        if self.genCreate != o.genCreate:   return False
+
+        # The object's program must be equal to ours
+        if self.program != o.program:   return False
+
+        # The object's action object must be equal to ours
+        if self.actionObj != o.actionObj:   return False
+
+        '''
+        The other object's inTeams must match our own, therefore:
+            - len(inTeams) must be equal
+            - every id that appears in our inTeams must appear in theirs (order doesn't matter)
+        '''
+        if len(self.inTeams) != len(o.inTeams): return False
+
+        '''
+        Collection comparison via collection counters
+        https://www.journaldev.com/37089/how-to-compare-two-lists-in-python
+        '''
+        if collections.Counter(self.inTeams) != collections.Counter(o.inTeams): return False
+
+        # The other object's id must be equal to ours
+        if self.id != o.id: return False
+        
+        return True
+
+    def debugEq(self,o: object) -> bool:
+
+        # Object must be an instance of Learner
+        if not isinstance(o, Learner11):
+            print("other object is not instance of Learner")
+            return False
+
+        # The object must have been created the same generation as us
+        if self.genCreate != o.genCreate:
+            print("other object has different genCreate")
+            return False
+
+        # The object's program must be equal to ours
+        if self.program != o.program:
+            print("other object has a different program")
+            return False
+
+        # The object's action object must be equal to ours
+        if self.actionObj != o.actionObj:
+            print("other object has a different action object")
+            return False
+
+        '''
+        The other object's inTeams must match our own, therefore:
+            - len(inTeams) must be equal
+            - every id that appears in our inTeams must appear in theirs (order doesn't matter)
+        '''
+        if len(self.inTeams) != len(o.inTeams):
+            print("other object has different number of inTeams")
+            print("us:")
+            print(self)
+            print("other learner:")
+            print(o)
+            return False
+
+        '''
+        Collection comparison via collection counters
+        https://www.journaldev.com/37089/how-to-compare-two-lists-in-python
+        '''
+        if collections.Counter(self.inTeams) != collections.Counter(o.inTeams):
+            print("other object has different inTeams")
+            return False
+
+        # The other object's id must be equal to ours
+        if self.id != o.id:
+            print("other object has different id")
+            return False
+        
+        return True
+
+    '''
+    Negation of __eq__
+    '''
+    def __ne__(self, o:object)-> bool:
+        return not self.__eq__(o)
+
+    '''
+    String representation of a learner
+    '''
+    def __str__(self):
+        
+        result = """id: {}
+                    created_at_gen: {}
+                    program_id: {}
+                    type: {}
+                    action: {}
+                    numTeamsReferencing: {}
+                    inTeams:\n""".format(
+                self.id,
+                self.genCreate,
+                self.program.id,
+                "actionCode" if self.isActionAtomic() else "teamAction",
+                self.actionObj.actionCode if self.isActionAtomic() else self.actionObj.teamAction.id,
+                self.numTeamsReferencing()
+            )
+
+        for cursor in self.inTeams:
+            result += "\t{}\n".format(cursor)
+        
+        return result
+    
+    """
+    Ensures proper functions are used in this class as set up by configurer.
+    """
+    @classmethod
+    def configFunctions(cls, functionsDict):
+        from _tpg.configuration.conf_learner import ConfLearner11
+
+        if functionsDict["init"] == "def":
+            cls.__init__ = ConfLearner11.init_def
+
+        if functionsDict["bid"] == "def":
+            cls.bid = ConfLearner11.bid_def
+        elif functionsDict["bid"] == "mem":
+            cls.bid = ConfLearner11.bid_mem
+
+        if functionsDict["getAction"] == "def":
+            cls.getAction = ConfLearner11.getAction_def
+
+        if functionsDict["getActionTeam"] == "def":
+            cls.getActionTeam = ConfLearner11.getActionTeam_def
+
+        if functionsDict["isActionAtomic"] == "def":
+            cls.isActionAtomic = ConfLearner11.isActionAtomic_def
+
+        if functionsDict["mutate"] == "def":
+            cls.mutate = ConfLearner11.mutate_def
+
+        if functionsDict["clone"] == "def":
+            cls.clone = ConfLearner11.clone_def
+
 class Learner2:
 
     def __init__(self, initParams, program, memoryObj, numRegisters, learner_id=None)->None: pass

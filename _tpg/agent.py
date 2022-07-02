@@ -194,6 +194,83 @@ class Agent1:
         if functionsDict["saveToFile"] == "def":
             cls.saveToFile = ConfAgent1.saveToFile_def
 
+class Agent11:
+
+    """
+    Create an agent with a team.
+    """
+    def __init__(self, team, functionsDict:dict, num:int=1, actVars:dict=None)->None: pass
+
+    """
+    Gets an action from the root team of this agent / this agent.
+    """
+    def act(self, state, path_trace=None): pass
+
+    """
+    Give this agent/root team a reward for the given task
+    """
+    def reward(self, score, task='task')->None: pass
+
+    """
+    Check if agent completed this task already, to skip.
+    """
+    def taskDone(self, task): pass
+
+    """
+    Save the agent to the file, saving any relevant class values to the instance.
+    """
+    def saveToFile(self, fileName): pass
+
+    def zeroRegisters(self)->None:
+        self.team.zeroRegisters()
+
+    """
+    Should be called when the agent is loaded from a file or when loaded into 
+    another process/thread, to ensure proper function used in all classes.
+    """
+    def configFunctionsSelf(self)->None:
+        from _tpg.team import Team11
+        from _tpg.learner import Learner11
+        from _tpg.program import Program11
+        from _tpg.action_object import ActionObject11
+
+        # first set up Agent functions
+        Agent11.configFunctions(self.functionsDict["Agent"])
+
+        # set up Team functions
+        Team11.configFunctions(self.functionsDict["Team"])
+
+        # set up Learner functions
+        Learner11.configFunctions(self.functionsDict["Learner"])
+
+        # set up ActionObject functions
+        ActionObject11.configFunctions(self.functionsDict["ActionObject"])
+
+        # set up Program functions
+        Program11.configFunctions(self.functionsDict["Program"])
+
+    """
+    Ensures proper functions are used in this class as set up by configurer.
+    """
+    @classmethod
+    def configFunctions(cls, functionsDict):
+        from _tpg.configuration.conf_agent import ConfAgent11
+
+        if functionsDict["init"] == "def":
+            cls.__init__ = ConfAgent11.init_def
+
+        if functionsDict["act"] == "def":
+            cls.act = ConfAgent11.act_def
+
+        if functionsDict["reward"] == "def":
+            cls.reward = ConfAgent11.reward_def
+
+        if functionsDict["taskDone"] == "def":
+            cls.taskDone = ConfAgent11.taskDone_def
+
+        if functionsDict["saveToFile"] == "def":
+            cls.saveToFile = ConfAgent11.saveToFile_def
+
 class Agent2:
 
     def __init__(self, team, functionsDict:dict, num:int=1, actVars:dict=None)->None: pass
@@ -237,7 +314,7 @@ class Agent2:
         if functionsDict["init"] == "def":
             cls.__init__ = ConfAgent2.init_def
 
-        if functionsDict["act"] == "def":
+        if functionsDict["image"] == "def":
             cls.image = ConfAgent2.image_def
 
         if functionsDict["reward"] == "def":

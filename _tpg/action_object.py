@@ -336,6 +336,145 @@ class ActionObject1:
         elif functionsDict["mutate"] == "real":
             cls.mutate = ConfActionObject1.mutate_real
 
+class ActionObject11:
+    _actions=[0]
+    '''
+    An action object can be initalized by:
+        - Copying another action object
+        - Passing an index into the action codes in initParams as the action
+        - Passing a team as the action
+    '''
+    def __init__(self, initParams:dict or int =None, action = None, _task='task'):
+
+        '''
+        Defer importing the Team class to avoid circular dependency.
+        This may require refactoring to fix properly
+        '''
+        from _tpg.team import Team11
+
+        # The action is a team
+        if isinstance(action, Team11):
+            self.teamAction = action
+            self.actionCode = None
+            #print("chose team action")
+            return
+    
+
+        # The action is another action object
+        if isinstance(action, ActionObject11):
+            self.actionCode = action.actionCode
+            self.teamAction = action.teamAction
+            return
+
+        # An int means the action is an index into the action codes in initParams
+        if isinstance(action, int):
+            if initParams is not None:
+                if "actionCodes" not in initParams:
+                    raise Exception('action codes not found in init params', initParams)
+
+                try:
+                    ActionObject11._actions = initParams["actionCodes"]
+                    self.actionCode = initParams["actionCodes"][action]
+                    self.teamAction = None
+                except IndexError as err:
+                    '''
+                    TODO log index error
+                    '''
+                    print("Index error")
+                return
+            else:
+                try:
+                    self.actionCode=random.choice(ActionObject11._actions)
+                    self.teamAction=None
+                except:
+                    print('諦めな・・・')
+                return
+    '''
+    An ActionObject is equal to another object if that object:
+        - is an instance of the ActionObject class
+        - has the same action code
+        - has the same team action
+    '''
+    def __eq__(self, o:object)->bool:
+
+        # The other object must be an instance of the ActionObject class
+        if not isinstance(o, ActionObject11):    return False
+        
+        # The other object's action code must be equal to ours
+        if self.actionCode != o.actionCode:     return False
+        
+        # The other object's team action must be equal to ours
+        if self.teamAction != o.teamAction:     return False
+
+        return True
+
+    '''
+    Negate __eq__
+    '''
+    def __ne__(self, o: object) -> bool:
+        return not self.__eq__(o)
+
+    def __str__(self):
+        return "TeamAction {} ActionCode: {}".format(
+            self.teamAction if self.teamAction is not None else 'None',
+            self.actionCode if self.actionCode is not None else 'None'
+        )
+
+    def zeroRegisters(self):
+        try:
+            self.registers = np.zeros(len(self.registers), dtype=float)
+        except:
+            pass
+
+    """
+    Returns the action code, and if applicable corresponding real action(s).
+    """
+    def getAction(self, state, visited, actVars=None, path_trace=None): pass
+
+    """
+    Returns the action code, and if applicable corresponding real action(s).
+    """
+    def getRealAction(self, state, visited, actVars=None, path_trace=None): pass
+    """
+    Returns true if the action is atomic, otherwise the action is a team.
+    """
+    def isAtomic(self): pass
+
+    """
+    Change action to team or atomic action.
+    """
+    def mutate(self, mutateParams, parentTeam, teams, pActAtom, learner_id): pass
+
+    """
+    Ensures proper functions are used in this class as set up by configurer.
+    """
+    @classmethod
+    def configFunctions(cls, functionsDict):
+        from _tpg.configuration.conf_action_object import ConfActionObject11
+
+        if functionsDict["init"] == "def":
+            cls.__init__ = ConfActionObject11.init_def
+        elif functionsDict["init"] == "real":
+            cls.__init__ = ConfActionObject11.init_real
+
+        if functionsDict["getAction"] == "def":
+            cls.getAction = ConfActionObject11.getAction_def
+        elif functionsDict["getAction"] == "real":
+            cls.getAction = ConfActionObject11.getAction_real
+        
+        if functionsDict["getRealAction"] == "real":
+            cls.getRealAction = ConfActionObject11.getRealAction_real
+        elif functionsDict["getRealAction"] == "real_mem":
+            cls.getRealAction = ConfActionObject11.getRealAction_real_mem
+
+        if functionsDict["isAtomic"] == "def":
+            cls.isAtomic = ConfActionObject11.isAtomic_def
+
+        if functionsDict["mutate"] == "def":
+            cls.mutate = ConfActionObject11.mutate_def
+        elif functionsDict["mutate"] == "real":
+            cls.mutate = ConfActionObject11.mutate_real
+
 class ActionObject2:
     _states={}
     '''

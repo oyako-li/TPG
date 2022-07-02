@@ -4,36 +4,36 @@ from _tpg.utils import flip
 
 class MemoryObject:
     memories=[{}]
-    def __init__(self, _state=0, initParam=None):
+    def __init__(self, state=0, initParam=None):
         from _tpg.team import Team2
 
-        if isinstance(_state, Team2):
-            self.teamMemory = _state
+        if isinstance(state, Team2):
+            self.teamMemory = state
             self.memoryCode = None
             return
-        elif isinstance(_state, MemoryObject):
-            self.memoryCode = _state.memoryCode
-            self.teamMemory = _state.teamMemory
+        elif isinstance(state, MemoryObject):
+            self.memoryCode = state.memoryCode
+            self.teamMemory = state.teamMemory
             return
-        elif isinstance(_state, int):
+        elif isinstance(state, int):
             # if _state > len(MemoryObject._memorys)-1: raise IndexError
-            _state %= len(MemoryObject.memories)
-            self.memoryCode = _state
+            state %= len(MemoryObject.memories)
+            self.memoryCode = state
             self.teamMemory = None
             return
-        elif isinstance(_state, np.ndarray):
+        elif isinstance(state, np.ndarray):
             if initParam is not None:
                 if "stateRandomMemorizeTimes" not in initParam: raise Exception('stateRandomMemorizeTimes not found in init params', initParam)
                 memory={}
                 for _ in initParam['stateRandomMemorizeTimes']:
-                    key = random.randint(0,len(_state)-1)
-                    memory[key]=_state[key]
+                    key = random.randint(0,len(state)-1)
+                    memory[key]=state[key]
                 MemoryObject.memories.append(memory)
                 self.memoryCode = len(MemoryObject.memories)-1
                 self.teamMemory = None
 
             else:
-                memory = dict(zip(range(len(_state)), _state))
+                memory = dict(zip(range(len(state)), state))
                 MemoryObject.memories.append(memory)
                 self.memoryCode = len(MemoryObject.memories)-1
                 self.teamMemory = None

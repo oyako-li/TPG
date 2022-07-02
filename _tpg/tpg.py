@@ -108,7 +108,7 @@ class TPG:
     def growing(self, _trainer, _task:str, _generations:int=1000, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True):
         self.instance_valid(_trainer)
         logger, filename = setup_logger(__name__, _task, test=_test, load=_load)
-        print(filename)
+        print(_task,filename)
         env = gym.make(_task) # make the environment
         action_space = env.action_space
         action = 0
@@ -153,7 +153,7 @@ class TPG:
             _trainer = self.trainer
 
         _filename = self.growing(_trainer, _task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load)
-        if not _test: _trainer.saveToFile(f'{task}/{_filename}')
+        if not _test: _trainer.saveToFile(f'{_task}/{_filename}')
         return _filename
 
 class NativeTPG(TPG):
@@ -199,6 +199,14 @@ class MemoryAndHierarchicalTPG(TPG):
 
     def instance_valid(self, trainer) -> bool:
         if not isinstance(trainer, Trainer1): raise Exception('this object is not Trainer1')
+
+class MemoryAndHierarchicalTPG1(TPG):
+
+    def __init__(self, actions=2, teamPopSize: int = 1000, rootBasedPop: bool = True, gap: float = 0.5, inputSize: int = 33600, nRegisters: int = 8, initMaxTeamSize: int = 10, initMaxProgSize: int = 10, maxTeamSize: int = -1, pLrnDel: float = 0.7, pLrnAdd: float = 0.6, pLrnMut: float = 0.2, pProgMut: float = 0.1, pActMut: float = 0.1, pActAtom: float = 0.95, pInstDel: float = 0.5, pInstAdd: float = 0.4, pInstSwp: float = 0.2, pInstMut: float = 1.0, doElites: bool = True, memType="def", memMatrixShape: tuple = (100, 8), rampancy: tuple = (0, 0, 0), operationSet: str = "custom", traversal: str = "team", prevPops=None, mutatePrevs=True, initMaxActProgSize: int = 6, nActRegisters: int = 4):
+        self.trainer = Trainer11(actions, teamPopSize, rootBasedPop, gap, inputSize, nRegisters, initMaxTeamSize, initMaxProgSize, maxTeamSize, pLrnDel, pLrnAdd, pLrnMut, pProgMut, pActMut, pActAtom, pInstDel, pInstAdd, pInstSwp, pInstMut, doElites, memType, memMatrixShape, rampancy, operationSet, traversal, prevPops, mutatePrevs, initMaxActProgSize, nActRegisters)
+
+    def instance_valid(self, trainer) -> bool:
+        if not isinstance(trainer, Trainer11): raise Exception('this object is not Trainer11')
 
 class EmulatorTPG(TPG):
     def __init__(self, 
@@ -299,6 +307,11 @@ class EmulatorTPG(TPG):
         self.rewards = {}
         self.thinkingTimeLimit=thinkingTime
 
+    def instance_valid(self, _actor, _emulator) -> bool:
+        if not isinstance(_actor, Trainer11): raise Exception('this actor is not Trainer11')
+        if not isinstance(_emulator, Trainer2): raise Exception('this emulator is not Trainer2')
+
+
     def getActor(self):
         yield from self.ActorGraph.getAgents()
 
@@ -328,6 +341,105 @@ class EmulatorTPG(TPG):
         bestActions=max(self.rewards, key=lambda k: self.rewards.get(k))
         return self.actions[bestActions]
 
+    def episode(self, _agents, _env, _logger=None, _scores={}, _frames:int=500, _show=False):
+        
+        for agent in _agents: # to multi-proccess
+            
+            state = _env.reset() # get initial state and prep environment
+            score = 0
+            _id = str(agent.team.id)
+            for _ in range(_frames): # run episodes that last 500 frames
+                act = agent.act(state)
+                # feedback from env
+                if not act in range(_env.action_space.n): continue
+                state, reward, isDone, debug = _env.step(act)
+                score += reward # accumulate reward in score
+
+                if isDone: break # end early if losing state
+                if _show:
+                    self.show_state(
+                        _env, _
+                    )
+
+            if _scores.get(_id) is None : _scores[_id]=0
+            _scores[_id] += score # store score
+
+            if _logger is not None: _logger.info(f'{_id},{score}')
+
+        # _summaryScores = (min(curScores), max(curScores), sum(curScores)/len(curScores)) # min, max, avg
+
+        return _scores
+
+    def generation(self,_trainer, _env, _logger=None, _episodes=1, _frames= 500, _show=False):
+        _scores = {}
+        agents = _trainer.getAgents()
+        _task = _env.spec.id
+        for _ in range(_episodes):      _scores = self.episode(agents, _env, _logger=_logger, _scores=_scores, _frames=_frames, _show=_show)
+        for i in _scores:                _scores[i]/=_episodes
+        for agent in agents:            agent.reward(_scores[str(agent.team.id)],task=_task)
+        _trainer.evolve([_task])
+
+        return _scores
+    
+    def growing(self, _actor, _emulator, _task:str, _generations:int=1000, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True):
+        self.instance_valid(_actor, _emulator)
+        logger, filename = setup_logger(__name__, _task, test=_test, load=_load)
+        print(_task,filename)
+        env = gym.make(_task) # make the environment
+        action_space = env.action_space
+        obsesrvation_space = env.observation_space
+        
+        action = 0
+        if isinstance(action_space, gym.spaces.Box):
+            action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
+        elif isinstance(action_space, gym.spaces.Discrete):
+            action = action_space.n
+        _actor.resetActions(actions=action)
+
+        state = env.observation_space.sample()
+        _emulator.reset
+        def outHandler(signum, frame):
+            if not _test: 
+                _actor.saveToFile(f'{_task}/{filename}-act')
+                _emulator.saveToFile(f'{_task}/{filename}-emu')
+            print('exit')
+            sys.exit()
+        
+        signal.signal(signal.SIGINT, outHandler)
+
+        
+
+        summaryScores = []
+
+        tStart = time.time()
+        for gen in tqdm(range(_generations)): # generation loop
+            scores = self.generation(_actor, _emulator, env, logger, _episodes=_episodes, _frames=_frames, _show=_show)
+
+            score = (min(scores.values()), max(scores.values()), sum(scores.values())/len(scores))
+
+            logger.info(f'generation:{gen}, score:{score}')
+            summaryScores.append(score)
+
+
+            
+        #clear_output(wait=True)
+        logger.info(f'Time Taken (Hours): {str((time.time() - tStart)/3600)}')
+        logger.info(f'Results: Min, Max, Avg, {summaryScores}')
+        return filename
+
+    def start(self, _task, _show, _test, _load, _actor=None, _emulator=None, _generations=1000, _episodes=1, _frames=500):
+        if _actor is None: 
+            if not self.ActorGraph : raise Exception('actor is not defined')
+            _actor = self.ActorGraph
+        if _emulator is None: 
+            if not self.EmulatorGraph : raise Exception('emulator is not defined')
+            _emulator = self.EmulatorGraph
+
+        _filename = self.growing(_actor, _emulator, _task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load)
+        if not _test: 
+            _actor.saveToFile(f'{task}/{_filename}-act')
+            _emulator.saveToFile(f'{task}/{_filename}-emu')
+        return _filename
 
 if __name__ == '__main__':
     task = sys.argv[1]
@@ -357,6 +469,8 @@ if __name__ == '__main__':
             tpg = NativeTPG(teamPopSize=teamPopSize)
         if arg=='hierarchy':
             tpg = MemoryAndHierarchicalTPG(teamPopSize=teamPopSize)
+        if arg=='hierarchy1':
+            tpg = MemoryAndHierarchicalTPG1(teamPopSize=teamPopSize)
         if arg=='emulator':
             tpg = EmulatorTPG(teamPopSize=teamPopSize)
         

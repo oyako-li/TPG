@@ -1,6 +1,6 @@
 import uuid
 from _tpg.utils import flip
-from _tpg.learner import Learner, Learner1, Learner2
+from _tpg.learner import Learner, Learner1, Learner11, Learner2
 import random
 import collections
 import copy
@@ -666,6 +666,208 @@ class Team1:
         
         if functionsDict["clone"] == "def":
             cls.clone = ConfTeam1.clone_def
+
+class Team11:
+
+    def __init__(self, initParams:int or dict=0): pass
+   
+    def act(self, state, visited, actVars=None, path_trace=None): pass
+
+    def addLearner(self, learner=None): pass
+
+    def removeLearner(self, learner): pass
+
+    def removeLearners(self): pass
+
+    def numAtomicActions(self): pass
+
+    def mutate(self, mutateParams, allLearners, teams): pass
+
+    def clone(self): pass
+
+    def _mutation_delete(self, probability):
+
+            original_probability = float(probability)
+
+            if probability == 0.0:
+                return []
+
+            if probability >= 1.0: 
+                raise Exception("pLrnDel is greater than or equal to 1.0!")
+
+            # Freak out if we don't have an atomic action
+            if self.numAtomicActions() < 1: 
+                raise Exception("Less than one atomic action in team! This shouldn't happen", self)
+
+
+            deleted_learners = []
+
+            # delete some learners
+            while flip(probability) and len(self.learners) > 2: # must have >= 2 learners
+                probability *= original_probability # decrease next chance
+
+
+                # If we have more than one learner with an atomic action pick any learner to delete
+                if self.numAtomicActions() > 1:
+                    learner = random.choice(self.learners)
+                else: 
+                    # Otherwise if we only have one, filter it out and pick from the remaining learners
+                    valid_choices = list(filter(lambda x: not x.isActionAtomic(), self.learners)) # isActionAtomic以外から削除を決定。
+                    learner = random.choice(valid_choices)
+
+                deleted_learners.append(learner)
+                self.removeLearner(learner)
+
+            return deleted_learners
+
+    def _mutation_add(self, probability, maxTeamSize, selection_pool):
+
+        original_probability = float(probability)
+
+        # Zero chance to add anything, return right away
+        if probability == 0.0 or len(selection_pool) == 0 or (maxTeamSize > 0 and len(self.learners) >= maxTeamSize):   return []
+        
+        # If this were true, we'd end up adding the entire selection pool
+        if probability >= 1.0:  raise Exception("pLrnAdd is greater than or equal to 1.0!")
+
+        added_learners = []  
+        while flip(probability) and (maxTeamSize <= 0 or len(self.learners) < maxTeamSize):
+            # If no valid selections left, break out of the loop
+            if len(selection_pool) == 0:    break
+
+            probability *= original_probability # decrease next chance
+
+
+            learner = random.choice(selection_pool)
+            added_learners.append(learner)
+            self.addLearner(learner)
+
+            # Ensure we don't pick the same learner twice by filtering the learners we've added from the selection pool
+            selection_pool = list(filter(lambda x:x not in added_learners, selection_pool))
+
+        return added_learners
+
+    def _mutation_mutate(self, probability, mutateParams, teams):
+        mutated_learners = {}
+        '''
+         This original learners thing is important, otherwise may mutate learners that we just added through mutation. 
+         This breaks reference tracking because it results in 'ghost learners' that were created during mutation, added themselves 
+         to inLearners in the teams they pointed to, but them were mutated out before being tracked by the trainer. So you end up
+         with teams hold a record in their inLearners to a learner that doesn't exist
+        '''
+        original_learners = list(self.learners)
+        new_learners = []
+        for learner in original_learners:
+            if flip(probability):
+
+                # If we only have one learner with an atomic action and the current learner is it
+                if self.numAtomicActions() == 1 and learner.isActionAtomic():
+                    pActAtom0 = 1.1 # Ensure their action remains atomic
+                else:
+                    # Otherwise let there be a probability that the learner's action is atomic as defined in the mutate params
+                    pActAtom0 = mutateParams['pActAtom']
+
+                #print("Team {} creating learner".format(self.id))
+                # Create a new new learner 
+                newLearner = Learner11(mutateParams, learner.program, learner.actionObj, len(learner.registers), learner.id)
+                new_learners.append(newLearner)
+                # Add the mutated learner to our learners
+                # Must add before mutate so that the new learner has this team in its inTeams
+                self.addLearner(newLearner)
+
+
+                # mutate it
+                newLearner.mutate(mutateParams, self, teams, pActAtom0)
+                # Remove the existing learner from the team
+                self.removeLearner(learner)
+
+                mutated_learners[str(learner.id)] = str(newLearner.id)
+
+      
+        return mutated_learners, new_learners
+    
+    def __eq__(self, o: object) -> bool:
+
+        # Object must be instance of Team
+        if not isinstance(o, Team11):    return False
+
+        # Object must be created the same generation as us
+        if self.genCreate != o.genCreate:   return False
+        
+        '''
+        The other object's learners must match our own, therefore:
+            - len(self.learners) must be equal to len(o.learners)
+            - every learner that appears in our list of learners must appear in the 
+              other object's list of learners as well.
+        '''
+        if len(self.learners) != len(o.learners):   return False
+        
+        for l in self.learners:
+            if l not in o.learners:
+                return False
+
+        
+        '''
+        The other object's inLearners must match our own, therefore:
+            - len(self.inLearners) must be equal to len(o.inLearners)
+            - every learner that appears in our list of inLearners must appear in 
+              the other object's list of inLearners as well. 
+        '''
+        if len(self.inLearners) != len(o.inLearners):   return False
+        
+        '''
+        Collection comparison via collection counters
+        https://www.journaldev.com/37089/how-to-compare-two-lists-in-python
+        '''
+        if collections.Counter(self.inLearners) != collections.Counter(o.inLearners):   return False
+
+        # The other object's id must be equal to ours
+        if self.id != o.id: return False
+
+        return True
+
+    def __ne__(self, o: object) -> bool:
+        return not self.__eq__(o)
+
+    # def __deepcopy__(self, __o):
+    #     return Team1(copy.deepcopy(self.genCreate, self.learners, self.outcomes, self.fitness, self.inLearners))
+
+    def zeroRegisters(self):
+        for learner in self.learners:
+            learner.zeroRegisters()
+
+    def numLearnersReferencing(self):
+        return len(self.inLearners)
+
+    @classmethod
+    def configFunctions(cls, functionsDict):
+        from _tpg.configuration.conf_team import ConfTeam11
+
+        if functionsDict["init"] == "def":
+            cls.__init__ = ConfTeam11.init_def
+
+        if functionsDict["act"] == "def":
+            cls.act = ConfTeam11.act_def
+        elif functionsDict["act"] == "learnerTrav":
+            cls.act = ConfTeam11.act_learnerTrav
+
+        if functionsDict["addLearner"] == "def":
+            cls.addLearner = ConfTeam11.addLearner_def
+
+        if functionsDict["removeLearner"] == "def":
+            cls.removeLearner = ConfTeam11.removeLearner_def
+
+        if functionsDict["removeLearners"] == "def":
+            cls.removeLearners = ConfTeam11.removeLearners_def
+
+        if functionsDict["numAtomicActions"] == "def":
+            cls.numAtomicActions = ConfTeam11.numAtomicActions_def
+
+        if functionsDict["mutate"] == "def":
+            cls.mutate = ConfTeam11.mutate_def
+        
+        if functionsDict["clone"] == "def":
+            cls.clone = ConfTeam11.clone_def
 
 class Team2:
 
