@@ -773,10 +773,6 @@ def _configureDefaults2(trainer, Trainer, Agent, Team, Learner, MemoryObject, Pr
     Learner.mutate = ConfLearner2.mutate_def
     Learner.clone = ConfLearner2.clone_def
 
-
-    # set action object functions
-    MemoryObject.memories = trainer.memoryCodes
-
     # set program functions
     Program.__init__ = ConfProgram2.init_def
     Program.execute = ConfProgram2.execute_def

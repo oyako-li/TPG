@@ -564,8 +564,8 @@ class ConfActionObject11:
                     raise Exception('action codes not found in init params', initParams)
 
                 try:
-                    ActionObject11._actions = initParams["actionCodes"]
-                    self.actionCode = initParams["actionCodes"][action]
+                    ActionObject11.actions=initParams["actionCodes"] #+ ActionObject11.nativeAction
+                    self.actionCode = action
                     self.teamAction = None
                 except IndexError as err:
                     '''
@@ -575,7 +575,7 @@ class ConfActionObject11:
                 return
             else:
                 try:
-                    self.actionCode=random.choice(ActionObject11._actions)
+                    self.actionCode=random.randint(0, len(ActionObject11.actions)-1)
                     self.teamAction=None
                 except:
                     print('諦めな・・・')
@@ -615,7 +615,7 @@ class ConfActionObject11:
             # An int means the action is an index into the action codes in initParams
             if "actionCodes" not in initParams: raise Exception('action codes not found in init params', initParams)
             try:
-                ActionObject11._actions = initParams["actionCodes"]
+                ActionObject11.actions = initParams["actionCodes"]
                 self.actionCode = initParams["actionCodes"][action]
                 self.actionLength = initParams["actionLengths"][action]
                 self.teamAction = None
@@ -643,7 +643,7 @@ class ConfActionObject11:
             return self.teamAction.act(state, visited, actVars=actVars, path_trace=path_trace)
         else:
             # atomic action
-            return self.actionCode
+            return ActionObject11.actions[self.actionCode]
 
     """
     Returns the action code, and if applicable corresponding real action(s).
@@ -693,7 +693,7 @@ class ConfActionObject11:
     def mutate_def(self, mutateParams=None, parentTeam=None, teams=None, pActAtom=None, learner_id=None):
         # mutate action
         if any(item is None for item in (mutateParams, parentTeam, teams, pActAtom, learner_id)):
-            self.actionCode = random.choice(ActionObject1._actions)
+            self.actionCode = random.randint(0,len(ActionObject11.actions)-1)
             self.teamAction = None
             print('0 valid_learners')
 
@@ -706,9 +706,9 @@ class ConfActionObject11:
             TODO handle case where there is only 1 action code.
             '''
             if self.actionCode is not None:
-                options = list(filter(lambda code: code != self.actionCode,mutateParams["actionCodes"]))
+                options = list(filter(lambda code: code != self.actionCode,ActionObject11.actions))
             else:
-                options = mutateParams["actionCodes"]
+                options = range(len(ActionObject11.actions))
 
             # let our current team know we won't be pointing to them anymore
             if not self.isAtomic():
@@ -719,24 +719,19 @@ class ConfActionObject11:
             self.teamAction = None
         else:
             # team action
-            selection_pool = [t for t in teams
-                    if t is not self.teamAction and t is not parentTeam]
+            selection_pool = [t for t in teams if t is not self.teamAction and t is not parentTeam]
 
             # If we have a valid set of options choose from them
             if len(selection_pool) > 0:
+
                 # let our current team know we won't be pointing to them anymore
-                oldTeam = None
-                if not self.isAtomic():
-                    oldTeam = self.teamAction
-                    self.teamAction.inLearners.remove(str(learner_id))
+                if not self.isAtomic(): self.teamAction.inLearners.remove(str(learner_id))
 
                 self.teamAction = random.choice(selection_pool)
+
                 # Let the new team know we're pointing to them
                 self.teamAction.inLearners.append(str(learner_id))
 
-                #if oldTeam != None:
-                #    print("Learner {} switched from Team {} to Team {}".format(learner_id, oldTeam.id, self.teamAction.id))
-        
         return self
 
     """
@@ -746,7 +741,7 @@ class ConfActionObject11:
 
         # first maybe mutate just program
         if any(item is None for item in (mutateParams, parentTeam, teams, pActAtom, learner_id)):
-            self.actionCode = random.choice(ActionObject11._actions)
+            self.actionCode = random.choice(ActionObject11.actions)
             self.teamAction = None
             print('0 valid_learners')
             return self

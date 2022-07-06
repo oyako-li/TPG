@@ -2,7 +2,7 @@
 import sys
 sys.path.insert(0, '.')
 from _tpg.trainer import Trainer
-from src.grower_hierarchical import growing
+from src.grower import growing
 
 task = 'ALE/Centipede-v5'
 trainer = Trainer(teamPopSize=100)

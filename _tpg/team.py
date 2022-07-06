@@ -1,6 +1,7 @@
 import uuid
 from _tpg.utils import flip
 from _tpg.learner import Learner, Learner1, Learner11, Learner2
+from _tpg.memory_object import MemoryObject
 import random
 import collections
 import copy
@@ -943,6 +944,7 @@ class Team2:
 
             learner = random.choice(selection_pool)
             added_learners.append(learner)
+
             self.addLearner(learner)
 
             # Ensure we don't pick the same learner twice by filtering the learners we've added from the selection pool

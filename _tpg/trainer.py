@@ -1,3 +1,4 @@
+from pkg_resources import yield_lines
 from _tpg.agent import Agent, Agent1, Agent11, Agent2
 from _tpg.team import Team, Team1, Team11, Team2
 from _tpg.learner import Learner, Learner1, Learner11, Learner2
@@ -8,6 +9,7 @@ from _tpg.configuration import configurer
 # from _tpg.emulator import Emulator
 import random
 import pickle
+import numpy as np
 # import time
 # import multiprocessing as mp
 
@@ -1663,24 +1665,26 @@ class Trainer11:
                         or any(task not in team.outcomes for task in skipTasks)]
 
         if len(sortTasks) == 0: # just get all
-            return [Agent11(team, self.functionsDict, num=i, actVars=self.actVars)
+            result = [Agent11(team, self.functionsDict, num=i, actVars=self.actVars)
                     for i,team in enumerate(rTeams)]
+            return random.shuffle(result)
         else:
 
             if len(sortTasks) == 1:
                 rTeams = [t for t in rTeams if sortTasks[0] in t.outcomes]
                 # return teams sorted by the outcome
-                return [Agent11(team, self.functionsDict, num=i, actVars=self.actVars)
-                        for i,team in enumerate(sorted(rTeams,
+                result =  [Agent11(team, self.functionsDict, num=i, actVars=self.actVars)
+                                for i,team in enumerate(sorted(rTeams,
                                         key=lambda tm: tm.outcomes[sortTasks[0]], reverse=True))]
-
+                return random.shuffle(result)
             else:
                 # apply scores/fitness to root teams
                 self._scoreIndividuals(sortTasks, multiTaskType=multiTaskType, doElites=False)
                 # return teams sorted by fitness
-                return [Agent11(team, self.functionsDict, num=i, actVars=self.actVars)
+                result = [Agent11(team, self.functionsDict, num=i, actVars=self.actVars)
                         for i,team in enumerate(sorted(rTeams,
                                         key=lambda tm: tm.fitness, reverse=True))]
+                return random.shuffle(result)
 
     def getEliteAgent(self, task):
         
@@ -2021,89 +2025,6 @@ class Trainer11:
 
         self.generation += 1
 
-    def removeHitchhikers(self, teams, visitedLearners):
-        learnersRemoved = []
-        teamsAffected = []
-
-        for i, team in enumerate(teams):
-            affected = False
-            for learner in team.learners:
-                # only remove if non atomic, or atomic and team has > 1 atomic actions
-                if learner not in visitedLearners[i] and (
-                        not learner.isActionAtomic() or 
-                            (learner.isActionAtomic() and team.numAtomicActions() > 1)):
-                    affected = True
-                    learnersRemoved.append(learner)
-                    team.removeLearner(learner)
-
-            if affected:
-                teamsAffected.append(team)
-
-        return learnersRemoved, teamsAffected
-    
-    def validate_graph(self):
-        print("Validating graph")
-
-        print("Checking for broken learners")
-        for cursor in self.learners:
-            if cursor.isActionAtomic() and cursor.actionObj.actionCode == None:
-                print("{} is an action atomic learner with no actionCode!".format(str(cursor.id)))
-            if cursor.actionObj.teamAction == None and cursor.actionObj.actionCode == None:
-                print("{} has no action!".format(str(cursor.id)))
-
-        learner_map = {}
-        for cursor in self.learners:
-            if str(cursor.id) not in learner_map:
-                learner_map[str(cursor.id)] = cursor.inTeams
-            else:
-                raise Exception("Duplicate learner id in trainer!")
-        
-        '''
-        For every entry in the learner map check that the corresponding team has the learner 
-        in its learners 
-        '''
-        for i,cursor in enumerate(learner_map.items()):
-            for expected_team in cursor[1]:
-                found_team = False
-                for team in self.teams:
-                    if str(team.id) == expected_team:
-                        found_learner = 0
-                        for learner in team.learners:
-                            if str(learner.id) == cursor[0]:
-                                found_learner += 1
-                        if found_learner != 1:
-                            print("found_learner = {} for learner {} in team {}".format(found_learner, cursor[0], str(team.id)))
-                        found_team = True
-                        break
-                if found_team == False:
-                    print("Could not find expected team {} in trainer".format(expected_team))
-            print("learner {} inTeams valid [{}/{}]".format(cursor[0], i, len(learner_map.items())-1))
-
-        '''
-        Verify that for every inLearner in a team, the learner exists in the trainer, pointing to that team
-        '''
-        team_map = {}
-        for cursor in self.teams:
-            if str(cursor.id) not in team_map:
-                team_map[str(cursor.id)] = cursor.inLearners
-            else:
-                raise Exception("Duplicate team id in trainer!")
-
-        for i,cursor in enumerate(team_map.items()):
-            for expected_learner in cursor[1]:
-                found_learner = False
-                points_to_team = False
-                for learner in self.learners:
-                    if str(learner.id) == expected_learner:
-                        found_learner = True
-                        if str(learner.actionObj.teamAction.id) == cursor[0]:
-                            points_to_team = True
-                            break
-                if found_learner == False:
-                    print("Could not find learner {} from team {} inLearners in trainer.".format(expected_learner, cursor[0]))
-                if points_to_team == False:
-                    print("Learner {} does not point to team {}".format(expected_learner, cursor[0]))
-            print("team {} inLearners valid [{}/{}]".format(cursor[0], i, len(team_map.items())-1))
     
     def countRootTeams(self):
         numRTeams = 0
@@ -2111,75 +2032,6 @@ class Trainer11:
             if team.numLearnersReferencing() == 0: numRTeams += 1
 
         return numRTeams
-
-    def get_graph(self):
-
-
-        result = {
-            "nodes":[],
-            "links":[]
-        }
-
-        # First add action codes as nodes
-        for actionCode in self.actionCodes:
-            result["nodes"].append(
-                {
-                    "id": str(actionCode),   
-                    "type": "action"
-                }
-            )
-        
-        # Then add teams as nodes
-        for team in self.teams:
-            result["nodes"].append(
-                {
-                    "id": str(team.id),
-                    "type": "rootTeam" if team in self.rootTeams else "team"
-                }
-            )
-
-        # Then add learners as nodes
-        for learner in self.learners:
-            result["nodes"].append(
-                {
-                    "id": str(learner.id),
-                    "type": "learner"
-                }
-            )
-
-
-        # Then add links from learners to teams
-        for team in self.teams:
-            for learner in team.inLearners:
-                result["links"].append(
-                    {
-                        "source": learner,
-                        "target": str(team.id)
-                    }
-                )
-        
-        # Then add links from teams to learners
-        for learner in self.learners:
-            for team in learner.inTeams:
-                result["links"].append(
-                    {
-                        "source": team,
-                        "target": str(learner.id)
-                    }
-                )
-            
-            # Also add links to action codes
-            if learner.isActionAtomic():
-                result["links"].append(
-                    {
-                        "source": str(learner.id),
-                        "target": str(learner.actionObj.actionCode)
-                    }
-                )
-
-        # with open("tpg_{}.json".format(self.generation), 'w') as out_file:
-        #     json.dump(result, out_file)
-        return result
 
     def cleanup(self):
         configurer._configureDefaults11(self, Trainer11, Agent11, Team11, Learner11, ActionObject11, Program11)
@@ -2202,7 +2054,6 @@ class Trainer11:
 
     def saveToFile(self, fileName):
         pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
-
 
 class Trainer2:
 
@@ -2369,7 +2220,7 @@ class Trainer2:
         # configure tpg functions and variable appropriately now
         configurer.configure2(self, Trainer2, Agent2, Team2, Learner2, MemoryObject, Program2, self.memType is not None, self.memType, self.doReal, self.operationSet, self.traversal)
 
-        self._initializePopulations()
+        self._initializePopulations(_state=state)
 
     def getAgents(self, sortTasks=[], multiTaskType='min', skipTasks=[]):
         # remove those that get skipped
@@ -2378,24 +2229,26 @@ class Trainer2:
                         or any(task not in team.outcomes for task in skipTasks)]
 
         if len(sortTasks) == 0: # just get all
-            return [Agent2(team, self.functionsDict, num=i, actVars=self.actVars)
+            result = [Agent2(team, self.functionsDict, num=i, actVars=self.actVars)
                     for i,team in enumerate(rTeams)]
+            return random.shuffle(result)
         else:
 
             if len(sortTasks) == 1:
                 rTeams = [t for t in rTeams if sortTasks[0] in t.outcomes]
                 # return teams sorted by the outcome
-                return [Agent2(team, self.functionsDict, num=i, actVars=self.actVars)
-                        for i,team in enumerate(sorted(rTeams,
+                result =  [Agent2(team, self.functionsDict, num=i, actVars=self.actVars)
+                                for i,team in enumerate(sorted(rTeams,
                                         key=lambda tm: tm.outcomes[sortTasks[0]], reverse=True))]
-
+                return random.shuffle(result)
             else:
                 # apply scores/fitness to root teams
                 self._scoreIndividuals(sortTasks, multiTaskType=multiTaskType, doElites=False)
                 # return teams sorted by fitness
-                return [Agent2(team, self.functionsDict, num=i, actVars=self.actVars)
+                result = [Agent2(team, self.functionsDict, num=i, actVars=self.actVars)
                         for i,team in enumerate(sorted(rTeams,
                                         key=lambda tm: tm.fitness, reverse=True))]
+                return random.shuffle(result)
 
     def getEliteAgent(self, task):
         
@@ -2415,7 +2268,7 @@ class Trainer2:
 
         return self.rootTeams
 
-    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None):
+    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _state=None):
         self._scoreIndividuals(
             tasks, 
             multiTaskType=multiTaskType,
@@ -2423,7 +2276,7 @@ class Trainer2:
         ) # assign scores to individuals
         self._saveFitnessStats() # save fitness stats
         self._select(extraTeams) # select individuals to keep
-        self._generate(extraTeams) # create new individuals from those kept
+        self._generate(extraTeams, _state) # create new individuals from those kept
         self._nextEpoch() # set up for next generation
 
     def _must_be_integer_greater_than_zero(self, name, value):
@@ -2434,39 +2287,44 @@ class Trainer2:
         if type(value) is not float or value > 1.0 or value < 0.0:
             raise Exception(name + " is a probability, it must not be greater than 1.0 or less than 0.0", name, value)
 
-    def _setUpMemories(self, state):
+    def _setUpMemories(self, state): #state: np.ndarray
+        import numpy as np
         if isinstance(state, int):
             # all discrete actions
-            self.memoryCodes:list = range(state)
+            # generate inital memories
+            self.memoryCodes = np.array(dict(zip(range(state), range(state))))
             doReal = False
-        else: # list of lengths of each action
+        if isinstance(state, np.ndarray): # list of lengths of each action
             # some may be real actions
-            self.memoryCodes:list = range(len(state))
-            self.memoryLengths = list(state)
-            doReal = True
+            for _ in range(self.initMaxTeamSize):
+                key = random.choices(range(state.size), random.randint(1, state.size-1))
+                MemoryObject.memories.append(key, state)
+            doReal = False
             
         return doReal
     
     def resetMemories(self, state):
+        import numpy as np
         if isinstance(state, int):
             # all discrete actions
-            self.memoryCodes:list = range(state)
+            self.memoryCodes = np.array(dict(zip(range(state), range(state))))
             self.doReal = False
-        else: # list of lengths of each action
+        if isinstance(state, np.ndarray): # list of lengths of each action
             # some may be real actions
-            self.memoryCodes:list = range(len(state))
-            self.memoryLengths = list(state)
-            self.doReal = True
+            for _ in range(self.initMaxTeamSize):
+                key = random.choices(range(state.size), random.randint(1, state.size-1))
+                MemoryObject.memories.append(key, state)
+            self.doReal = False
         
         if self.doReal: self.nMemRegisters = max(max(self.memoryLengths), self.nMemRegisters)
         # self.nActRegisters = self.nMemRegisters
         configurer.configure2(self, Trainer2, Agent2, Team2, Learner2, MemoryObject, Program2, 
             self.memType is not None, self.memType, self.doReal, self.operationSet, self.traversal)
 
-    def _initializePopulations(self):
+    def _initializePopulations(self, _state=1):
         for _ in range(self.teamPopSize):
             # create 2 unique actions and learners
-            m1,m2 = random.sample(range(len(self.memoryCodes)), 2)
+            # m1,m2 = random.choices(range(len(self.memoryCodes)), 2)
 
             l1 = Learner2(
                 initParams=self.mutateParams,
@@ -2476,9 +2334,7 @@ class Trainer2:
                     nDestinations=self.nRegisters,
                     inputSize=self.inputSize,
                     initParams=self.mutateParams),
-                memoryObj=MemoryObject(
-                    state=m1, 
-                    initParams=self.mutateParams),
+                memoryObj=MemoryObject(state=_state),
                 numRegisters=self.nRegisters)
             
             l2 = Learner2(
@@ -2489,9 +2345,7 @@ class Trainer2:
                     nDestinations=self.nRegisters,
                     inputSize=self.inputSize,
                     initParams=self.mutateParams),
-                memoryObj=MemoryObject(
-                    state=m2, 
-                    initParams=self.mutateParams),
+                memoryObj=MemoryObject(state=_state),
                 numRegisters=self.nRegisters)
 
             # save learner population
@@ -2507,7 +2361,7 @@ class Trainer2:
             moreLearners = random.randint(0, self.initMaxTeamSize-2)
             for __ in range(moreLearners):
                 # select action
-                memory = random.choice(range(len(self.memoryCodes)))
+                # memory = random.choice(range(len(self.memoryCodes)))
 
                 # create new learner
                 learner = Learner2(
@@ -2518,9 +2372,7 @@ class Trainer2:
                         nDestinations=self.nRegisters,
                         inputSize=self.inputSize,
                         initParams=self.mutateParams),
-                    memoryObj=MemoryObject(
-                        state=memory, 
-                        initParams=self.mutateParams),  
+                    memoryObj=MemoryObject(state=_state),  
                     numRegisters=self.nRegisters)
 
                 team.addLearner(learner)
@@ -2536,8 +2388,7 @@ class Trainer2:
             # get the best agent at each task
             self.elites = [] # clear old elites
             for task in tasks:
-                self.elites.append(max([team for team in self.rootTeams],
-                                        key=lambda t: t.outcomes[task]))
+                self.elites.append(max([team for team in self.rootTeams], key=lambda t: t.outcomes[task]))
 
         if len(tasks) == 1: # single fitness
             for team in self.rootTeams:
@@ -2638,7 +2489,7 @@ class Trainer2:
 
     def _select(self, extraTeams=None):
 
-        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.fitness, reverse=True)
+        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.fitness)
         numKeep = len(self.rootTeams) - int(len(self.rootTeams)*self.gap)
         deleteTeams = rankedTeams[numKeep:]
 
@@ -2649,17 +2500,22 @@ class Trainer2:
             self.rootTeams.remove(team)
 
         orphans = [learner for learner in self.learners if learner.numTeamsReferencing() == 0]
-    
+
         for cursor in orphans:
             if not cursor.isMemoryAtomic(): # If the orphan does NOT point to an atomic action
                 # Get the team the orphan is pointing to and remove the orphan's id from the team's in learner list
                 cursor.memoryObj.teamMemory.inLearners.remove(str(cursor.id))
+            else: # delete MemoryObject
+                MemoryObject.memories.referenced[cursor.memoryObj.memoryCode]-=1
+
+        MemoryObject.memories.oblivion()
+
 
         # Finaly, purge the orphans
         # AtomicActionのLearnerはどのように生成すれば良いのだろうか？ -> actionObj.mutate()による
         self.learners = [learner for learner in self.learners if learner.numTeamsReferencing() > 0]
                 
-    def _generate(self, extraTeams=None):
+    def _generate(self, extraTeams=None, _state=None):
 
         # extras who are already part of the team population
         protectedExtras = []
@@ -2708,8 +2564,7 @@ class Trainer2:
                     # new_learner's teamAction change to clone
                     new_learner.memoryObj.teamMemory = clone
 
-
-                    # self.rootTeams.remove(rt)
+            if not _state is None: child.addLearner(Learner2(memoryObj=MemoryObject(state=_state)))
 
             self.teams.append(child)
 
@@ -2736,165 +2591,12 @@ class Trainer2:
 
         self.generation += 1
 
-    def removeHitchhikers(self, teams, visitedLearners):
-        learnersRemoved = []
-        teamsAffected = []
-
-        for i, team in enumerate(teams):
-            affected = False
-            for learner in team.learners:
-                # only remove if non atomic, or atomic and team has > 1 atomic actions
-                if learner not in visitedLearners[i] and (
-                        not learner.isMemoryAtomic() or 
-                            (learner.isMemoryAtomic() and team.numAtomicMemories() > 1)):
-                    affected = True
-                    learnersRemoved.append(learner)
-                    team.removeLearner(learner)
-
-            if affected:
-                teamsAffected.append(team)
-
-        return learnersRemoved, teamsAffected
-    
-    def validate_graph(self):
-        print("Validating graph")
-
-        print("Checking for broken learners")
-        for cursor in self.learners:
-            if cursor.isMemoryAtomic() and cursor.memoryObj.memoryCode == None:
-                print("{} is an memory atomic learner with no memoryCode!".format(str(cursor.id)))
-            if cursor.memoryObj.teamMemory == None and cursor.memoryObj.memoryCode == None:
-                print("{} has no memory!".format(str(cursor.id)))
-
-        learner_map = {}
-        for cursor in self.learners:
-            if str(cursor.id) not in learner_map:
-                learner_map[str(cursor.id)] = cursor.inTeams
-            else:
-                raise Exception("Duplicate learner id in trainer!")
-        
-        '''
-        For every entry in the learner map check that the corresponding team has the learner 
-        in its learners 
-        '''
-        for i,cursor in enumerate(learner_map.items()):
-            for expected_team in cursor[1]:
-                found_team = False
-                for team in self.teams:
-                    if str(team.id) == expected_team:
-                        found_learner = 0
-                        for learner in team.learners:
-                            if str(learner.id) == cursor[0]:
-                                found_learner += 1
-                        if found_learner != 1:
-                            print("found_learner = {} for learner {} in team {}".format(found_learner, cursor[0], str(team.id)))
-                        found_team = True
-                        break
-                if found_team == False:
-                    print("Could not find expected team {} in trainer".format(expected_team))
-            print("learner {} inTeams valid [{}/{}]".format(cursor[0], i, len(learner_map.items())-1))
-
-        '''
-        Verify that for every inLearner in a team, the learner exists in the trainer, pointing to that team
-        '''
-        team_map = {}
-        for cursor in self.teams:
-            if str(cursor.id) not in team_map:
-                team_map[str(cursor.id)] = cursor.inLearners
-            else:
-                raise Exception("Duplicate team id in trainer!")
-
-        for i,cursor in enumerate(team_map.items()):
-            for expected_learner in cursor[1]:
-                found_learner = False
-                points_to_team = False
-                for learner in self.learners:
-                    if str(learner.id) == expected_learner:
-                        found_learner = True
-                        if str(learner.memoryObj.teamMemory.id) == cursor[0]:
-                            points_to_team = True
-                            break
-                if found_learner == False:
-                    print("Could not find learner {} from team {} inLearners in trainer.".format(expected_learner, cursor[0]))
-                if points_to_team == False:
-                    print("Learner {} does not point to team {}".format(expected_learner, cursor[0]))
-            print("team {} inLearners valid [{}/{}]".format(cursor[0], i, len(team_map.items())-1))
-    
     def countRootTeams(self):
         numRTeams = 0
         for team in self.teams:
             if team.numLearnersReferencing() == 0: numRTeams += 1
 
         return numRTeams
-
-    def get_graph(self):
-
-
-        result = {
-            "nodes":[],
-            "links":[]
-        }
-
-        # First add action codes as nodes
-        for memoryCode in self.memoryCodes:
-            result["nodes"].append(
-                {
-                    "id": str(memoryCode),   
-                    "type": "memory"
-                }
-            )
-        
-        # Then add teams as nodes
-        for team in self.teams:
-            result["nodes"].append(
-                {
-                    "id": str(team.id),
-                    "type": "rootTeam" if team in self.rootTeams else "team"
-                }
-            )
-
-        # Then add learners as nodes
-        for learner in self.learners:
-            result["nodes"].append(
-                {
-                    "id": str(learner.id),
-                    "type": "learner"
-                }
-            )
-
-
-        # Then add links from learners to teams
-        for team in self.teams:
-            for learner in team.inLearners:
-                result["links"].append(
-                    {
-                        "source": learner,
-                        "target": str(team.id)
-                    }
-                )
-        
-        # Then add links from teams to learners
-        for learner in self.learners:
-            for team in learner.inTeams:
-                result["links"].append(
-                    {
-                        "source": team,
-                        "target": str(learner.id)
-                    }
-                )
-            
-            # Also add links to action codes
-            if learner.isMemoryAtomic():
-                result["links"].append(
-                    {
-                        "source": str(learner.id),
-                        "target": str(learner.memoryObj.memoryCode)
-                    }
-                )
-
-        # with open("tpg_{}.json".format(self.generation), 'w') as out_file:
-        #     json.dump(result, out_file)
-        return result
 
     def cleanup(self):
         configurer._configureDefaults2(self, Trainer2, Agent2, Team2, Learner2, MemoryObject, Program2)
@@ -2908,8 +2610,6 @@ class Trainer2:
 
         # set up Learner functions
         Learner2.configFunctions(self.functionsDict["Learner"])
-
-        # MemoryObject.configFunctions(self.functionsDict["MemoryObject"])
 
         # set up Program functions
         Program2.configFunctions(self.functionsDict["Program"])

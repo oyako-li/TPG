@@ -348,13 +348,8 @@ class ConfLearner2:
         _inTeams:list=[],
         _frameNum:int=0
     ):
-        self.program = Program2(
-            instructions = program.instructions
-        ) #Each learner should have their own copy of the program
-        self.memoryObj = MemoryObject(
-            _state = memoryObj, 
-            initParams = initParams
-        ) #Each learner should have their own copy of the action object
+        self.program = Program2(instructions = program.instructions) #Each learner should have their own copy of the program
+        self.memoryObj = MemoryObject(state = memoryObj) #Each learner should have their own copy of the action object
         if isinstance(numRegisters, int): self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
         else: self.registers = numRegisters
         if isinstance(initParams, int): self.genCreate = initParams # Store the generation that this learner was created on
@@ -398,8 +393,8 @@ class ConfLearner2:
 
         return self.registers[0]
 
-    def getImage_def(self, _act, _state, visited, actVars=None, path_trace=None):
-        return self.memoryObj.getImage(_act, _state, visited, actVars=actVars, path_trace=path_trace)
+    def getImage_def(self, _act, _state, _bid, visited, actVars=None, path_trace=None):
+        return self.memoryObj.getImage(_act, _state, _bid, visited, actVars=actVars, path_trace=path_trace)
 
     def getMemoryTeam_def(self):
         return self.memoryObj.teamMemory
@@ -432,5 +427,6 @@ class ConfLearner2:
         _clone.inTeams = []
         _clone.id = uuid.uuid4()
         if _clone.memoryObj.teamMemory : _clone.memoryObj.teamMemory.inLearners.append(str(_clone.id))
+        elif _clone.memoryObj.memoryCode: MemoryObject.memories.referenced[_clone.memoryObj.memoryCode]+=1
         return _clone
 

@@ -297,12 +297,8 @@ class Program11:
         if instructions is not None: # copy from existing
             self.instructions = np.array(instructions, dtype=np.int32)
         else: # create random new
-            self.instructions = np.array([
-                (
-                    random.randint(0,1),
-                    random.randint(0, nOperations-1),
-                    random.randint(0, nDestinations-1),
-                    random.randint(0, inputSize-1)
+            self.instructions = np.array([(
+                    random.randint(0,1), random.randint(0, nOperations-1), random.randint(0, nDestinations-1), random.randint(0, inputSize-1)
                 ) for _ in range(random.randint(1, maxProgramLength))], dtype=np.int32)
 
         self.id = uuid.uuid4()

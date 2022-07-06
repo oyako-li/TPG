@@ -40,7 +40,6 @@ if __name__ == '__main__':
             pattern = arg.split(':')[1]
             print('CubeCrashPattern:', pattern)
 
-
     for arg in sys.argv[1:]:
         if arg=='native':
             tpg = NativeTPG(teamPopSize=teamPopSize)

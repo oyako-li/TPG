@@ -277,7 +277,7 @@ class Agent2:
 
     def image(self, _act, _state, path_trace=None): pass
 
-    def reward(self, score, task='task')->None: pass
+    def reward(self, state, task='task')->None: pass
 
     def taskDone(self, task): pass
 

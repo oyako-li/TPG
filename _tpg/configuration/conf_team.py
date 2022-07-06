@@ -1,6 +1,8 @@
 from _tpg.team import Team1, Team11, Team2
 from _tpg.learner import Learner, Learner1, Learner11, Learner2
+from _tpg.memory_object import MemoryObject
 from _tpg.utils import flip
+
 import random
 import uuid
 import copy
@@ -806,7 +808,7 @@ class ConfTeam2:
         if isinstance(initParams, dict): self.genCreate = initParams["generation"]
         elif isinstance(initParams, int): self.genCreate = initParams
 
-    def image_def(self, _act, _state, visited:list, actVars=None, path_trace=None):
+    def image_def(self, _act, _state, _bid:list, visited:list, actVars=None, path_trace=None):
 
         # If we've already visited me, throw an exception
         if str(self.id) in visited:
@@ -842,6 +844,7 @@ class ConfTeam2:
             valid_learners.append(clone)
 
         top_learner = max(valid_learners, key=lambda lrnr: lrnr.bid(_act, _state, actVars=actVars))
+        _bid[0]+=top_learner.registers[0]
 
     
         # If we're tracing this path
@@ -870,7 +873,7 @@ class ConfTeam2:
             # Append our path segment to the trace
             path_trace.append(path_segment)
 
-        return top_learner.getImage(_act, _state, visited=visited, actVars=actVars, path_trace=path_trace)
+        return top_learner.getImage(_act, _state, _bid, visited=visited, actVars=actVars, path_trace=path_trace)
 
 
     """
@@ -919,6 +922,7 @@ class ConfTeam2:
 
         self.learners.append(learner)
         learner.inTeams.append(str(self.id)) # Add this team's id to the list of teams that reference the learner
+        if learner.isMemoryAtomic(): MemoryObject.memories.referenced[learner.memoryObj.memoryCode]+=1
 
         return True
 
@@ -943,6 +947,7 @@ class ConfTeam2:
 
         # Build a new list of learners containing only learners that are not the learner
         self.learners = [cursor for cursor in self.learners if cursor != learner ]
+        if to_remove.isMemoryAtomic(): MemoryObject.memories.referenced[to_remove.memoryObj.memoryCode]-=1
 
         # Remove our id from the learner's inTeams
         # NOTE: Have to do this after removing the learner otherwise, removal will fail 
@@ -955,6 +960,7 @@ class ConfTeam2:
     def removeLearners_def(self):
         for learner in self.learners:
             learner.inTeams.remove(str(self.id))
+            if learner.isMemoryAtomic(): MemoryObject.memories.referenced[learner.memoryObj.memoryCode]-=1
 
         del self.learners[:]
 

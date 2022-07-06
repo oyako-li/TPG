@@ -1660,12 +1660,13 @@ class ConfProgram2:
 
 
     def execute_def(act, inpt, regs, modes, ops, dsts, srcs):
+        # inpt+=[act]
         regSize = len(regs)
         inptLen = len(inpt)
         for i in range(len(modes)):
             # first get source
-            if modes[i] == 0:   src = regs[srcs[i]%regSize]
-            else:               src = inpt[srcs[i]%inptLen]
+            if modes[i] == 0:   src = regs[(srcs[i]+act)%regSize]
+            else:               src = inpt[(srcs[i]+act)%inptLen]
 
 
             # get data for operation
@@ -1696,8 +1697,8 @@ class ConfProgram2:
         inptLen = len(inpt)
         for i in range(len(modes)):
             # first get source
-            if modes[i] == 0:   src = regs[srcs[i]%regSize]
-            else:               src = inpt[srcs[i]%inptLen]
+            if modes[i] == 0:   src = regs[(srcs[i]+act)%regSize]
+            else:               src = inpt[(srcs[i]+act)%inptLen]
 
             # get data for operation
             op = ops[i]
@@ -1749,8 +1750,8 @@ class ConfProgram2:
         inptLen = len(inpt)
         for i in range(len(modes)):
             # first get source
-            if modes[i] == 0:   src = regs[srcs[i]%regSize]
-            else:               src = inpt[srcs[i]%inptLen]
+            if modes[i] == 0:   src = regs[(srcs[i]+act)%regSize]
+            else:               src = inpt[(srcs[i]+act)%inptLen]
 
             # get data for operation
             op = ops[i]
@@ -1785,8 +1786,8 @@ class ConfProgram2:
         inptLen = len(inpt)
         for i in range(len(modes)):
             # first get source
-            if modes[i] == 0:   src = regs[srcs[i]%regSize]
-            else:               src = inpt[srcs[i]%inptLen]
+            if modes[i] == 0:   src = regs[(srcs[i]+act)%regSize]
+            else:               src = inpt[(srcs[i]+act)%inptLen]
 
             # get data for operation
             op = ops[i]
@@ -1842,8 +1843,8 @@ class ConfProgram2:
         inptLen = len(inpt)
         for i in range(len(modes)):
             # first get source
-            if modes[i] == 0:   src = regs[srcs[i]%regSize]
-            else:               src = inpt[srcs[i]%inptLen]
+            if modes[i] == 0:   src = regs[(srcs[i]+act)%regSize]
+            else:               src = inpt[(srcs[i]+act)%inptLen]
 
             # get data for operation
             op = ops[i]
@@ -1885,8 +1886,8 @@ class ConfProgram2:
         inptLen = len(inpt)
         for i in range(len(modes)):
             # first get source
-            if modes[i] == 0:   src = regs[srcs[i]%regSize]
-            else:               src = inpt[srcs[i]%inptLen]
+            if modes[i] == 0:   src = regs[(srcs[i]+act)%regSize]
+            else:               src = inpt[(srcs[i]+act)%inptLen]
 
             # get data for operation
             op = ops[i]
@@ -1947,8 +1948,8 @@ class ConfProgram2:
         inptLen = len(inpt)
         for i in range(len(modes)):
             # first get source
-            if modes[i] == 0:   src = regs[srcs[i]%regSize]
-            else:               src = inpt[srcs[i]%inptLen]
+            if modes[i] == 0:   src = regs[(srcs[i]+act)%regSize]
+            else:               src = inpt[(srcs[i]+act)%inptLen]
 
             # get data for operation
             op = ops[i]
@@ -1977,8 +1978,8 @@ class ConfProgram2:
         inptLen = len(inpt)
         for i in range(len(modes)):
             # first get source
-            if modes[i] == 0:   src = regs[srcs[i]%regSize]
-            else:               src = inpt[srcs[i]%inptLen]
+            if modes[i] == 0:   src = regs[(srcs[i]+act)%regSize]
+            else:               src = inpt[(srcs[i]+act)%inptLen]
 
             # get data for operation
             op = ops[i]
@@ -2045,9 +2046,7 @@ class ConfProgram2:
             # maybe delete instruction
             if len(self.instructions) > 1 and flip(mutateParams["pInstDel"]):
                 # delete random row/instruction
-                self.instructions = np.delete(self.instructions,
-                                    random.randint(0, len(self.instructions)-1),
-                                    0)
+                self.instructions = np.delete(self.instructions,random.randint(0, len(self.instructions)-1),0)
 
                 
 

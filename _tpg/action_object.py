@@ -337,7 +337,8 @@ class ActionObject1:
             cls.mutate = ConfActionObject1.mutate_real
 
 class ActionObject11:
-    _actions=[0]
+    actions=[]
+    nativeAction=['break']
     '''
     An action object can be initalized by:
         - Copying another action object
@@ -373,8 +374,8 @@ class ActionObject11:
                     raise Exception('action codes not found in init params', initParams)
 
                 try:
-                    ActionObject11._actions = initParams["actionCodes"]
-                    self.actionCode = initParams["actionCodes"][action]
+                    ActionObject11.actions=initParams["actionCodes"] #+ActionObject11.nativeAction
+                    self.actionCode = action
                     self.teamAction = None
                 except IndexError as err:
                     '''
@@ -384,7 +385,7 @@ class ActionObject11:
                 return
             else:
                 try:
-                    self.actionCode=random.choice(ActionObject11._actions)
+                    self.actionCode=random.randint(0, len(ActionObject11.actions)-1)
                     self.teamAction=None
                 except:
                     print('諦めな・・・')
