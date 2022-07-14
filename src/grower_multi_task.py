@@ -86,16 +86,37 @@ if __name__ == '__main__':
                 elif pattern=='2':
                     tasks =[
                         "ALE/Riverraid-v5",
+                        "RoadRunner-v4",
+                        "CartPole-v0",
                         "WizardOfWor-v4",
                         "Acrobot-v1",
-                        "RoadRunner-v4",
-                        "CartPole-v0"
                     ]
                 elif pattern=='3':
                     tasks = [
                         "Asterix-v4",
                         "Boxing-v0",
                         "ALE/Riverraid-v5",
+                        "WizardOfWor-v4",
+                        "Acrobot-v1",
+                        "RoadRunner-v4",
+                        "CartPole-v0"
+                    ]
+            if model=='ALE/Riverraid-v5':
+                if pattern=='1':
+                    tasks=[
+                        "Asterix-v4",
+                        "Boxing-v0",
+                        "CartPole-v0"
+                    ]
+                elif pattern=='2':
+                    tasks =[
+                        "RoadRunner-v4",
+                        "CartPole-v0",
+                        "WizardOfWor-v4",
+                        "Acrobot-v1"
+                    ]
+                elif pattern=='3':
+                    tasks = [
                         "WizardOfWor-v4",
                         "Acrobot-v1",
                         "RoadRunner-v4",
