@@ -237,7 +237,7 @@ class ConfProgram:
                 elif op == 1:           regs[dest] = x-y
                 elif op == 2:           regs[dest] = x*y
                 elif op == 3 and y != 0:regs[dest] = x/y
-                elif op == 4:           regs[dest] = x**y
+                elif op == 4:           pass #regs[dest] = x**y
                 elif op == 5 and x < y: regs[dest] = x*(-1)
                 elif op == 6 and x > y: regs[dest] = x*(-1)
                 elif op == 7:           regs[dest] = sin(y)
@@ -280,7 +280,7 @@ class ConfProgram:
                 elif op == 1:           regs[dest] = x-y
                 elif op == 2:           regs[dest] = x*y
                 elif op == 3 and y != 0:regs[dest] = x/y
-                elif op == 4:           regs[dest] = x**y
+                elif op == 4:           pass#regs[dest] = x**y
                 elif op == 5 and x < y: regs[dest] = x*(-1)
                 elif op == 6 and x > y: regs[dest] = x*(-1)
                 elif op == 7:           regs[dest] = sin(y)
@@ -1099,7 +1099,7 @@ class ConfProgram1:
 
                 changed = True
 
-class ConfProgram11:
+class ConfProgram3:
 
     def init_def(self, instructions=None, maxProgramLength=128, nOperations=5,
             nDestinations=8, inputSize=30720, initParams=None):
@@ -1362,7 +1362,7 @@ class ConfProgram11:
                 elif op == 1:           regs[dest] = x-y
                 elif op == 2:           regs[dest] = x*y
                 elif op == 3 and y != 0:regs[dest] = x/y
-                elif op == 4:           regs[dest] = x**y
+                elif op == 4:           pass#regs[dest] = x**y
                 elif op == 5 and x < y: regs[dest] = x*(-1)
                 elif op == 6 and x > y: regs[dest] = x*(-1)
                 elif op == 7:           regs[dest] = sin(y)
@@ -1901,7 +1901,7 @@ class ConfProgram2:
                 elif op == 1:           regs[dest] = x-y
                 elif op == 2:           regs[dest] = x*y
                 elif op == 3 and y != 0:regs[dest] = x/y
-                elif op == 4:           regs[dest] = x**y
+                elif op == 4:           pass#regs[dest] = x**y
                 elif op == 5 and x < y: regs[dest] = x*(-1)
                 elif op == 6 and x > y: regs[dest] = x*(-1)
                 elif op == 7:           regs[dest] = sin(y)
@@ -1923,8 +1923,6 @@ class ConfProgram2:
                     # row offset (start from center, go to edges)
                     halfRows = int(memRows/2) # halfRows
                     for i in range(halfRows):
-                        # probability to write (gets smaller as i increases)
-                        # TODO: swap out write prob func by passing in an array of values for that row.
                         writeProb = memWriteProbFunc(i)
                         # column to maybe write corresponding value into
                         for col in range(memCols):

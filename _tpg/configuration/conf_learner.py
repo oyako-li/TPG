@@ -1,6 +1,6 @@
-from _tpg.program import Program, Program1, Program11, Program2
-from _tpg.action_object import ActionObject, ActionObject1, ActionObject11
-from _tpg.team import Team, Team1, Team11, Team2
+from _tpg.program import Program, Program1, Program3, Program2
+from _tpg.action_object import ActionObject, ActionObject1, ActionObject3
+from _tpg.team import Team, Team1, Team3, Team2
 from _tpg.memory_object import MemoryObject
 from _tpg.utils import flip
 import numpy as np
@@ -238,104 +238,6 @@ class ConfLearner1:
         if _clone.actionObj.teamAction : _clone.actionObj.teamAction.inLearners.append(str(_clone.id))
         return _clone
 
-class ConfLearner11:
-
-    def init_def(self, 
-        initParams:int or dict=0, 
-        program:Program11=Program11(), 
-        actionObj:Team11 or ActionObject11 or int=ActionObject11(action=0), 
-        numRegisters:int or np.ndarray=8, 
-        _ancestor=None,
-        _states:list=[],
-        _inTeams:list=[],
-        _frameNum:int=0
-    ):
-        self.program = Program11(
-            instructions=program.instructions
-        ) #Each learner should have their own copy of the program
-        self.actionObj = ActionObject11(
-            action=actionObj, 
-            initParams=initParams
-        ) #Each learner should have their own copy of the action object
-        if isinstance(numRegisters, int): self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
-        else: self.registers = numRegisters
-        if isinstance(initParams, int): self.genCreate = initParams # Store the generation that this learner was created on
-        elif isinstance(initParams, dict): self.genCreate = initParams["generation"] # Store the generation that this learner was created on
-
-        self.ancestor = _ancestor #By default no ancestor
-        self.states = _states
-        self.inTeams = _inTeams # Store a list of teams that reference this learner, incoming edges
-        # self.actionCodes = initParams["actionCodes"]
-        self.frameNum = _frameNum # Last seen frame is 0
-        self.id = uuid.uuid4()
-
-
-        if not self.isActionAtomic(): self.actionObj.teamAction.inLearners.append(str(self.id))
-
-    def bid_def(self, state, actVars=None):
-        # exit early if we already got bidded this frame
-        if self.frameNum == actVars["frameNum"]:
-            return self.registers[0]
-
-        self.frameNum = actVars["frameNum"]
-
-        Program11.execute(state, self.registers,
-                        self.program.instructions[:,0], self.program.instructions[:,1],
-                        self.program.instructions[:,2], self.program.instructions[:,3])
-
-        return self.registers[0]
-
-    def bid_mem(self, state, actVars=None):
-        # exit early if we already got bidded this frame
-        if self.frameNum == actVars["frameNum"]:
-            return self.registers[0]
-
-        self.frameNum = actVars["frameNum"]
-
-        Program11.execute(state, self.registers,
-                        self.program.instructions[:,0], self.program.instructions[:,1],
-                        self.program.instructions[:,2], self.program.instructions[:,3],
-                        actVars["memMatrix"], actVars["memMatrix"].shape[0], actVars["memMatrix"].shape[1],
-                        Program11.memWriteProbFunc)
-
-        return self.registers[0]
-
-    def getAction_def(self, state, visited, actVars=None, path_trace=None):
-        return self.actionObj.getAction(state, visited, actVars=actVars, path_trace=path_trace)
-
-    def getActionTeam_def(self):
-        return self.actionObj.teamAction
-
-    def isActionAtomic_def(self):
-        return self.actionObj.isAtomic()
-
-    def mutate_def(self, mutateParams, parentTeam, teams, pActAtom):
-
-        changed = False
-        while not changed:
-            # mutate the program
-            if flip(mutateParams["pProgMut"]):
-
-                changed = True
-              
-                self.program.mutate(mutateParams)
-
-            # mutate the action
-            if flip(mutateParams["pActMut"]):
-
-                changed = True
-                
-                self.actionObj.mutate(mutateParams, parentTeam, teams, pActAtom, learner_id=self.id)
-
-        return self
-
-    def clone_def(self):
-        _clone = copy.deepcopy(self)
-        _clone.inTeams = []
-        _clone.id = uuid.uuid4()
-        if _clone.actionObj.teamAction : _clone.actionObj.teamAction.inLearners.append(str(_clone.id))
-        return _clone
-
 class ConfLearner2:
 
     def init_def(self, 
@@ -363,7 +265,8 @@ class ConfLearner2:
         self.id = uuid.uuid4()
 
 
-        if not self.isMemoryAtomic(): self.memoryObj.teamMemory.inLearners.append(str(self.id))
+        if self.isMemoryAtomic(): MemoryObject.memories.referenced[self.memoryObj.memoryCode]+=1
+        else: self.memoryObj.teamMemory.inLearners.append(str(self.id))
 
     def bid_def(self, _act, _state, actVars=None):
         # exit early if we already got bidded this frame
@@ -426,7 +329,105 @@ class ConfLearner2:
         _clone = copy.deepcopy(self)
         _clone.inTeams = []
         _clone.id = uuid.uuid4()
-        if _clone.memoryObj.teamMemory : _clone.memoryObj.teamMemory.inLearners.append(str(_clone.id))
-        elif _clone.memoryObj.memoryCode: MemoryObject.memories.referenced[_clone.memoryObj.memoryCode]+=1
+        if _clone.isMemoryAtomic(): MemoryObject.memories.referenced[_clone.memoryObj.memoryCode]+=1
+        else: _clone.memoryObj.teamMemory.inLearners.append(str(_clone.id))
+        return _clone
+
+class ConfLearner3:
+
+    def init_def(self, 
+        initParams:int or dict=0, 
+        program:Program3=Program3(), 
+        actionObj:Team3 or ActionObject3 or int=ActionObject3(action=0), 
+        numRegisters:int or np.ndarray=8, 
+        _ancestor=None,
+        _states:list=[],
+        _inTeams:list=[],
+        _frameNum:int=0
+    ):
+        self.program = Program3(
+            instructions=program.instructions
+        ) #Each learner should have their own copy of the program
+        self.actionObj = ActionObject3(
+            action=actionObj, 
+            initParams=initParams
+        ) #Each learner should have their own copy of the action object
+        if isinstance(numRegisters, int): self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
+        else: self.registers = numRegisters
+        if isinstance(initParams, int): self.genCreate = initParams # Store the generation that this learner was created on
+        elif isinstance(initParams, dict): self.genCreate = initParams["generation"] # Store the generation that this learner was created on
+
+        self.ancestor = _ancestor #By default no ancestor
+        self.states = _states
+        self.inTeams = _inTeams # Store a list of teams that reference this learner, incoming edges
+        # self.actionCodes = initParams["actionCodes"]
+        self.frameNum = _frameNum # Last seen frame is 0
+        self.id = uuid.uuid4()
+
+
+        if not self.isActionAtomic(): self.actionObj.teamAction.inLearners.append(str(self.id))
+
+    def bid_def(self, state, actVars=None):
+        # exit early if we already got bidded this frame
+        if self.frameNum == actVars["frameNum"]:
+            return self.registers[0]
+
+        self.frameNum = actVars["frameNum"]
+
+        Program3.execute(state, self.registers,
+                        self.program.instructions[:,0], self.program.instructions[:,1],
+                        self.program.instructions[:,2], self.program.instructions[:,3])
+
+        return self.registers[0]
+
+    def bid_mem(self, state, actVars=None):
+        # exit early if we already got bidded this frame
+        if self.frameNum == actVars["frameNum"]:
+            return self.registers[0]
+
+        self.frameNum = actVars["frameNum"]
+
+        Program3.execute(state, self.registers,
+                        self.program.instructions[:,0], self.program.instructions[:,1],
+                        self.program.instructions[:,2], self.program.instructions[:,3],
+                        actVars["memMatrix"], actVars["memMatrix"].shape[0], actVars["memMatrix"].shape[1],
+                        Program3.memWriteProbFunc)
+
+        return self.registers[0]
+
+    def getAction_def(self, state, visited, actVars=None, path_trace=None):
+        return self.actionObj.getAction(state, visited, actVars=actVars, path_trace=path_trace)
+
+    def getActionTeam_def(self):
+        return self.actionObj.teamAction
+
+    def isActionAtomic_def(self):
+        return self.actionObj.isAtomic()
+
+    def mutate_def(self, mutateParams, parentTeam, teams, pActAtom):
+
+        changed = False
+        while not changed:
+            # mutate the program
+            if flip(mutateParams["pProgMut"]):
+
+                changed = True
+              
+                self.program.mutate(mutateParams)
+
+            # mutate the action
+            if flip(mutateParams["pActMut"]):
+
+                changed = True
+                
+                self.actionObj.mutate(mutateParams, parentTeam, teams, pActAtom, learner_id=self.id)
+
+        return self
+
+    def clone_def(self):
+        _clone = copy.deepcopy(self)
+        _clone.inTeams = []
+        _clone.id = uuid.uuid4()
+        if _clone.actionObj.teamAction : _clone.actionObj.teamAction.inLearners.append(str(_clone.id))
         return _clone
 

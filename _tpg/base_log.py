@@ -11,6 +11,7 @@ def setup_logger(_name, _logfile='LOGFILENAME', test=False, load=True):
 
     _filename = datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
     print(f'{_logfile} {_filename}')
+    time.sleep(0.5)
     # create file handler which logs even DEBUG messages
     if not test:
         while True:

@@ -2,28 +2,52 @@ import pickle
 from uuid import uuid4
 import numpy as np
 import random
-from _tpg.utils import flip
+from _tpg.utils import flip, breakpoint
+
+
 
 class Fragment:
     def __init__(self, _key=np.array([0]), _state=np.array([[0.]])):
-        self.flagment = np.array(_state[_key])
-        self.index = np.array(_key)
+        state = np.array(_state)
+        key = np.array(_key)
+        # print(state, key)
+        self.fragment = state[key]
+        self.index = key
         self.id = str(uuid4())
     
     def __getitem__(self, key):
-        return self.flagment[self.index==key][0]
+        return self.fragment[self.index==key]
 
     def keys(self):
         return self.index
 
     def values(self):
-        return self.flagment
+        return self.fragment
     
-    def update(self, value):
-        if not isinstance(value, np.ndarray): raise Exception('the data type is different')
+    def update(self, key, value):
+        assert isinstance(value, list) or isinstance(value, np.ndarray)
         if isinstance(value, list): value = np.array(value)
-        if value.size != self.index.size: raise Exception('the length is different')
-        self.flagment = value
+        assert value.size==self.index.size
+        self.fragment[[i for i,x in enumerate(self.index) if x in key]] = value
+
+    def memorize(self, state):
+        assert isinstance(state, np.ndarray), state
+        key = self.index[self.index<state.size]
+        val = self.fragment[self.index<state.size]
+        dif = val - state[key]
+        diff = np.array(self.fragment)
+        diff[[i for i,x in enumerate(self.index) if x in key]] = dif
+        self.fragment-= diff*0.01
+        return diff
+
+
+    def recall(self, state):
+        assert isinstance(state, np.ndarray)
+        key = self.index[self.index<state.size]
+        val = self.fragment[self.index<state.size]
+        state[key] = val
+        return state
+    
 
 class Memory:
     def __init__(self):
@@ -41,9 +65,11 @@ class Memory:
         del self.referenced[__name]
     
     def append(self, _key, _state):
+        _key= list(set(_key))
         memory = Fragment(_key, _state)
         self.memories[memory.id] = memory
         self.weights[memory.id] = 1.
+        self.referenced[memory.id]=0
         return memory.id
     
     def size(self):
@@ -64,8 +90,14 @@ class Memory:
         self.weights = {x: val*rate for x, val in self.weights.items()}
 
     def oblivion(self):
-        for key in [k for k, v in self.referenced.items() if v<1]:
-            self.__delattr__(key)
+        deleat_key = []
+        for k, v in self.referenced.items():
+            if v<1: deleat_key.append(k)
+        for key in deleat_key:
+            del self.memories[key]
+            del self.weights[key]
+            del self.referenced[key]
+        # breakpoint(len(MemoryObject.memories.memories))
 
 
     def choice(self, _ignore=None)->list:
@@ -94,17 +126,21 @@ class MemoryObject:
             self.teamMemory = None
             return
         elif isinstance(state, np.ndarray):
-            key = np.random.choices(range(state.size), random.randint(1, state.size-1))
+            key = np.random.choice(range(state.size), random.randint(1, state.size-1))
             self.memoryCode = MemoryObject.memories.append(key, state)
             self.teamMemory = None
 
     def __eq__(self, __o: object) -> bool:
-        if not isinstance(__o, MemoryObject) and not isinstance(__o, np.ndarray): False
-        memory:Fragment = MemoryObject.memories[self.memoryCode]
-
-        for i in memory:
-            if __o[i]!=memory[i]: False
-
+        # if not isinstance(__o, MemoryObject) and not isinstance(__o, np.ndarray): False
+        # memory:Fragment = MemoryObject.memories[self.memoryCode]
+        # The other object must be an instance of the ActionObject class
+        if not isinstance(__o, MemoryObject):    return False
+        
+        # The other object's action code must be equal to ours
+        if self.memoryCode != __o.memoryCode:     return False
+        
+        # The other object's team action must be equal to ours
+        if self.teamMemory != __o.teamMemory:     return False
         return True
 
     def __ne__(self, __o: object) -> bool:
@@ -113,13 +149,12 @@ class MemoryObject:
     def __getitem__(self, _key):
         return MemoryObject.memories[self.memoryCode][_key]
     
-    def getImage(self, _act, _state, _bid, visited, path_trace=None):
+    def getImage(self, _act, _state, _bid, visited, actVars=None, path_trace=None):
         if self.teamMemory is not None:
             return self.teamMemory.image(_act, _state, _bid, visited, path_trace)
         else:
             MemoryObject.memories.weights[self.memoryCode]*=0.9 # 忘却確立減算
             MemoryObject.memories.updateWeights()                    # 忘却確立計上
-
             return self.memoryCode, _bid[0]
 
     def isAtomic(self):
@@ -134,7 +169,10 @@ class MemoryObject:
 
         if flip(pMemAtom):
             if self.memoryCode is not None:
-                MemoryObject.memories.referenced[self.memoryCode]-=1
+                try:
+                    MemoryObject.memories.referenced[self.memoryCode]-=1
+                except:
+                    print('memory is crashed')
                 _ignore = self.memoryCode
             else:
                 _ignore = None

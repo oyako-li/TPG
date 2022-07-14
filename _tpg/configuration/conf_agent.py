@@ -1,3 +1,5 @@
+from math import tanh
+from importlib.metadata import distribution
 import pickle
 from random import random
 import time
@@ -124,16 +126,74 @@ class ConfAgent1:
     def saveToFile_def(self, fileName):
         pickle.dump(self, open(fileName, 'wb'))
 
-class ConfAgent11:
+class ConfAgent2:
 
-    """
-    Create an agent with a team.
-    """
     def init_def(self, team, functionsDict, num=1, actVars=None):
         self.team = team
         self.functionsDict = functionsDict
         self.agentNum = num
         self.actVars = actVars
+        self.imageCode = None
+
+
+    def image_def(self, _act, _state, path_trace=None):
+
+        start_execution_time = time.time()*1000.0
+        self.actVars["frameNum"] = random()
+        visited = list() #Create a new list to track visited team/learners each time
+        
+        path = None
+        best = [0]
+        if path_trace != None:
+            path = list()
+            imageCode, bids = self.team.image(_act, _state, _bid=best, visited=visited, actVars=self.actVars, path_trace=path)
+        else:
+            imageCode, bids = self.team.image(_act, _state, _bid=best, visited=visited, actVars=self.actVars)
+
+        end_execution_time = time.time()*1000.0
+        execution_time = end_execution_time - start_execution_time
+
+        # state長の制限が存在する。 その場合Rejectされるべき？ 上限以上切り捨てで出力
+        # state = MemoryObject.memories[imageCode].recall(_state)
+        if path_trace != None:
+            path_trace['execution_time'] = execution_time
+            path_trace['execution_time_units'] = 'milliseconds'
+            path_trace['root_team_id'] = str(self.team.id)
+            path_trace['final_image'] = _state
+            path_trace['path'] = path 
+            path_trace['depth'] = len(path)
+
+            
+        return imageCode, bids
+
+    def reward_def(self, score, task='task'):
+        if not self.team.outcomes.get(task): self.team.outcomes[task]=0.
+        distribution = self.team.numDistribution()
+        distribute_score = score/float(distribution)
+        survive_rate = tanh(distribute_score)+self.team.outcomes['survive']
+        task_score = tanh(distribute_score) + self.team.outcomes[task]
+        self.team.outcomes[task] = tanh(task_score)
+        self.team.outcomes['reward'] = distribute_score
+        self.team.outcomes['survive'] = tanh(survive_rate)
+        # inheritance team counts を導入することで、報酬分配を考えることができる。
+        # このteamを継承しているteamにも報酬を支払う。 分け与える
+
+    def taskDone_def(self, task):
+        return task in self.team.outcomes
+
+    def saveToFile_def(self, fileName):
+        pickle.dump(self, open(fileName, 'wb'))
+
+class ConfAgent3:
+
+    """
+    Create an agent with a team.
+    """
+    def init_def(self, team, functionsDict, num=1, actVars={'task':'task'}):
+        self.team = team
+        self.functionsDict = functionsDict
+        self.agentNum = num
+        self.actVars = actVars # has 'task'
 
     """
     Gets an action from the root team of this agent / this agent.
@@ -168,7 +228,15 @@ class ConfAgent11:
     Give this agent/root team a reward for the given task
     """
     def reward_def(self, score, task='task'):
-        self.team.outcomes[task] = score
+        distribution = self.team.numDistribution()
+        distribute_score = score/float(distribution)
+        survive_rate = tanh(distribute_score)+self.team.outcomes['survive']
+        self.team.outcomes[task] = tanh(distribute_score)
+        self.team.outcomes['reward'] = distribute_score
+        self.team.outcomes['survive'] = tanh(survive_rate)
+        assert isinstance(self.team.outcomes[task], float), type(float(self.team.outcomes[task]))
+
+
 
     """
     Check if agent completed this task already, to skip.
@@ -179,64 +247,5 @@ class ConfAgent11:
     """
     Save the agent to the file, saving any relevant class values to the instance.
     """
-    def saveToFile_def(self, fileName):
-        pickle.dump(self, open(fileName, 'wb'))
-
-class ConfAgent2:
-
-    def init_def(self, team, functionsDict, num=1, actVars=None):
-        self.team = team
-        self.functionsDict = functionsDict
-        self.agentNum = num
-        self.actVars = actVars
-        self.imageCode = None
-
-
-    def image_def(self, _act, _state, path_trace=None):
-
-        start_execution_time = time.time()*1000.0
-        self.actVars["frameNum"] = random()
-        visited = list() #Create a new list to track visited team/learners each time
-        
-        path = None
-        best = [0]
-        if path_trace != None:
-            path = list()
-            imageCode, bids = self.team.image(_act, _state, _bid=best, visited=visited, actVars=self.actVars, path_trace=path)
-        else:
-            imageCode, bids = self.team.image(_act, _state, _bid=best, visited=visited, actVars=self.actVars)
-
-        end_execution_time = time.time()*1000.0
-        execution_time = end_execution_time - start_execution_time
-
-        # state長の制限が存在する。
-        key = MemoryObject.memories[imageCode].keys()
-        val = MemoryObject.memories[imageCode].values()
-        _state[key]=val
-        if path_trace != None:
-
-            path_trace['execution_time'] = execution_time
-            path_trace['execution_time_units'] = 'milliseconds'
-            path_trace['root_team_id'] = str(self.team.id)
-            path_trace['final_image'] = _state
-            path_trace['path'] = path 
-            path_trace['depth'] = len(path)
-
-            
-        return _state, imageCode, bids
-
-    def reward_def(self, score, task='task'):
-
-        # key = MemoryObject.memories[self.imageCode].keys()
-        # val = MemoryObject.memories[self.imageCode].values()
-        # diff = val-state[key]
-        # val = val-(diff)*0.01 # 学習率
-        # MemoryObject.memories[self.imageCode].update(val)
-        # score = np.power(diff, 2).sum() # 二乗和誤差で評価 小さい方ものが残っていく。
-        self.team.outcomes[task] = score
-
-    def taskDone_def(self, task):
-        return task in self.team.outcomes
-
     def saveToFile_def(self, fileName):
         pickle.dump(self, open(fileName, 'wb'))

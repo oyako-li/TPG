@@ -11,6 +11,11 @@ Coin flips, at varying levels of success based on prob.
 """
 def flip(prob):
     return random.uniform(0.0,1.0) < prob
+    
+def breakpoint(*_print):
+    import sys
+    print(_print)
+    sys.exit()
 
 """
 Returns the teams that this team references, either immediate or

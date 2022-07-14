@@ -336,8 +336,8 @@ class ActionObject1:
         elif functionsDict["mutate"] == "real":
             cls.mutate = ConfActionObject1.mutate_real
 
-class ActionObject11:
-    actions=[]
+class ActionObject3:
+    actions=[0]
     nativeAction=['break']
     '''
     An action object can be initalized by:
@@ -347,14 +347,10 @@ class ActionObject11:
     '''
     def __init__(self, initParams:dict or int =None, action = None, _task='task'):
 
-        '''
-        Defer importing the Team class to avoid circular dependency.
-        This may require refactoring to fix properly
-        '''
-        from _tpg.team import Team11
+        from _tpg.team import Team3
 
         # The action is a team
-        if isinstance(action, Team11):
+        if isinstance(action, Team3):
             self.teamAction = action
             self.actionCode = None
             #print("chose team action")
@@ -362,7 +358,7 @@ class ActionObject11:
     
 
         # The action is another action object
-        if isinstance(action, ActionObject11):
+        if isinstance(action, ActionObject3):
             self.actionCode = action.actionCode
             self.teamAction = action.teamAction
             return
@@ -370,22 +366,19 @@ class ActionObject11:
         # An int means the action is an index into the action codes in initParams
         if isinstance(action, int):
             if initParams is not None:
-                if "actionCodes" not in initParams:
-                    raise Exception('action codes not found in init params', initParams)
-
                 try:
-                    ActionObject11.actions=initParams["actionCodes"] #+ActionObject11.nativeAction
-                    self.actionCode = action
+                    # ActionObject3.actions=initParams["actionCodes"] #+ActionObject3.nativeAction
+                    self.actionCode = action%len(ActionObject3.actions)
                     self.teamAction = None
                 except IndexError as err:
                     '''
                     TODO log index error
                     '''
-                    print("Index error")
+                    print("log index error")
                 return
             else:
                 try:
-                    self.actionCode=random.randint(0, len(ActionObject11.actions)-1)
+                    self.actionCode=random.randint(0, len(ActionObject3.actions)-1)
                     self.teamAction=None
                 except:
                     print('諦めな・・・')
@@ -399,7 +392,7 @@ class ActionObject11:
     def __eq__(self, o:object)->bool:
 
         # The other object must be an instance of the ActionObject class
-        if not isinstance(o, ActionObject11):    return False
+        if not isinstance(o, ActionObject3):    return False
         
         # The other object's action code must be equal to ours
         if self.actionCode != o.actionCode:     return False
@@ -451,30 +444,30 @@ class ActionObject11:
     """
     @classmethod
     def configFunctions(cls, functionsDict):
-        from _tpg.configuration.conf_action_object import ConfActionObject11
+        from _tpg.configuration.conf_action_object import ConfActionObject3
 
         if functionsDict["init"] == "def":
-            cls.__init__ = ConfActionObject11.init_def
+            cls.__init__ = ConfActionObject3.init_def
         elif functionsDict["init"] == "real":
-            cls.__init__ = ConfActionObject11.init_real
+            cls.__init__ = ConfActionObject3.init_real
 
         if functionsDict["getAction"] == "def":
-            cls.getAction = ConfActionObject11.getAction_def
+            cls.getAction = ConfActionObject3.getAction_def
         elif functionsDict["getAction"] == "real":
-            cls.getAction = ConfActionObject11.getAction_real
+            cls.getAction = ConfActionObject3.getAction_real
         
         if functionsDict["getRealAction"] == "real":
-            cls.getRealAction = ConfActionObject11.getRealAction_real
+            cls.getRealAction = ConfActionObject3.getRealAction_real
         elif functionsDict["getRealAction"] == "real_mem":
-            cls.getRealAction = ConfActionObject11.getRealAction_real_mem
+            cls.getRealAction = ConfActionObject3.getRealAction_real_mem
 
         if functionsDict["isAtomic"] == "def":
-            cls.isAtomic = ConfActionObject11.isAtomic_def
+            cls.isAtomic = ConfActionObject3.isAtomic_def
 
         if functionsDict["mutate"] == "def":
-            cls.mutate = ConfActionObject11.mutate_def
+            cls.mutate = ConfActionObject3.mutate_def
         elif functionsDict["mutate"] == "real":
-            cls.mutate = ConfActionObject11.mutate_real
+            cls.mutate = ConfActionObject3.mutate_real
 
 class ActionObject2:
     _states={}

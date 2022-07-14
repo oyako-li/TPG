@@ -1,17 +1,21 @@
 import asyncio
-import matplotlib.pyplot as plt
-# from IPython import display
-import sys
+from math import tanh
+from _tpg.action_object import ActionObject1, ActionObject3
+from _tpg.agent import Agent1, Agent3, Agent2
+from _tpg.trainer import Trainer, Trainer1, Trainer3, Trainer2, loadTrainer
 from _tpg.memory_object import MemoryObject
-# sys.path.insert(0, '.')
-
-import gym
-from _tpg.trainer import Trainer, Trainer1, Trainer11, Trainer2, loadTrainer
 from _tpg.base_log import setup_logger
+from _tpg.utils import breakpoint
+from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+import multiprocessing as mp
+import queue
+import numpy as np
+import sys
+import gym
 import signal
 import time
-import numpy as np
 
 class TPG:
 
@@ -78,9 +82,7 @@ class TPG:
 
                 if isDone: break # end early if losing state
                 if _show:
-                    self.show_state(
-                        _env, _
-                    )
+                    self.show_state(_env, _)
 
             if _scores.get(_id) is None : _scores[_id]=0
             _scores[_id] += score # store score
@@ -198,10 +200,10 @@ class MemoryAndHierarchicalTPG(TPG):
 class MemoryAndHierarchicalTPG1(TPG):
 
     def __init__(self, actions=2, teamPopSize: int = 1000, rootBasedPop: bool = True, gap: float = 0.5, inputSize: int = 33600, nRegisters: int = 8, initMaxTeamSize: int = 10, initMaxProgSize: int = 10, maxTeamSize: int = -1, pLrnDel: float = 0.7, pLrnAdd: float = 0.6, pLrnMut: float = 0.2, pProgMut: float = 0.1, pActMut: float = 0.1, pActAtom: float = 0.95, pInstDel: float = 0.5, pInstAdd: float = 0.4, pInstSwp: float = 0.2, pInstMut: float = 1.0, doElites: bool = True, memType="def", memMatrixShape: tuple = (100, 8), rampancy: tuple = (0, 0, 0), operationSet: str = "custom", traversal: str = "team", prevPops=None, mutatePrevs=True, initMaxActProgSize: int = 6, nActRegisters: int = 4):
-        self.trainer = Trainer11(actions, teamPopSize, rootBasedPop, gap, inputSize, nRegisters, initMaxTeamSize, initMaxProgSize, maxTeamSize, pLrnDel, pLrnAdd, pLrnMut, pProgMut, pActMut, pActAtom, pInstDel, pInstAdd, pInstSwp, pInstMut, doElites, memType, memMatrixShape, rampancy, operationSet, traversal, prevPops, mutatePrevs, initMaxActProgSize, nActRegisters)
+        self.trainer = Trainer3(actions, teamPopSize, rootBasedPop, gap, inputSize, nRegisters, initMaxTeamSize, initMaxProgSize, maxTeamSize, pLrnDel, pLrnAdd, pLrnMut, pProgMut, pActMut, pActAtom, pInstDel, pInstAdd, pInstSwp, pInstMut, doElites, memType, memMatrixShape, rampancy, operationSet, traversal, prevPops, mutatePrevs, initMaxActProgSize, nActRegisters)
 
     def instance_valid(self, trainer) -> bool:
-        if not isinstance(trainer, Trainer11): raise Exception('this object is not Trainer11')
+        if not isinstance(trainer, Trainer3): raise Exception('this object is not Trainer3')
 
 class EmulatorTPG(TPG):
     def __init__(self, 
@@ -237,7 +239,7 @@ class EmulatorTPG(TPG):
         thinkingTime:int=2
     ):
         # super().__init__()
-        self.ActorGraph = Trainer11(
+        self.ActorGraph = Trainer3(
             actions, 
             teamPopSize,               # *
             rootBasedPop,             
@@ -297,135 +299,191 @@ class EmulatorTPG(TPG):
             initMaxActProgSize,           # *
             nActRegisters,
         )
-        self.actions = {[]}
-        self.states = {[]}
-        self.memories = {[]}
-        self.pair = {}
-        self.rewards = {}
         self.thinkingTimeLimit=thinkingTime
+        self.initParams()
 
     def instance_valid(self, _actor, _emulator) -> bool:
-        if not isinstance(_actor, Trainer11): raise Exception('this actor is not Trainer11')
+        if not isinstance(_actor, Trainer3): raise Exception('this actor is not Trainer1')
         if not isinstance(_emulator, Trainer2): raise Exception('this emulator is not Trainer2')
 
-    def getActor(self):
-        yield from self.ActorGraph.getAgents()
-
-    def getEmulator(self):
-        yield from self.EmulatorGraph.getAgents()
-
-    async def counterfactualThinking(self, _state, _actor, _emulator):
-
+    def _setupParams(self, actor_id, emulator_id=None, actions=None, images=None, reward=None):
+        self.actions[actor_id]=[]
+        if not self.rewards.get(actor_id) : self.rewards[actor_id]=0.
+        if emulator_id is not None:
+            self.pairs[actor_id] = emulator_id
+            if not self.memories.get(emulator_id) : self.memories[emulator_id]=[]
+            if images is not None: self.memories[emulator_id]   += images
+        if actions is not None: self.actions[actor_id]      = actions
+        if reward is not None: self.rewards[actor_id]       += reward
+ 
+    def initParams(self):
+        self.actions    = {}
+        self.memories   = {}
+        self.pairs      = {}
+        self.rewards    = {}
+    
+    def think(self, hippocampus, _actor, _emulator):
+        assert isinstance(_actor, Agent3)
+        assert isinstance(_emulator, Agent2)
+        _actor.configFunctionsSelf()
+        _emulator.configFunctionsSelf()
+        state = np.array(hippocampus['now'])
         actor_id = str(_actor.team.id)
         emulator_id = str(_emulator.team.id)
-        self.actions[actor_id]=[]
-        self.rewards[actor_id]=0.
-        self.pair[actor_id] = emulator_id
+        ActionObject3.actions = hippocampus['actions']
+        MemoryObject.memories = hippocampus['memories']
+        actionCodes = []
+        memoryCodes = []
+        rewards = 0
+        timeout_start = time.time()
+        while time.time() < timeout_start + self.thinkingTimeLimit:
+            actionCode = _actor.act(state)
+            imageCode, reward = _emulator.image(actionCode, state)
+            actionCodes  += [actionCode]
+            rewards      += reward*0.001
+            memoryCodes  += [imageCode]
+            state = hippocampus['memories'][imageCode].recall(state)
+            # breakpoint(self.thinkingTimeLimit)
+        return actor_id, emulator_id, actionCodes, memoryCodes, rewards 
 
-        if self.memories.get(emulator_id) is None : self.memories[emulator_id]=[]
-        if self.states.get(emulator_id)   is None : self.states[emulator_id]  =[]
-
-        while True:
-            act = _actor.act(_state)
-            self.actions[actor_id]      += [act]
-            if act == 'break': break
-            _state, imageCode, reward = _emulator.image(act, _state)
-            self.rewards[actor_id]      += reward
-            self.memories[emulator_id]  += [imageCode]
-            self.states[emulator_id]    += [_state]
-    
-    async def think(self, _state, _actors, _emulators):
-        # combination = [(actor, emulator) for actor in _actors]
-        cors = [self.counterfactualThinking(_state, actor, emulator) for actor, emulator in zip(_actors, _emulators)]
-        await asyncio.gather(*cors)
-
-    async def thinker(self, _state, _actors, _emulators):
-        try:
-            await asyncio.wait_for(self.think(_state, _actors, _emulators), timeout=self.thinkingTimeLimit)
-        except asyncio.TimeoutError:
-            pass
-
+    def thinker(self, _state, _actors, _emulators, actionQ):
+        print()
+        manager = mp.Manager()
+        hippocampus = manager.dict()
+        hippocampus['actions']  = ActionObject3.actions
+        hippocampus['memories'] = MemoryObject.memories
+        hippocampus['now'] = _state
+        # breakpoint(hippocampus['memories'].choice())
+        with mp.Pool(mp.cpu_count()-2) as pool:
+            results = pool.starmap(self.think, [(hippocampus, actor, emulator) for actor, emulator in zip(_actors, _emulators)])
+        # breakpoint(results)s
+        for result in results:
+            actor_id, emulator_id, actions, images, reward = result
+            self._setupParams(actor_id=actor_id, emulator_id=emulator_id, actions=actions, images=images, reward=reward)
         bestActor=max(self.rewards, key=lambda k: self.rewards.get(k))
-        pairEmulator = self.pair[bestActor]
-        return bestActor, pairEmulator
+        self.best=bestActor
 
-    async def episode(self, _actors, _emulators, _env, _logger=None, _scores={}, _frames:int=500, _show=False):
+        return self.actions[bestActor]
+    
+    def actor(self, _init_state, _elite):
+        return [_elite.act(_init_state)]
+
+
+    def episode(self, _actors, _emulators, _env, _elite_actor, _elite_emulator, _logger=None, _scores={}, _frames:int=500, _show=False):
         _scores = {}
-        _states = {[]}
+        _states = {}
         frame=0
-        state = _env.reset() # get initial state and prep environment
+        actionQ = queue.Queue()
+        executor = ThreadPoolExecutor(max_workers=3)
+        action_list = []
+        state = _env.reset().flatten() # get initial state and prep environment
+        thinker = executor.submit(self.thinker, state, _actors, _emulators)
+        actor = executor.submit(self.actor, state, _elite_actor, _elite_emulator)
+        action_list.append(thinker)
+        action_list.append(actor)
         while frame<_frames:
             score = 0
             states = []
-            bestActor, pairEmulator = await self.thinker(state.flatten(), _actors, _emulators)
-            for act in self.actions[bestActor]: # run episodes that last 500 frames
-                if not act in range(_env.action_space.n): continue
-                state, reward, isDone, debug = _env.step(act) # state : np.ndarray.flatten
-                score+=reward # accumulate reward in score
-                states.append(state.flatten())
-                frame+=1
-                if isDone: break # end early if losing state
-                if _show:  self.show_state(_env, frame)
+            # action_list = await asyncio.gather(
+            #     self.thinker(state, _actors, _emulators),
+            #     self.actor(state, _elite)
+            # ) 
+            for actions in action_list: # run episodes that last 500 frames
+                for act in actions.result():
+                    frame+=1
+                    if not act in range(_env.action_space.n): continue
+                    state, reward, isDone, debug = _env.step(act) # state : np.ndarray.flatten
+                    score+=reward # accumulate reward in score
+                    states.append(state.flatten())
+                    if isDone: 
+                        frame=_frames
+                        break
+                        # end early if losing state
+                    if _show:  self.show_state(_env, frame)
+            
+            if _scores.get(self.best)    is None : _scores[self.best]=0
+            if _states.get(self.pairs[self.best]) is None : _states[self.pairs[self.best]]=[]
+            _scores[self.best]    += score      # store score
+            _states[self.pairs[self.best]] += states  # store states
+            action_list = self.thinker(state, _actors, _emulators)
+            # else:
+            #     self.best = str(_elite.team.id)
+            #     self._setupParams(self.best)
+            #     act = _elite.act(state)
+            #     frame+=1
+            #     if not act in range(_env.action_space.n): continue
+            #     state, reward, isDone, debug = _env.step(act) # state : np.ndarray.flatten
+            #     states.append(state.flatten())
+            #     if _scores.get(self.best)    is None : _scores[self.best]=0
+            #     _scores[self.best]    += reward      # store score
+            #     if isDone: break
+            #     if _show:  self.show_state(_env, frame)
 
-            if _scores.get(bestActor)    is None : _scores[bestActor]=0
-            if _states.get(pairEmulator) is None : _states[pairEmulator]=[]
-            _scores[bestActor]    += score      # store score
-            _states[pairEmulator] += [states]  # store states
 
-            if _logger is not None: _logger.info(f'{bestActor},{score}')
+        if _logger is not None: _logger.info(f'{self.best},{score}')
 
         # _summaryScores = (min(curScores), max(curScores), sum(curScores)/len(curScores)) # min, max, avg
 
         return _scores, _states
 
-    async def generation(self,_actor, _emulator, _env, _logger=None, _episodes=1, _frames= 500, _show=False):
-        _scores = {}
-        actors      = _actor.getAgents()
-        emulators   = _emulator.getAgents()
-        _task       = _env.spec.id
-        for _ in range(_episodes):      _scores, _states = await self.episode(actors, emulators, _env, _logger=_logger, _scores=_scores, _frames=_frames, _show=_show)
-        for i in _scores:               _scores[i]/=_episodes
-        # emulator 用の二乗和誤差平均の計算
-        last_state = _states[-1]
+    def generation(self,_actor, _emulator, _env, _logger=None, _episodes=1, _frames= 500, _show=False):
 
+        _scores = {}
+        _states = {}
+        _task       = _env.spec.id
+        actors      = _actor.getAgents(task=_task)
+        elite       = _actor.getEliteAgent(task=_task)
+        emulators   = _emulator.getAgents(task=_task)
+
+        # breakpoint(type(emulators))
+        for _ in range(_episodes):      _scores, _states = self.episode(_actors=actors, _emulators=emulators, _env=_env, _elite=elite, _logger=_logger, _scores=_scores, _frames=_frames, _show=_show)
+        for ac in _scores:               
+            _scores[ac]/=_episodes
+            _scores[ac] = tanh(_scores[ac])
+            _scores[ac]-=tanh(self.rewards[ac])
+        # emulator 用の二乗和誤差平均の計算
+        states=[]
         for em in _states:
             score=0
             for state, imageCode in zip(_states[em], self.memories[em]):
-
-                key = MemoryObject.memories[imageCode].keys()
-                val = MemoryObject.memories[imageCode].values()
-                diff = val-state[key]
-                val = val-(diff)*0.01 # 学習率
-                MemoryObject.memories[imageCode].update(val)
-                score += np.power(diff, 2).sum()
+                
+                diff = MemoryObject.memories[imageCode].memorize(state)
+                score += np.power(diff, 2).sum()*0.01
+                states+=[state]
             _states[em]=score
         
         # 報酬の贈与
         for actor in actors:
-            actor.reward(_scores[str(actor.team.id)],task=_task)
+            if _scores.get(str(actor.team.id)) : 
+                actor.reward(_scores[str(actor.team.id)],task=_task)
         # ここらへんのエミュレータの報酬設計
         for emulator in emulators:
-            emulator.reward(_states[str(emulator.team.id)],task=_task)
+            if _states.get(str(emulator.team.id)): 
+                emulator.reward(_states[str(emulator.team.id)],task=_task)
+        # breakpoint()
         _actor.evolve([_task])
-        _emulator.evolve([_task], _state=last_state)
+        # breakpoint('finish')
+        _emulator.evolve([_task], _states=states)
+
+        self.initParams()
+
         return _scores
     
-    async def growing(self, _actor, _emulator, _task:str, _generations:int=1000, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True):
+    def growing(self, _actor, _emulator, _task:str, _generations:int=1000, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True):
         self.instance_valid(_actor, _emulator)
         logger, filename = setup_logger(__name__, _task, test=_test, load=_load)
-        print(_task,filename)
         env = gym.make(_task) # make the environment
         action_space = env.action_space
-        # obsesrvation_space = env.observation_space
+        observation_space = env.observation_space
         
         action = 0
         if isinstance(action_space, gym.spaces.Box):
             action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
         elif isinstance(action_space, gym.spaces.Discrete):
             action = action_space.n
-        _actor.resetActions(actions=action)
 
-        state = env.observation_space.sample()
+        state = observation_space.sample()
+        _actor.resetActions(actions=action)
         _emulator.resetMemories(state=state.flatten())
         def outHandler(signum, frame):
             if not _test: 
@@ -440,7 +498,8 @@ class EmulatorTPG(TPG):
 
         tStart = time.time()
         for gen in tqdm(range(_generations)): # generation loop
-            scores = await self.generation(_actor, _emulator, env, logger, _episodes=_episodes, _frames=_frames, _show=_show)
+            # breakpoint(type(_emulator))
+            scores = self.generation(_actor=_actor, _emulator=_emulator, _env=env, _logger=logger, _episodes=_episodes, _frames=_frames, _show=_show)
 
             score = (min(scores.values()), max(scores.values()), sum(scores.values())/len(scores))
 
@@ -452,7 +511,7 @@ class EmulatorTPG(TPG):
         logger.info(f'Results: Min, Max, Avg, {summaryScores}')
         return filename
 
-    async def start(self, _task, _show, _test, _load, _actor=None, _emulator=None, _generations=1000, _episodes=1, _frames=500):
+    def start(self, _task, _show, _test, _load, _actor=None, _emulator=None, _generations=1000, _episodes=1, _frames=500):
         if _actor is None: 
             if not self.ActorGraph : raise Exception('actor is not defined')
             _actor = self.ActorGraph
@@ -460,7 +519,7 @@ class EmulatorTPG(TPG):
             if not self.EmulatorGraph : raise Exception('emulator is not defined')
             _emulator = self.EmulatorGraph
 
-        _filename = await self.growing(_actor, _emulator, _task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load)
+        _filename = self.growing(_actor=_actor, _emulator=_emulator, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load)
         if not _test: 
             _actor.saveToFile(f'{task}/{_filename}-act')
             _emulator.saveToFile(f'{task}/{_filename}-emu')
@@ -471,11 +530,13 @@ if __name__ == '__main__':
     show = False
     test = False
     load = False
-    trainer = None
+    actor = None
+    emulator = None
     teamPopSize=10
     generations=1000
     episodes=1
     frames=1000
+    thinkingTime=0.2
 
     tpg = NativeTPG(teamPopSize=teamPopSize)
 
@@ -488,20 +549,32 @@ if __name__ == '__main__':
         if 'generatioins:' in arg: generations=int(arg.split(':')[1])
         if 'episodes:' in arg: episodes=int(arg.split(':')[1])
         if 'frames:' in arg: frames=int(arg.split(':')[1])
+        if 'thinkingTime:' in arg: thinkingTime=float(arg.split(':')[1])
     
     for arg in sys.argv[2:]:
         if arg=='native':
             tpg = NativeTPG(teamPopSize=teamPopSize)
+            print('native')
         if arg=='hierarchy':
             tpg = MemoryAndHierarchicalTPG(teamPopSize=teamPopSize)
+            print('hierarchy')
         if arg=='hierarchy1':
             tpg = MemoryAndHierarchicalTPG1(teamPopSize=teamPopSize)
-        if arg=='emulator':
-            tpg = EmulatorTPG(teamPopSize=teamPopSize)
+            print('hierarchy1')
+        if arg=='emulate':
+            tpg = EmulatorTPG(teamPopSize=teamPopSize, thinkingTime=thinkingTime)
+            print('emulate')
         
-        if 'model:' in arg:
+        if 'actor:' in arg:
             modelPath = arg.split(':')[1]
             print(modelPath)
-            trainer = loadTrainer(modelPath)
-    if isinstance(tpg, EmulatorTPG): asyncio.run(tpg.start(_task=task, _show=show, _test=test, _load=load, _trainer=trainer, _generations=generations, _episodes=episodes, _frames=frames))
-    else:    tpg.start(_task=task, _show=show, _test=test, _load=load, _trainer=trainer, _generations=generations, _episodes=episodes, _frames=frames)
+            actor = loadTrainer(modelPath)
+        if 'emulator:' in arg:
+            modelPath = arg.split(':')[1]
+            print(modelPath)
+            emulator = loadTrainer(modelPath)
+
+    if isinstance(tpg, EmulatorTPG):
+        tpg.start(_task=task, _show=show, _test=test, _load=load, _actor=actor, _emulator=emulator, _generations=generations, _episodes=episodes, _frames=frames)
+    else:
+        tpg.start(_task=task, _show=show, _test=test, _load=load, _trainer=actor, _generations=generations, _episodes=episodes, _frames=frames)
