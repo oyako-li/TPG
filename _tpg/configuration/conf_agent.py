@@ -143,12 +143,11 @@ class ConfAgent2:
         visited = list() #Create a new list to track visited team/learners each time
         
         path = None
-        best = [0]
         if path_trace != None:
             path = list()
-            imageCode, bids = self.team.image(_act, _state, _bid=best, visited=visited, actVars=self.actVars, path_trace=path)
+            imageCode = self.team.image(_act, _state, visited=visited, actVars=self.actVars, path_trace=path)
         else:
-            imageCode, bids = self.team.image(_act, _state, _bid=best, visited=visited, actVars=self.actVars)
+            imageCode = self.team.image(_act, _state, visited=visited, actVars=self.actVars)
 
         end_execution_time = time.time()*1000.0
         execution_time = end_execution_time - start_execution_time
@@ -164,17 +163,17 @@ class ConfAgent2:
             path_trace['depth'] = len(path)
 
             
-        return imageCode, bids
+        return imageCode
 
     def reward_def(self, score, task='task'):
         if not self.team.outcomes.get(task): self.team.outcomes[task]=0.
         distribution = self.team.numDistribution()
         distribute_score = score/float(distribution)
-        survive_rate = tanh(distribute_score)+self.team.outcomes['survive']
-        task_score = tanh(distribute_score) + self.team.outcomes[task]
-        self.team.outcomes[task] = tanh(task_score)
+        survive_rate = tanh(distribute_score*3)+self.team.outcomes['survive']
+        task_score = tanh(distribute_score*3) + self.team.outcomes[task]
+        self.team.outcomes[task] = tanh(task_score*3)
         self.team.outcomes['reward'] = distribute_score
-        self.team.outcomes['survive'] = tanh(survive_rate)
+        self.team.outcomes['survive'] = tanh(survive_rate*3)
         # inheritance team counts を導入することで、報酬分配を考えることができる。
         # このteamを継承しているteamにも報酬を支払う。 分け与える
 
@@ -230,10 +229,10 @@ class ConfAgent3:
     def reward_def(self, score, task='task'):
         distribution = self.team.numDistribution()
         distribute_score = score/float(distribution)
-        survive_rate = tanh(distribute_score)+self.team.outcomes['survive']
-        self.team.outcomes[task] = tanh(distribute_score)
+        survive_rate = tanh(distribute_score*3)+self.team.outcomes['survive']
+        self.team.outcomes[task] = tanh(distribute_score*3)
         self.team.outcomes['reward'] = distribute_score
-        self.team.outcomes['survive'] = tanh(survive_rate)
+        self.team.outcomes['survive'] = tanh(survive_rate*3)
         assert isinstance(self.team.outcomes[task], float), type(float(self.team.outcomes[task]))
 
 

@@ -1688,6 +1688,7 @@ class Trainer2:
                                         key=lambda tm: tm.fitness, reverse=True))]
 
     def getEliteAgent(self, task):
+        self.actVars['task']=task
         
         teams = [t for t in self.teams if task in t.outcomes]
 
@@ -1705,7 +1706,7 @@ class Trainer2:
 
         return self.rootTeams
 
-    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _states=None):
+    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _states=None,_unexpectancies=None):
         self._scoreIndividuals(
             tasks, 
             multiTaskType=multiTaskType,
@@ -1713,7 +1714,7 @@ class Trainer2:
         ) # assign scores to individuals
         self._saveFitnessStats() # save fitness stats
         self._select(extraTeams) # select individuals to keep
-        self._generate(extraTeams, _states=_states) # create new individuals from those kept
+        self._generate(extraTeams, _states=_states, _unexpectancies=_unexpectancies) # create new individuals from those kept
         self._nextEpoch() # set up for next generation
 
     def _must_be_integer_greater_than_zero(self, name, value):
@@ -1934,7 +1935,7 @@ class Trainer2:
         MemoryObject.memories.oblivion()
 
                 
-    def _generate(self, extraTeams=None, _states=None):
+    def _generate(self, extraTeams=None, _states=None, _unexpectancies=None):
 
         # extras who are already part of the team population
         protectedExtras = []
@@ -1983,9 +1984,21 @@ class Trainer2:
                     # new_learner's teamAction change to clone
                     new_learner.memoryObj.teamMemory = clone
 
-            if not _states is None: 
-                breakpoint(_states)
-                child.addLearner(Learner2(memoryObj=MemoryObject(state=random.choice(_states))))
+            if not _states is None and not _unexpectancies is None: 
+                states = np.array(_states)
+                unexpectancies = np.array(_unexpectancies)
+                if len(unexpectancies[unexpectancies>0])!=0:
+                    state = random.choices(states[unexpectancies>0], unexpectancies[unexpectancies>0])[0]
+                else:
+                    state = random.choices(states)[0]
+                child.addLearner(Learner2(memoryObj=MemoryObject(state=state)))
+                # breakpoint(state)
+                # どういう時の状態をメモライズすれば良いか？
+                # 理想は予想外に報酬の高い状態を記憶する。
+                # 状態＋報酬　の　メモライズではどうだろうか？
+                # つまり、報酬値の予想値との差異に基づいて、記憶すべき状態を優先づける。
+                # この場合、
+                # 
 
             self.teams.append(child)
 

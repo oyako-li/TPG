@@ -723,8 +723,8 @@ def configure2(trainer, Trainer, Agent, Team, Learner, MemoryObject, Program,
         trainer.rampancy[0], trainer.rampancy[1], trainer.rampancy[2], 0, 0, 0]
 
     # additional stuff for act, like memory matrix possible
-    actVarKeys = ["frameNum"]
-    actVarVals = [0]
+    actVarKeys = ["frameNum", "task"]
+    actVarVals = [0, 'task']
 
     # before doing any special configuration, set all methods to defaults
     _configureDefaults2(trainer, Trainer, Agent, Team, Learner, MemoryObject, Program)

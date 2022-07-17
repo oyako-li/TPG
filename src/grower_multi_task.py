@@ -14,7 +14,7 @@ if __name__ == '__main__':
     load = False
     trainer = None
     teamPopSize=100
-    generations=1000
+    generations=100
     episodes=1
     frames=500
 
@@ -38,7 +38,7 @@ if __name__ == '__main__':
             print('frames:', frames)
         if 'pattern:' in arg: 
             pattern = arg.split(':')[1]
-            print('CubeCrashPattern:', pattern)
+            print('Pattern:', pattern)
 
     for arg in sys.argv[1:]:
         if arg=='native':
@@ -125,6 +125,48 @@ if __name__ == '__main__':
                 else: raise Exception('preas setting CubeCrash-v0 pattern paramater')
             # filename = modelPath.split('/')[-1]
             trainer = loadTrainer(modelPath)
+
+        elif 'task:' in arg:
+            task = arg.split(':')[1]
+            if task == "Acrobot-v1":
+                tasks = [
+                    "Acrobot-v1",
+                    "ALE/Centipede-v5",	
+                    "ALE/Freeway-v5",		
+                    "ALE/Riverraid-v5",		
+                    "Asterix-v4",		
+                    "Boxing-v0",		
+                    "CartPole-v0",		
+                    "CubeCrash-v0",		
+                    "RoadRunner-v4",
+                    "WizardOfWor-v4"
+                ]
+            elif task== "ALE/Freeway-v5":
+                tasks = [
+                    "ALE/Freeway-v5",	
+                    "ALE/Centipede-v5",	
+                    "CubeCrash-v0",	
+                    "Asterix-v4",	
+                    "Boxing-v0",
+                    "ALE/Riverraid-v5",	
+                    "WizardOfWor-v4",		
+                    "Acrobot-v1",			
+                    "RoadRunner-v4",	
+                    "CartPole-v0"
+                ]
+            elif task == "Boxing-v0":
+                tasks = [
+                    "Boxing-v0",
+                    "CubeCrash-v0",	
+                    "WizardOfWor-v4",		
+                    "ALE/Freeway-v5",	
+                    "ALE/Riverraid-v5",	
+                    "Acrobot-v1",			
+                    "Asterix-v4",	
+                    "CartPole-v0"
+                    "ALE/Centipede-v5",	
+                    "RoadRunner-v4",	
+                ]
 
     if not tpg: raise Exception('TPG type is not defined')
 

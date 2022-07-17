@@ -493,7 +493,7 @@ class ConfTeam2:
         if isinstance(initParams, dict): self.genCreate = initParams["generation"]
         elif isinstance(initParams, int): self.genCreate = initParams
 
-    def image_def(self, _act, _state, _bid:list, visited:list, actVars={"frameNum":1}, path_trace=None):
+    def image_def(self, _act, _state, visited:list, actVars={"frameNum":1}, path_trace=None):
 
         # If we've already visited me, throw an exception
         if str(self.id) in visited:
@@ -505,7 +505,7 @@ class ConfTeam2:
         # Add this team's id to the list of visited ids
         visited.append(str(self.id)) 
         
-        if len(self.learners)==0:   self.addLearner(Learner2())
+        if len(self.learners)==0:   self.addLearner(Learner2(memoryObj=MemoryObject(state=_state)))
         # breakpoint()
 
         valid_learners = [lrnr for lrnr in self.learners if lrnr.isMemoryAtomic() or str(lrnr.getMemoryTeam().id) not in visited]
@@ -523,7 +523,6 @@ class ConfTeam2:
         assert actVars.get('frameNum'), type(actVars)
         top_learner = max(valid_learners, key=lambda lrnr: lrnr.bid(_act, _state, actVars=actVars))
         # print(_bid[0])
-        _bid[0]+=top_learner.registers[0]
         if not self.outcomes.get(actVars['task']): self.outcomes[actVars['task']]=0.
 
 
@@ -569,7 +568,7 @@ class ConfTeam2:
             # Append our path segment to the trace
             path_trace.append(path_segment)
 
-        return top_learner.getImage(_act, _state, _bid, visited=visited, actVars=actVars, path_trace=path_trace)
+        return top_learner.getImage(_act, _state, visited=visited, actVars=actVars, path_trace=path_trace)
 
     def image_learnerTrav(self, _act, _state, visited, actVars=None, path_trace=None):
 

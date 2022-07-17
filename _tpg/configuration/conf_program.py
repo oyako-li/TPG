@@ -1358,10 +1358,10 @@ class ConfProgram3:
 
             # do an operation
             try:
-                if op == 0:             regs[dest] = x+y
-                elif op == 1:           regs[dest] = x-y
-                elif op == 2:           regs[dest] = x*y
-                elif op == 3 and y != 0:regs[dest] = x/y
+                if op == 0:             regs[dest] = tanh(x+y)
+                elif op == 1:           regs[dest] = tanh(x-y)
+                elif op == 2:           regs[dest] = tanh(x*y)
+                elif op == 3 and y != 0:regs[dest] = tanh(x/y)
                 elif op == 4:           pass#regs[dest] = x**y
                 elif op == 5 and x < y: regs[dest] = x*(-1)
                 elif op == 6 and x > y: regs[dest] = x*(-1)
@@ -1897,10 +1897,10 @@ class ConfProgram2:
 
             # do an operation
             try:
-                if   op == 0:           regs[dest] = x+y
-                elif op == 1:           regs[dest] = x-y
-                elif op == 2:           regs[dest] = x*y
-                elif op == 3 and y != 0:regs[dest] = x/y
+                if   op == 0:           regs[dest] = tanh(x+y)
+                elif op == 1:           regs[dest] = tanh(x-y)
+                elif op == 2:           regs[dest] = tanh(x*y)
+                elif op == 3 and y != 0:regs[dest] = tanh(x/y)
                 elif op == 4:           pass#regs[dest] = x**y
                 elif op == 5 and x < y: regs[dest] = x*(-1)
                 elif op == 6 and x > y: regs[dest] = x*(-1)

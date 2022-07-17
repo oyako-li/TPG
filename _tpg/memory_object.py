@@ -1,3 +1,4 @@
+from math import tanh
 import pickle
 from uuid import uuid4
 import numpy as np
@@ -10,7 +11,7 @@ class Fragment:
     def __init__(self, _key=np.array([0]), _state=np.array([[0.]])):
         state = np.array(_state)
         key = np.array(_key)
-        # print(state, key)
+        self.reward = 0.
         self.fragment = state[key]
         self.index = key
         self.id = str(uuid4())
@@ -24,21 +25,25 @@ class Fragment:
     def values(self):
         return self.fragment
     
+    # ここら辺をもっとRewardに沿った形で変更。
     def update(self, key, value):
         assert isinstance(value, list) or isinstance(value, np.ndarray)
         if isinstance(value, list): value = np.array(value)
         assert value.size==self.index.size
         self.fragment[[i for i,x in enumerate(self.index) if x in key]] = value
 
-    def memorize(self, state):
+    def memorize(self, state, _reward):
         assert isinstance(state, np.ndarray), state
+        reward_unexpectancy = (self.reward-_reward)
+        self.reward     -= reward_unexpectancy
+        unexpectancy = abs(tanh(reward_unexpectancy))
         key = self.index[self.index<state.size]
         val = self.fragment[self.index<state.size]
         dif = val - state[key]
         diff = np.array(self.fragment)
         diff[[i for i,x in enumerate(self.index) if x in key]] = dif
-        self.fragment-= diff*0.01
-        return diff
+        self.fragment   = self.fragment - diff*unexpectancy
+        return diff, unexpectancy
 
 
     def recall(self, state):
@@ -67,23 +72,23 @@ class Memory:
     def append(self, _key, _state):
         _key= list(set(_key))
         memory = Fragment(_key, _state)
-        self.memories[memory.id] = memory
-        self.weights[memory.id] = 1.
-        self.referenced[memory.id]=0
+        self.memories[memory.id]    = memory
+        self.weights[memory.id]     = 1.
+        self.referenced[memory.id]  = 0
         return memory.id
     
     def size(self):
         return len(self.weights)
     
     def codes(self, _ignore:list=None):
-        if not _ignore is None: return list(filter(lambda x: not x in _ignore, self.weights.keys()))
-        return list(self.weights.keys())
+        if not _ignore is None: 
+            return np.array(list(filter(lambda x: not x in _ignore, self.weights.keys())))
+        return np.array(list(self.weights.keys()))
     
     def popus(self, _ignore:list=None):
         if not _ignore is None:
             codes = self.codes(_ignore)
             return np.array([val for key, val in self.weights.items() if key in codes])
-            
         return np.array(list(self.weights.values()))
 
     def updateWeights(self, rate=1.01):
@@ -102,9 +107,8 @@ class Memory:
 
     def choice(self, _ignore=None)->list:
         p = 1-self.popus(_ignore)
-        p = p[p>0]
-        if len(p)==0: return random.choice(self.codes(_ignore))
-        return random.choices(self.codes(_ignore), p[p>0])[0]
+        if len(p[p>0])==0: return random.choice(self.codes(_ignore))
+        return random.choices(self.codes(_ignore)[p>0], p[p>0])[0]
 
 class MemoryObject:
     memories=Memory()
@@ -134,13 +138,13 @@ class MemoryObject:
         # if not isinstance(__o, MemoryObject) and not isinstance(__o, np.ndarray): False
         # memory:Fragment = MemoryObject.memories[self.memoryCode]
         # The other object must be an instance of the ActionObject class
-        if not isinstance(__o, MemoryObject):    return False
+        if not isinstance(__o, MemoryObject):   return False
         
         # The other object's action code must be equal to ours
-        if self.memoryCode != __o.memoryCode:     return False
+        if self.memoryCode != __o.memoryCode:   return False
         
         # The other object's team action must be equal to ours
-        if self.teamMemory != __o.teamMemory:     return False
+        if self.teamMemory != __o.teamMemory:   return False
         return True
 
     def __ne__(self, __o: object) -> bool:
@@ -149,13 +153,13 @@ class MemoryObject:
     def __getitem__(self, _key):
         return MemoryObject.memories[self.memoryCode][_key]
     
-    def getImage(self, _act, _state, _bid, visited, actVars=None, path_trace=None):
+    def getImage(self, _act, _state, visited, actVars, path_trace=None):
         if self.teamMemory is not None:
-            return self.teamMemory.image(_act, _state, _bid, visited, path_trace)
+            return self.teamMemory.image(_act, _state, visited, actVars=actVars, path_trace=path_trace)
         else:
             MemoryObject.memories.weights[self.memoryCode]*=0.9 # 忘却確立減算
-            MemoryObject.memories.updateWeights()                    # 忘却確立計上
-            return self.memoryCode, _bid[0]
+            MemoryObject.memories.updateWeights()               # 忘却確立計上
+            return self.memoryCode
 
     def isAtomic(self):
         return self.teamMemory is None

@@ -265,7 +265,11 @@ class ConfLearner2:
         self.id = uuid.uuid4()
 
 
-        if self.isMemoryAtomic(): MemoryObject.memories.referenced[self.memoryObj.memoryCode]+=1
+        if self.isMemoryAtomic(): 
+            try:
+                MemoryObject.memories.referenced[self.memoryObj.memoryCode]+=1
+            except:
+                print('no memory', self.memoryObj.memoryCode)
         else: self.memoryObj.teamMemory.inLearners.append(str(self.id))
 
     def bid_def(self, _act, _state, actVars=None):
@@ -296,8 +300,8 @@ class ConfLearner2:
 
         return self.registers[0]
 
-    def getImage_def(self, _act, _state, _bid, visited, actVars=None, path_trace=None):
-        return self.memoryObj.getImage(_act, _state, _bid, visited, actVars=actVars, path_trace=path_trace)
+    def getImage_def(self, _act, _state, visited, actVars, path_trace=None):
+        return self.memoryObj.getImage(_act, _state, visited, actVars=actVars, path_trace=path_trace)
 
     def getMemoryTeam_def(self):
         return self.memoryObj.teamMemory
