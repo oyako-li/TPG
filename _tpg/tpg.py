@@ -14,6 +14,7 @@ import sys
 import gym
 import signal
 import time
+import logging
 
 class TPG:
 
@@ -138,6 +139,11 @@ class TPG:
         #clear_output(wait=True)
         logger.info(f'Time Taken (Hours): {str((time.time() - tStart)/3600)}')
         logger.info(f'Results: Min, Max, Avg, {summaryScores}')
+        # logger.shutdown()
+        # logging.disable(logging.NOTSET)
+
+        list(map(logger.removeHandler, logger.handlers))
+        list(map(logger.removeFilter, logger.filters))
         return filename
 
     def instance_valid(self, trainer)->bool: pass

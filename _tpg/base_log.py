@@ -6,6 +6,7 @@ from datetime import datetime
 # LOG.basicConfig(format='[%(asctime)s][%(levelname)s](%(filename)s:%(lineno)s) %(name)s:%(message)s')
 
 def setup_logger(_name, _logfile='LOGFILENAME', test=False, load=True):
+    logging.disable(logging.NOTSET)
     _logger = logging.getLogger(_name)
     _logger.setLevel(logging.DEBUG)
 
