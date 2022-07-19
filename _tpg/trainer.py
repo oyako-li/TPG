@@ -1931,10 +1931,7 @@ class Trainer2:
         # Finaly, purge the orphans
         # AtomicActionのLearnerはどのように生成すれば良いのだろうか？ -> actionObj.mutate()による
         self.learners = [learner for learner in self.learners if learner.numTeamsReferencing() > 0]
-        # breakpoint('correctry here')
-        MemoryObject.memories.oblivion()
 
-                
     def _generate(self, extraTeams=None, _states=None, _unexpectancies=None):
 
         # extras who are already part of the team population
@@ -2011,17 +2008,24 @@ class Trainer2:
 
     def _nextEpoch(self):
         # add in newly added learners, and decide root teams
+        memory_code_list = set()
         self.rootTeams = []
         for team in self.teams:
-            # add any new learners to the population
             for learner in team.learners:
                 if learner not in self.learners:
-                    #print("Adding {} to trainer learners".format(learner.id))
                     self.learners.append(learner)
 
             # maybe make root team
             if team.numLearnersReferencing() == 0 or team in self.elites:
                 self.rootTeams.append(team)
+
+        for lrnr in self.learners:
+            if lrnr.isMemoryAtomic():
+                memory_code_list.add(lrnr.memoryObj.memoryCode)
+
+        memory_code_list = list(memory_code_list)
+        MemoryObject.memories.oblivion(memory_code_list)
+
         
         self.generation += 1
 

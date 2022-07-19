@@ -85,21 +85,24 @@ if __name__ == '__main__':
                     ]
                 elif pattern=='2':
                     tasks =[
-                        "ALE/Riverraid-v5",
-                        "RoadRunner-v4",
-                        "CartPole-v0",
-                        "WizardOfWor-v4",
-                        "Acrobot-v1",
+                        "Asterix-v4",	
+                        "Boxing-v0",
+                        "ALE/Riverraid-v5",	
+                        "WizardOfWor-v4",		
+                        "Acrobot-v1",			
+                        "RoadRunner-v4",	
+                        "CartPole-v0"
                     ]
                 elif pattern=='3':
                     tasks = [
-                        "Asterix-v4",
-                        "Boxing-v0",
-                        "ALE/Riverraid-v5",
-                        "WizardOfWor-v4",
-                        "Acrobot-v1",
-                        "RoadRunner-v4",
-                        "CartPole-v0"
+                        "WizardOfWor-v4",		
+                        "ALE/Freeway-v5",	
+                        "ALE/Riverraid-v5",	
+                        "Acrobot-v1",			
+                        "Asterix-v4",	
+                        "CartPole-v0",
+                        "ALE/Centipede-v5",	
+                        "RoadRunner-v4"	
                     ]
             if model=='ALE/Riverraid-v5':
                 if pattern=='1':
@@ -124,6 +127,12 @@ if __name__ == '__main__':
                     ]
                 else: raise Exception('preas setting CubeCrash-v0 pattern paramater')
             # filename = modelPath.split('/')[-1]
+            if model=='Asterix-v4':
+                tasks = [
+                    "CartPole-v0",
+                    "ALE/Centipede-v5",	
+                    "RoadRunner-v4"	
+                ]
             trainer = loadTrainer(modelPath)
 
         elif 'task:' in arg:
@@ -163,9 +172,9 @@ if __name__ == '__main__':
                     "ALE/Riverraid-v5",	
                     "Acrobot-v1",			
                     "Asterix-v4",	
-                    "CartPole-v0"
+                    "CartPole-v0",
                     "ALE/Centipede-v5",	
-                    "RoadRunner-v4",	
+                    "RoadRunner-v4"	
                 ]
 
     if not tpg: raise Exception('TPG type is not defined')

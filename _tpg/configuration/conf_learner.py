@@ -265,12 +265,8 @@ class ConfLearner2:
         self.id = uuid.uuid4()
 
 
-        if self.isMemoryAtomic(): 
-            try:
-                MemoryObject.memories.referenced[self.memoryObj.memoryCode]+=1
-            except:
-                print('no memory', self.memoryObj.memoryCode)
-        else: self.memoryObj.teamMemory.inLearners.append(str(self.id))
+        # if self.isMemoryAtomic(): MemoryObject.memories.referenced[self.memoryObj.memoryCode]+=1
+        if not self.isMemoryAtomic(): self.memoryObj.teamMemory.inLearners.append(str(self.id))
 
     def bid_def(self, _act, _state, actVars=None):
         # exit early if we already got bidded this frame
@@ -333,8 +329,8 @@ class ConfLearner2:
         _clone = copy.deepcopy(self)
         _clone.inTeams = []
         _clone.id = uuid.uuid4()
-        if _clone.isMemoryAtomic(): MemoryObject.memories.referenced[_clone.memoryObj.memoryCode]+=1
-        else: _clone.memoryObj.teamMemory.inLearners.append(str(_clone.id))
+        # if _clone.isMemoryAtomic(): MemoryObject.memories.referenced[_clone.memoryObj.memoryCode]+=1
+        if not _clone.isMemoryAtomic(): _clone.memoryObj.teamMemory.inLearners.append(str(_clone.id))
         return _clone
 
 class ConfLearner3:

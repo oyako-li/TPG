@@ -59,7 +59,6 @@ class Memory:
         fragment = Fragment()
         self.memories:dict={fragment.id:fragment} # uuid:flagment
         self.weights:dict={fragment.id:1.}
-        self.referenced:dict={fragment.id:0}
 
     def __getitem__(self, key):
         return self.memories[key] # flagment
@@ -67,14 +66,12 @@ class Memory:
     def __delattr__(self, __name: str) -> None:
         del self.memories[__name]
         del self.weights[__name]
-        del self.referenced[__name]
     
     def append(self, _key, _state):
         _key= list(set(_key))
         memory = Fragment(_key, _state)
         self.memories[memory.id]    = memory
         self.weights[memory.id]     = 1.
-        self.referenced[memory.id]  = 0
         return memory.id
     
     def size(self):
@@ -94,21 +91,19 @@ class Memory:
     def updateWeights(self, rate=1.01):
         self.weights = {x: val*rate for x, val in self.weights.items()}
 
-    def oblivion(self):
+    def oblivion(self, ignore):
         deleat_key = []
-        for k, v in self.referenced.items():
-            if v<1: deleat_key.append(k)
+        for k, v in self.memories.items():
+            if not k in ignore: deleat_key.append(k)
         for key in deleat_key:
-            del self.memories[key]
-            del self.weights[key]
-            del self.referenced[key]
-        # breakpoint(len(MemoryObject.memories.memories))
+            self.__delattr__(key)
 
 
-    def choice(self, _ignore=None)->list:
+    def choice(self, _ignore:list=[])->list:
         p = 1-self.popus(_ignore)
         if len(p[p>0])==0: return random.choice(self.codes(_ignore))
         return random.choices(self.codes(_ignore)[p>0], p[p>0])[0]
+
 
 class MemoryObject:
     memories=Memory()
@@ -134,10 +129,9 @@ class MemoryObject:
             self.memoryCode = MemoryObject.memories.append(key, state)
             self.teamMemory = None
 
+
     def __eq__(self, __o: object) -> bool:
-        # if not isinstance(__o, MemoryObject) and not isinstance(__o, np.ndarray): False
-        # memory:Fragment = MemoryObject.memories[self.memoryCode]
-        # The other object must be an instance of the ActionObject class
+
         if not isinstance(__o, MemoryObject):   return False
         
         # The other object's action code must be equal to ours
@@ -166,17 +160,17 @@ class MemoryObject:
 
     def mutate(self, mutateParams=None, parentTeam=None, teams=None, pMemAtom=None, learner_id=None):
         if None in (mutateParams, parentTeam, teams, pMemAtom, learner_id):
-            self.memoryCode=MemoryObject.memories.choice()
+            self.memoryCode=MemoryObject.memories.choice([self.memoryCode])
             self.teamMemory=None
-            print('0 valid_learners')
+            # print('0 valid_learners')
             return self
 
         if flip(pMemAtom):
             if self.memoryCode is not None:
-                try:
-                    MemoryObject.memories.referenced[self.memoryCode]-=1
-                except:
-                    print('memory is crashed')
+                # try:
+                #     MemoryObject.memories.referenced[self.memoryCode]-=1
+                # except:
+                #     print('memory is crashed')
                 _ignore = self.memoryCode
             else:
                 _ignore = None
@@ -184,8 +178,7 @@ class MemoryObject:
             if not self.isAtomic():
                 self.teamMemory.inLearners.remove(str(learner_id))
             
-            self.memoryCode = MemoryObject.memories.choice(_ignore)
-            MemoryObject.memories.referenced[self.memoryCode]+=1
+            self.memoryCode = MemoryObject.memories.choice([_ignore])
             self.teamMemory = None
         else:
             selection_pool = [t for t in teams if t is not self.teamMemory and t is not parentTeam]

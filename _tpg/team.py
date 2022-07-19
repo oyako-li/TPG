@@ -767,6 +767,7 @@ class Team2:
                 #print("Team {} creating learner".format(self.id))
                 # Create a new new learner 
                 newLearner = Learner2(mutateParams, learner.program, learner.memoryObj, len(learner.registers), learner.id)
+                
                 new_learners.append(newLearner)
                 # Add the mutated learner to our learners
                 # Must add before mutate so that the new learner has this team in its inTeams
