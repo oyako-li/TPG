@@ -1,6 +1,6 @@
 # from src.grower import growing
 from _tpg.trainer import loadTrainer
-from _tpg.tpg import NativeTPG, MemoryAndHierarchicalTPG, EmulatorTPG
+from _tpg.tpg import NativeTPG, MemoryAndHierarchicalTPG, EmulatorTPG, StateTPG
 import sys
 
 def breakpoint(_print):
@@ -47,6 +47,8 @@ if __name__ == '__main__':
             tpg = MemoryAndHierarchicalTPG(teamPopSize=teamPopSize)
         elif arg=='emulator':
             tpg = EmulatorTPG(teamPopSize=teamPopSize)
+        elif arg=='state':
+            tpg = StateTPG(teamPopSize=teamPopSize)
         if 'model:' in arg:
             modelPath = arg.split(':')[1]
             model = '/'.join(modelPath.split('/')[:-1])

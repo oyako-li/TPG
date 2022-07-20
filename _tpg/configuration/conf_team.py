@@ -300,7 +300,6 @@ class ConfTeam1:
 
         return top_learner.getAction(state, visited=visited, actVars=actVars, path_trace=path_trace)
 
-
     """
     Returns an action to use based on the current state. Learner traversal.
     """

@@ -193,4 +193,4 @@ class MemoryObject:
     
     @classmethod
     def backup(cls, fileName):
-        pickle.dump(cls, open(f'log/{fileName}.pickle', 'wb'))
+        pickle.dump(cls, open(f'log/{fileName}-mem.pickle', 'wb'))
