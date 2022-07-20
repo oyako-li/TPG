@@ -2611,4 +2611,3 @@ class Trainer3:
 
     def saveToFile(self, fileName):
         pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
-

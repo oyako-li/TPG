@@ -648,6 +648,10 @@ class EmulatorTPG(TPG):
             _emulator.saveToFile(f'{task}/{_filename}-emu')
         return _filename
 
+class Automata(TPG):
+    def __init__(self, actions=2, teamPopSize: int = 1000, rootBasedPop: bool = True, gap: float = 0.5, inputSize: int = 33600, nRegisters: int = 8, initMaxTeamSize: int = 10, initMaxProgSize: int = 10, maxTeamSize: int = -1, pLrnDel: float = 0.7, pLrnAdd: float = 0.6, pLrnMut: float = 0.2, pProgMut: float = 0.1, pActMut: float = 0.1, pActAtom: float = 0.95, pInstDel: float = 0.5, pInstAdd: float = 0.4, pInstSwp: float = 0.2, pInstMut: float = 1., doElites: bool = True, memType="def", memMatrixShape: tuple = (100, 8), rampancy: tuple = (0, 0, 0), operationSet: str = "custom", traversal: str = "team", prevPops=None, mutatePrevs=True, initMaxActProgSize: int = 6, nActRegisters: int = 4):
+        super().__init__(actions, teamPopSize, rootBasedPop, gap, inputSize, nRegisters, initMaxTeamSize, initMaxProgSize, maxTeamSize, pLrnDel, pLrnAdd, pLrnMut, pProgMut, pActMut, pActAtom, pInstDel, pInstAdd, pInstSwp, pInstMut, doElites, memType, memMatrixShape, rampancy, operationSet, traversal, prevPops, mutatePrevs, initMaxActProgSize, nActRegisters)
+
 if __name__ == '__main__':
     task = sys.argv[1]
     show = False
