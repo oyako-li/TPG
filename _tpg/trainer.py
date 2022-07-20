@@ -2053,6 +2053,7 @@ class Trainer2:
 
     def saveToFile(self, fileName):
         pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
+        MemoryObject.backup(fileName=fileName)
     
 class Trainer3:
 

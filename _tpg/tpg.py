@@ -227,19 +227,13 @@ class StateTPG(TPG):
             _id = str(agent.team.id)
             for _ in range(_frames): # run episodes that last 500 frames
                 act = _env.action_space.sample()
-                # feedback from env
-                # if not act in range(_env.action_space.n): continue
                 imageCode = agent.image(act, state)
                 state, reward, isDone, debug = _env.step(act)
-                # diff = MemoryObject.memories[imageCode].recall(state)
                 diff, unex = MemoryObject.memories[imageCode].memorize(state, reward)
-                # score += reward # accumulate reward in score
-                # diff, unex = MemoryObject.memories[imageCode].memorize(state, reward)
-                # print(reward)
+
                 score += tanh(np.power(diff, 2).sum())
                 states+=[state]
                 unexpectancies+=[unex]
-                # if unexpectancy==0: _states[em]=tanh(score)*1000
 
                 if isDone: break # end early if losing state
                 if _show:
@@ -268,14 +262,8 @@ class StateTPG(TPG):
     def growing(self, _trainer, _task:str, _generations:int=1000, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True):
         self.instance_valid(_trainer)
         logger, filename = setup_logger(__name__, _task, test=_test, load=_load)
-        # print(_task,filename)
         env = gym.make(_task) # make the environment
-        # action_space = env.action_space
-        # action = 0
-        # if isinstance(action_space, gym.spaces.Box):
-        #     action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
-        # elif isinstance(action_space, gym.spaces.Discrete):
-        #     action = action_space.n
+
         _trainer.resetMemories(state=env.observation_space.sample())
 
         def outHandler(signum, frame):
@@ -298,14 +286,13 @@ class StateTPG(TPG):
             logger.info(f'generation:{gen}, score:{score}')
             summaryScores.append(score)
             
-        #clear_output(wait=True)
         logger.info(f'Time Taken (Hours): {str((time.time() - tStart)/3600)}')
         logger.info(f'Results: Min, Max, Avg, {summaryScores}')
-        # logger.shutdown()
-        # logging.disable(logging.NOTSET)
+
 
         list(map(logger.removeHandler, logger.handlers))
         list(map(logger.removeFilter, logger.filters))
+        
         return filename
     
 class EmulatorTPG(TPG):
