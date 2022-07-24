@@ -49,6 +49,7 @@ if __name__ == '__main__':
             tpg = EmulatorTPG(teamPopSize=teamPopSize)
         elif arg=='state':
             tpg = StateTPG(teamPopSize=teamPopSize)
+
         if 'model:' in arg:
             modelPath = arg.split(':')[1]
             model = '/'.join(modelPath.split('/')[:-1])
@@ -180,6 +181,12 @@ if __name__ == '__main__':
                 ]
 
     if not tpg: raise Exception('TPG type is not defined')
+
+    if isinstance(tpg, EmulatorTPG):
+
+        for _task in tasks:
+            filename = tpg.start(_task=_task, _show=show, _test=test, _load=load, _trainer=trainer, _generations=generations, _episodes=episodes, _frames=frames)
+            trainer = loadTrainer(f'{_task}/{filename}')
 
     for _task in tasks:
         filename = tpg.start(_task=_task, _show=show, _test=test, _load=load, _trainer=trainer, _generations=generations, _episodes=episodes, _frames=frames)

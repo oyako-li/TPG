@@ -12,8 +12,8 @@ class Fragment:
         state = np.array(_state)
         key = np.array(_key)
         self.reward = 0.
-        self.fragment = state[key]
         self.index = key
+        self.fragment = state[key]
         self.id = str(uuid4())
     
     def __getitem__(self, key):

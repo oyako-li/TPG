@@ -5,17 +5,19 @@ from _tpg.program import Program, Program1, Program3, Program2
 from _tpg.action_object import ActionObject, ActionObject1, ActionObject3, ActionObject2
 from _tpg.memory_object import MemoryObject
 from _tpg.configuration import configurer
-# from _tpg.emulator import Emulator
+from _tpg.utils import breakpoint
 import random
 import pickle
 import numpy as np
+from tqdm import tqdm
 # import time
 # import multiprocessing as mp
 
-def breakpoint(*_print):
-    import sys
-    print(_print)
-    sys.exit()
+def loadTrainer(fileName:str):
+    trainer = pickle.load(open(f'log/{fileName}.pickle', 'rb'))
+    trainer.configFunctions()
+    return trainer
+
 """
 Functionality for actually growing TPG and evolving it to be functional.
 """
@@ -778,11 +780,6 @@ class Trainer:
     """
     def saveToFile(self, fileName):
         pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
-
-def loadTrainer(fileName:str):
-    trainer = pickle.load(open(f'log/{fileName}.pickle', 'rb'))
-    trainer.configFunctions()
-    return trainer
 
 class Trainer1:
 
@@ -1742,6 +1739,7 @@ class Trainer2:
         for _ in range(self.initMaxTeamSize):
             key = np.random.choice(range(state.size), random.randint(1, state.size-1))
             MemoryObject.memories.append(key, state)
+            
         self.doReal = False
         
         if self.doReal: self.nMemRegisters = max(max(self.memoryLengths), self.nMemRegisters)
@@ -1987,7 +1985,7 @@ class Trainer2:
                 if len(unexpectancies[unexpectancies>0])!=0:
                     state = random.choices(states[unexpectancies>0], unexpectancies[unexpectancies>0])[0]
                 else:
-                    state = random.choices(states)[0]
+                    state = 1
                 child.addLearner(Learner2(memoryObj=MemoryObject(state=state)))
                 # breakpoint(state)
                 # どういう時の状態をメモライズすれば良いか？
@@ -2421,16 +2419,13 @@ class Trainer3:
         # assign fitness
         if multiTaskType == 'min':
             for rt in self.rootTeams:
-                rt.fitness = min([(rt.outcomes[task]-mins[i])/(maxs[i]-mins[i])
-                        for i,task in enumerate(tasks)])
+                rt.fitness = min([(rt.outcomes[task]-mins[i])/(maxs[i]-mins[i]) for i,task in enumerate(tasks)])
         elif multiTaskType == 'max':
             for rt in self.rootTeams:
-                rt.fitness = max([(rt.outcomes[task]-mins[i])/(maxs[i]-mins[i])
-                        for i,task in enumerate(tasks)])
+                rt.fitness = max([(rt.outcomes[task]-mins[i])/(maxs[i]-mins[i]) for i,task in enumerate(tasks)])
         elif multiTaskType == 'average':
             for rt in self.rootTeams:
-                scores = [(rt.outcomes[task]-mins[i])/(maxs[i]-mins[i])
-                            for i,task in enumerate(tasks)]
+                scores = [(rt.outcomes[task]-mins[i])/(maxs[i]-mins[i]) for i,task in enumerate(tasks)]
                 rt.fitness = sum(scores)/len(scores)
 
     def _paretoDominateScorer(self, tasks):
@@ -2441,8 +2436,7 @@ class Trainer3:
                     continue # don't compare to self
 
                 # compare on all tasks
-                if all([t1.outcomes[task] >= t2.outcomes[task]
-                         for task in tasks]):
+                if all([t1.outcomes[task] >= t2.outcomes[task] for task in tasks]):
                     t1.fitness += 1
 
     def _paretoNonDominatedScorer(self, tasks):

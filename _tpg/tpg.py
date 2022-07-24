@@ -227,12 +227,12 @@ class StateTPG(TPG):
             _id = str(agent.team.id)
             for _ in range(_frames): # run episodes that last 500 frames
                 act = _env.action_space.sample()
-                imageCode = agent.image(act, state)
+                imageCode = agent.image(act, state.flatten())
                 state, reward, isDone, debug = _env.step(act)
-                diff, unex = MemoryObject.memories[imageCode].memorize(state, reward)
+                diff, unex = MemoryObject.memories[imageCode].memorize(state.flatten(), reward)
 
                 score += tanh(np.power(diff, 2).sum())
-                states+=[state]
+                states+=[state.flatten()]
                 unexpectancies+=[unex]
 
                 if isDone: break # end early if losing state
@@ -264,7 +264,7 @@ class StateTPG(TPG):
         logger, filename = setup_logger(__name__, _task, test=_test, load=_load)
         env = gym.make(_task) # make the environment
 
-        _trainer.resetMemories(state=env.observation_space.sample())
+        _trainer.resetMemories(state=env.observation_space.sample().flatten())
 
         def outHandler(signum, frame):
             if not _test: _trainer.saveToFile(f'{_task}/{filename}-em')
@@ -653,7 +653,7 @@ class Automata(TPG):
         super().__init__(actions, teamPopSize, rootBasedPop, gap, inputSize, nRegisters, initMaxTeamSize, initMaxProgSize, maxTeamSize, pLrnDel, pLrnAdd, pLrnMut, pProgMut, pActMut, pActAtom, pInstDel, pInstAdd, pInstSwp, pInstMut, doElites, memType, memMatrixShape, rampancy, operationSet, traversal, prevPops, mutatePrevs, initMaxActProgSize, nActRegisters)
 
 if __name__ == '__main__':
-    task = sys.argv[1]
+    # task = sys.argv[1]
     show = False
     test = False
     load = False
@@ -668,17 +668,18 @@ if __name__ == '__main__':
     tpg = NativeTPG(teamPopSize=teamPopSize)
 
 
-    for arg in sys.argv[2:]:
+    for arg in sys.argv[1:]:
         if arg=='show': show = True
         if arg=='test': test=True
         if arg=='load': load=True
+        if 'task:' in arg: task=arg.split(':')[1]
         if 'teamPopSize:' in arg: teamPopSize=int(arg.split(':')[1])
         if 'generations:' in arg: generations=int(arg.split(':')[1])
         if 'episodes:' in arg: episodes=int(arg.split(':')[1])
         if 'frames:' in arg: frames=int(arg.split(':')[1])
         if 'thinkingTime:' in arg: thinkingTime=float(arg.split(':')[1])
     
-    for arg in sys.argv[2:]:
+    for arg in sys.argv[1:]:
         if arg=='native':
             tpg = NativeTPG(teamPopSize=teamPopSize)
             print('native')
@@ -703,6 +704,8 @@ if __name__ == '__main__':
             modelPath = arg.split(':')[1]
             print(modelPath)
             emulator = loadTrainer(modelPath)
+
+    if not task: raise Exception("task doesn't")
 
     if isinstance(tpg, EmulatorTPG):
         tpg.start(_task=task, _show=show, _test=test, _load=load, _actor=actor, _emulator=emulator, _generations=generations, _episodes=episodes, _frames=frames)

@@ -519,25 +519,24 @@ class ConfTeam2:
 
             self.addLearner(clone)
             valid_learners.append(clone)
-        assert actVars.get('frameNum'), type(actVars)
+        # assert actVars.get('frameNum'), type(actVars)
         top_learner = max(valid_learners, key=lambda lrnr: lrnr.bid(_act, _state, actVars=actVars))
         # print(_bid[0])
         if not self.outcomes.get(actVars['task']): self.outcomes[actVars['task']]=0.
 
 
         # reward distribute to inheritances
-        for lrnr in self.learners:
-            if not lrnr.isMemoryAtomic():
-                inheritance = lrnr.getMemoryTeam()
-                if not inheritance.outcomes.get(actVars['task']): inheritance.outcomes[actVars['task']]=0.
-                distribution = inheritance.numDistribution()
-                distribute_score = self.outcomes['reward']/float(distribution)
-                survive_rate = tanh(distribute_score)+inheritance.outcomes['survive']
-                task_score = inheritance.outcomes[actVars['task']] + tanh(distribute_score)
-                inheritance.outcomes[actVars['task']] = tanh(task_score)
-                inheritance.outcomes['reward'] = distribute_score
-                inheritance.outcomes['survive'] = tanh(survive_rate)
-                assert isinstance(inheritance.outcomes[actVars['task']], float)
+        # for lrnr in self.learners:
+        #     if not lrnr.isMemoryAtomic():
+        #         inheritance = lrnr.getMemoryTeam()
+        #         if not inheritance.outcomes.get(actVars['task']): inheritance.outcomes[actVars['task']]=0.
+        #         distribution = inheritance.numDistribution()
+        #         distribute_score = self.outcomes['reward']/float(distribution)
+        #         survive_rate = inheritance.outcomes['survive'] + tanh(distribute_score)
+        #         task_score = inheritance.outcomes[actVars['task']] + tanh(distribute_score)
+        #         inheritance.outcomes[actVars['task']] = tanh(task_score)
+        #         inheritance.outcomes['reward'] = distribute_score
+        #         inheritance.outcomes['survive'] = tanh(survive_rate)
 
 
     
@@ -636,7 +635,6 @@ class ConfTeam2:
     def removeLearners_def(self):
         for learner in self.learners:
             learner.inTeams.remove(str(self.id))
-            # if learner.isMemoryAtomic(): MemoryObject.memories.referenced[learner.memoryObj.memoryCode]-=1
 
         del self.learners[:]
 
@@ -754,18 +752,18 @@ class ConfTeam3:
         top_learner = max(valid_learners, key=lambda lrnr: lrnr.bid(state, actVars=actVars))
         if not self.outcomes.get(actVars['task']): self.outcomes[actVars['task']]=0.
 
-        for lrnr in self.learners:
-            if not lrnr.isActionAtomic():
-                inheritance = lrnr.getActionTeam()
-                if not inheritance.outcomes.get(actVars['task']): inheritance.outcomes[actVars['task']]=0.
-                distribution = inheritance.numDistribution()
-                distribute_score = self.outcomes['reward']/float(distribution)
-                survive_rate = tanh(distribute_score)+inheritance.outcomes['survive']
-                task_score = inheritance.outcomes[actVars['task']] + tanh(distribute_score)
-                inheritance.outcomes[actVars['task']] = tanh(task_score)
-                inheritance.outcomes['reward'] = distribute_score
-                inheritance.outcomes['survive'] = tanh(survive_rate)
-                assert isinstance(inheritance.outcomes[actVars['task']], float)
+        # このタイミングでやるのはまずい？
+        # for lrnr in self.learners:
+        #     if not lrnr.isActionAtomic():
+        #         inheritance = lrnr.getActionTeam()
+        #         if not inheritance.outcomes.get(actVars['task']): inheritance.outcomes[actVars['task']]=0.
+        #         distribution = inheritance.numDistribution()
+        #         distribute_score = self.outcomes['reward']/float(distribution)
+        #         survive_rate = inheritance.outcomes['survive'] + tanh(distribute_score)
+        #         task_score = inheritance.outcomes[actVars['task']] + tanh(distribute_score)
+        #         inheritance.outcomes[actVars['task']] = tanh(task_score*3)
+        #         inheritance.outcomes['reward'] = distribute_score*1.1
+        #         inheritance.outcomes['survive'] = tanh(survive_rate*3)
 
         # If we're tracing this path
         if path_trace != None:
