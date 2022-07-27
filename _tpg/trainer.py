@@ -1689,7 +1689,7 @@ class Trainer2:
         
         teams = [t for t in self.teams if task in t.outcomes]
 
-        return Agent2(max([tm for tm in teams],
+        return Agent2(min([tm for tm in teams],
                         key=lambda t: t.outcomes[task]),
                      self.functionsDict, num=0, actVars=self.actVars)
 

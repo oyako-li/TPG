@@ -632,6 +632,8 @@ class EmulatorTPG(TPG):
         #clear_output(wait=True)
         logger.info(f'Time Taken (Hours): {str((time.time() - tStart)/3600)}')
         logger.info(f'Results: Min, Max, Avg, {summaryScores}')
+        list(map(logger.removeHandler, logger.handlers))
+        list(map(logger.removeFilter, logger.filters))
         return filename
 
     def start(self, _task, _show, _test, _load, _actor=None, _emulator=None, _generations=1000, _episodes=1, _frames=500):
