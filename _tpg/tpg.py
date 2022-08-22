@@ -96,7 +96,7 @@ class TPG:
         agents = _trainer.getAgents()
         _task = _env.spec.id
         for _ in range(_episodes):      _scores = self.episode(agents, _env, _logger=_logger, _scores=_scores, _frames=_frames, _show=_show)
-        for i in _scores:                _scores[i]/=_episodes
+        for i in _scores:               _scores[i]/=_episodes
         for agent in agents:            agent.reward(_scores[str(agent.team.id)],task=_task)
         _trainer.evolve([_task])
 
@@ -254,7 +254,7 @@ class StateTPG(TPG):
         _task = _env.spec.id
         for _ in range(_episodes):      _scores, states, unexpectancies = self.episode(agents, _env, _logger=_logger, _scores=_scores, _frames=_frames, _show=_show)
         for i in _scores:                _scores[i]/=_episodes
-        for agent in agents:            agent.reward(_scores[str(agent.team.id)],task=_task)
+        for agent in agents:            agent.reward(_scores[str(agent.team.id)], task=_task)
         _trainer.evolve([_task], _states=states, _unexpectancies=unexpectancies)
 
         return _scores
@@ -399,7 +399,8 @@ class EmulatorTPG(TPG):
 
     def _setupParams(self, actor_id, emulator_id, actions=None, images=None, rewards=None):
         self.actions[actor_id]=[]
-        self.rewards[actor_id]=0.
+        # self.rewards[actor_id]=0.
+        if not self.rewards.get(actor_id) : self.rewards[actor_id]=0.
         if rewards is not None: self.rewards[actor_id] = sum(rewards)
         if actions is not None: self.actions[actor_id] = actions
 
@@ -407,13 +408,12 @@ class EmulatorTPG(TPG):
         if not self.memories.get(emulator_id) : self.memories[emulator_id]=[]
         if images is not None: self.memories[emulator_id]   += images
 
- 
     def initParams(self):
         self.actions    = {}
         self.memories   = {}
         self.pairs      = {}
         self.rewards    = {}
-    
+
     def think(self, hippocampus, _actor, _emulator):
         assert isinstance(_actor, Agent3)
         assert isinstance(_emulator, Agent2)
@@ -427,8 +427,8 @@ class EmulatorTPG(TPG):
         actionCodes = []
         memoryCodes = []
         rewards     = []
-        timeout_start = time.time()
-        while time.time() < timeout_start + self.thinkingTimeLimit:
+        # timeout_start = time.time()
+        for i in range(hippocampus['frame']):
             actionCode = _actor.act(state)
             imageCode  = _emulator.image(actionCode, state)
             actionCodes  += [actionCode]
@@ -438,12 +438,14 @@ class EmulatorTPG(TPG):
             # breakpoint(self.thinkingTimeLimit)
         return actor_id, emulator_id, actionCodes, memoryCodes, rewards
 
-    def thinker(self, _state, _actors, _emulators):
+    def thinker(self, _state, _actors, _emulators, _frames):
         manager = mp.Manager()
         hippocampus = manager.dict()
         hippocampus['actions']  = ActionObject3.actions
         hippocampus['memories'] = MemoryObject.memories
         hippocampus['now'] = _state
+        hippocampus['frame']= _frames
+        
         with mp.Pool(mp.cpu_count()-2) as pool:
             # params = [(actor, emulator) for actor, emulator in zip(_actors, _emulators)]
             results = pool.starmap(self.think, [(hippocampus, actor, emulator) for actor, emulator in zip(_actors, _emulators)])
@@ -461,7 +463,7 @@ class EmulatorTPG(TPG):
         frame=0
         executor = ThreadPoolExecutor(max_workers=2)
         # state = _env.reset() # get initial state and prep environment
-        thinker = executor.submit(self.thinker, EmulatorTPG.state.flatten(), _actors, _emulators)
+        thinker = executor.submit(self.thinker, EmulatorTPG.state.flatten(), _actors, _emulators, _frames)
         # self.best = str(_elite_actor.team.id)
         total_reward = 0.
         # thinking_actor = []
@@ -492,7 +494,7 @@ class EmulatorTPG(TPG):
                 if _states.get(pairEmulator) is None : 
                     assert pairEmulator, pairEmulator
                     _states[pairEmulator]=[]
-                _scores[bestActor]    += scores             # store score
+                _scores[bestActor]    += scores    # store score
                 _states[pairEmulator] += states    # store states
                 thinker = executor.submit(self.thinker, EmulatorTPG.state.flatten(), _actors, _emulators)
             else:
@@ -545,16 +547,20 @@ class EmulatorTPG(TPG):
 
         unexpectancy=0.
         unexpectancies=[]
+        re_total=0.
+        for key, val in _scores.items():
+            re_total += sum(val)
+        print(re_total)
         for ac in _scores:               
-            total = sum(_scores[ac])
-            total = tanh(total)
-            total-= tanh(self.rewards[ac])
-            reward_for_actor[ac] = total
+            # total = sum(re_total)#-self.rewards[ac]
+            # total = tanh(total)
+            # total-= tanh(self.rewards[ac])
+            reward_for_actor[ac] = re_total
             em = self.pairs[ac]
             score = 0.
             assert len(_states[em])==len(_scores[ac])
             # unexpectancyが予想よりいいか悪いかを表す。
-            unexpectancy = abs(total)
+            # unexpectancy = abs(total)
 
             for state, imageCode, reward in zip(_states[em], self.memories[em], _scores[ac]):
                 diff, unex = MemoryObject.memories[imageCode].memorize(state, reward)
@@ -562,8 +568,7 @@ class EmulatorTPG(TPG):
                 score += tanh(np.power(diff, 2).sum())
                 states+=[state]
                 unexpectancies+=[unex]
-            if unexpectancy==0: _states[em]=tanh(score)*1000
-            else: _states[em]=tanh(score)/unexpectancy 
+            _states[em]=score
             # 予想外度　-1~1ぐらい、予想外度が小さいとあまりスコアを得られない。
             # ただ、エミュレータの場合、予想外度が小さいものほど評価されるべき。
             # 報酬予想が正しいものが残る。
@@ -575,11 +580,11 @@ class EmulatorTPG(TPG):
         # 報酬の贈与
         for actor in actors:
             if reward_for_actor.get(str(actor.team.id)) : 
-                actor.reward(reward_for_actor[str(actor.team.id)],task=_task)
+                actor.reward(reward_for_actor[str(actor.team.id)], task=_task)
         # ここらへんのエミュレータの報酬設計
         for emulator in emulators:
             if _states.get(str(emulator.team.id)): 
-                emulator.reward(_states[str(emulator.team.id)],task=_task)
+                emulator.reward(_states[str(emulator.team.id)], task=_task)
         # breakpoint()
         _actor.evolve([_task])
         # breakpoint('finish')
@@ -679,7 +684,9 @@ if __name__ == '__main__':
         if 'generations:' in arg: generations=int(arg.split(':')[1])
         if 'episodes:' in arg: episodes=int(arg.split(':')[1])
         if 'frames:' in arg: frames=int(arg.split(':')[1])
-        if 'thinkingTime:' in arg: thinkingTime=float(arg.split(':')[1])
+        if 'thinkingTime:' in arg: 
+            thinkingTime=float(arg.split(':')[1])
+            print('thinkingTime:', thinkingTime)
     
     for arg in sys.argv[1:]:
         if arg=='native':
@@ -706,6 +713,10 @@ if __name__ == '__main__':
             modelPath = arg.split(':')[1]
             print(modelPath)
             emulator = loadTrainer(modelPath)
+        # if 'model:' in arg:
+        #     modelPath = arg.split(':')[1]
+        #     print(modelPath)
+        #     model = loadTrainer(modelPath)
 
     if not task: raise Exception("task doesn't")
 

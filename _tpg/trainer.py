@@ -1710,7 +1710,7 @@ class Trainer2:
             doElites=self.doElites
         ) # assign scores to individuals
         self._saveFitnessStats() # save fitness stats
-        self._select(extraTeams) # select individuals to keep
+        self._select(extraTeams, task=tasks[0]) # select individuals to keep
         self._generate(extraTeams, _states=_states, _unexpectancies=_unexpectancies) # create new individuals from those kept
         self._nextEpoch() # set up for next generation
 
@@ -1905,9 +1905,9 @@ class Trainer2:
 
         return scoreStats
 
-    def _select(self, extraTeams=None):
+    def _select(self, extraTeams=None, task='task'):
 
-        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.fitness)
+        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.outcomes[task])
         numKeep = len(self.rootTeams) - int(len(self.rootTeams)*self.gap)
         deleteTeams = rankedTeams[numKeep:]
 
@@ -2270,7 +2270,7 @@ class Trainer3:
             doElites=self.doElites
         ) # assign scores to individuals
         self._saveFitnessStats() # save fitness stats
-        self._select(extraTeams) # select individuals to keep
+        self._select(extraTeams, task=tasks[0]) # select individuals to keep
         self._generate(extraTeams) # create new individuals from those kept
         self._nextEpoch() # set up for next generation
 
@@ -2485,9 +2485,9 @@ class Trainer3:
 
         return scoreStats
 
-    def _select(self, extraTeams=None):
+    def _select(self, extraTeams=None, task='task'):
 
-        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.fitness, reverse=True)
+        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.outcomes[task], reverse=True)
         numKeep = len(self.rootTeams) - int(len(self.rootTeams)*self.gap)
         deleteTeams = rankedTeams[numKeep:]
 

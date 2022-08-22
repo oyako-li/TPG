@@ -1,5 +1,6 @@
 from _tpg.trainer import Trainer, Trainer1, loadTrainer
 from _tpg.action_object import ActionObject1, ActionObject
+from _tpg.memory_object import MemoryObject
 import gym
 import matplotlib.pyplot as plt
 
@@ -66,18 +67,19 @@ if __name__ == "__main__":
             print(task)
             while i<10:
                 # show_state(env)
-                
-                act = elietAgent.act(state.flatten())
-                if not act in range(env.action_space.n):
-                    f+=1
-                    if f>500:
-                        print(score)
-                        _scores.append(score)
-                        score=0
-                        state = env.reset()
-                        # if i>10: break
-                        i+=1
-                    continue
+                act = env.action_space.sample()
+                # act = elietAgent.act(state.flatten())
+                # if not act in range(env.action_space.n):
+                #     f+=1
+                #     if f>500:
+                #         print(score)
+                #         _scores.append(score)
+                #         score=0
+                #         state = env.reset()
+                #         # if i>10: break
+                #         i+=1
+                #     continue
+                im = elietAgent.image(act, state.flatten())
                 state, reward, isDone, debug = env.step(act)
                 score += reward
                 if isDone:

@@ -3,7 +3,7 @@ from _tpg.tpg import EmulatorTPG
 import gym
 import unittest
 
-class EmulatorTest(unittest.TestCase):
+class Trainer2Test(unittest.TestCase):
 
     def test_emulator(self):
         env = gym.make("BreakoutNoFrameskip-v4")

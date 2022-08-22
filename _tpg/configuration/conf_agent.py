@@ -167,13 +167,13 @@ class ConfAgent2:
 
     def reward_def(self, score, task='task'):
         if not self.team.outcomes.get(task): self.team.outcomes[task]=0.
-        distribution = self.team.numDistribution()
-        distribute_score = score/float(distribution)
-        survive_rate = tanh(distribute_score*3)+self.team.outcomes['survive']
-        task_score = tanh(distribute_score*3) + self.team.outcomes[task]
-        self.team.outcomes[task] = tanh(task_score*3)
-        self.team.outcomes['reward'] = distribute_score
-        self.team.outcomes['survive'] = tanh(survive_rate*3)
+        # distribution = self.team.numDistribution()
+        # distribute_score = score/float(distribution)
+        # survive_rate = tanh(distribute_score*3)+self.team.outcomes['survive']
+        self.team.outcomes[task]=score
+        # self.team.outcomes[task] = tanh(task_score*3)
+        # self.team.outcomes['reward'] = distribute_score
+        # self.team.outcomes['survive'] = tanh(survive_rate*3)
         # inheritance team counts を導入することで、報酬分配を考えることができる。
         # このteamを継承しているteamにも報酬を支払う。 分け与える
 
@@ -227,14 +227,14 @@ class ConfAgent3:
     Give this agent/root team a reward for the given task
     """
     def reward_def(self, score, task='task'):
-        distribution = self.team.numDistribution()
-        distribute_score = score/float(distribution)
-        survive_rate = tanh(distribute_score*3)+self.team.outcomes['survive']
-        self.team.outcomes[task] = tanh(distribute_score*3)
-        self.team.outcomes['reward'] = distribute_score
-        self.team.outcomes['survive'] = tanh(survive_rate*3)
-        assert isinstance(self.team.outcomes[task], float), type(float(self.team.outcomes[task]))
-
+        # distribution = self.team.numDistribution()
+        # distribute_score = score/float(distribution)
+        # survive_rate = tanh(distribute_score*3)+self.team.outcomes['survive']
+        # self.team.outcomes[task] = tanh(distribute_score*3)
+        # self.team.outcomes['reward'] = distribute_score
+        # self.team.outcomes['survive'] = tanh(survive_rate*3)
+        # assert isinstance(self.team.outcomes[task], float), type(float(self.team.outcomes[task]))
+        self.team.outcomes[task]=score
 
 
     """
