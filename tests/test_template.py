@@ -1,3 +1,4 @@
+# https://qiita.com/hoto17296/items/fa0166728177e676cd36
 import unittest
 
 class TemplateTest(unittest.TestCase):
@@ -55,25 +56,28 @@ class HogeTest(unittest.TestCase):
         self.assertEqual(the_exception.code, 1234)
 
 
-class MainTest(unittest.TestCase):
-    def test_main(self):
-        # main関数の呼び出し自体は他の関数とかと同じ
-        # main()は標準入出力を扱う必要があるのでそこが少し面倒。
+# class MainTest(unittest.TestCase):
+#     def test_main(self):
+#         # main関数の呼び出し自体は他の関数とかと同じ
+#         # main()は標準入出力を扱う必要があるのでそこが少し面倒。
+#         import sys
+#         import io
+#         from contextlib import redirect_stdout
 
-        # コマンドライン引数を擬似的に再現するためsys.argv()に自前で格納
-        # cleanしないと正しい引数を渡せないので注意
-        sys.argv.clear()
-        sys.argv.append('./sample.py')
-        sys.argv.append('--arg1')
-        sys.argv.append('hogehoge')
+#         # コマンドライン引数を擬似的に再現するためsys.argv()に自前で格納
+#         # cleanしないと正しい引数を渡せないので注意
+#         sys.argv.clear()
+#         sys.argv.append('./sample.py')
+#         sys.argv.append('--arg1')
+#         sys.argv.append('hogehoge')
 
-        # main()の標準出力をioにリダイレクト
-        io = StringIO()
-        with redirect_stdout(io):
-            sample.main()
+#         # main()の標準出力をioにリダイレクト
+#         _io = io.StringIO()
+#         with redirect_stdout(_io):
+#             sample.main()
 
-        # mainの標準出力をチェック
-        self.assertEqual(io.getvalue(), 'hogehoge\n')
+#         # mainの標準出力をチェック
+#         self.assertEqual(_io.getvalue(), 'hogehoge\n')
 
 import unittest.mock
 import os

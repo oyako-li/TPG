@@ -8,6 +8,8 @@ import uuid
 
 class ConfTeam:
 
+    
+
     def init_def(self, initParams:dict):
         self.learners = []
         self.children=[]

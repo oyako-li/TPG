@@ -1,3 +1,4 @@
+from fileinput import filename
 from math import tanh
 import pickle
 from uuid import uuid4
@@ -105,34 +106,40 @@ class Memory:
         return random.choices(self.codes(_ignore)[p>0], p[p>0])[0]
 
 
-class MemoryObject:
-    memories=Memory()
+class _MemoryObject:
+    memory=Memory()
+    Team = None
+
+    # you should inherit
+    def importance(self):
+        from _tpg.team import _Team
+        __class__.Team = _Team
     
     def __init__(self, state=1, initParam=None):
-        from _tpg.team import Team2
+        self.importance()
 
-        if isinstance(state, Team2):
+        if isinstance(state, __class__.Team):
             self.teamMemory = state
             self.memoryCode = None
             return
-        elif isinstance(state, MemoryObject):
+        elif isinstance(state, __class__):
             self.memoryCode = state.memoryCode
             self.teamMemory = state.teamMemory
             return
         elif isinstance(state, int):
             # if _state > len(MemoryObject._memorys)-1: raise IndexError
-            self.memoryCode = MemoryObject.memories.choice()
+            self.memoryCode = __class__.memory.choice()
             self.teamMemory = None
             return
         elif isinstance(state, np.ndarray):
             key = np.random.choice(range(state.size), random.randint(1, state.size-1))
-            self.memoryCode = MemoryObject.memories.append(key, state)
+            self.memoryCode = __class__.memory.append(key, state)
             self.teamMemory = None
 
 
     def __eq__(self, __o: object) -> bool:
 
-        if not isinstance(__o, MemoryObject):   return False
+        if not isinstance(__o, __class__):   return False
         
         # The other object's action code must be equal to ours
         if self.memoryCode != __o.memoryCode:   return False
@@ -145,22 +152,23 @@ class MemoryObject:
         return not self.__eq__(__o)
     
     def __getitem__(self, _key):
-        return MemoryObject.memories[self.memoryCode][_key]
+        return __class__.memory[self.memoryCode][_key]
     
     def getImage(self, _act, _state, visited, actVars, path_trace=None):
         if self.teamMemory is not None:
             return self.teamMemory.image(_act, _state, visited, actVars=actVars, path_trace=path_trace)
         else:
-            MemoryObject.memories.weights[self.memoryCode]*=0.9 # 忘却確立減算
-            MemoryObject.memories.updateWeights()               # 忘却確立計上
+            __class__.memory.weights[self.memoryCode]*=0.9 # 忘却確立減算
+            __class__.memory.updateWeights()               # 忘却確立計上
             return self.memoryCode
 
     def isAtomic(self):
         return self.teamMemory is None
 
+    
     def mutate(self, mutateParams=None, parentTeam=None, teams=None, pMemAtom=None, learner_id=None):
         if None in (mutateParams, parentTeam, teams, pMemAtom, learner_id):
-            self.memoryCode=MemoryObject.memories.choice([self.memoryCode])
+            self.memoryCode=__class__.memory.choice([self.memoryCode])
             self.teamMemory=None
             # print('0 valid_learners')
             return self
@@ -178,7 +186,7 @@ class MemoryObject:
             if not self.isAtomic():
                 self.teamMemory.inLearners.remove(str(learner_id))
             
-            self.memoryCode = MemoryObject.memories.choice([_ignore])
+            self.memoryCode = __class__.memory.choice([_ignore])
             self.teamMemory = None
         else:
             selection_pool = [t for t in teams if t is not self.teamMemory and t is not parentTeam]
@@ -191,6 +199,12 @@ class MemoryObject:
 
         return self
     
+    def backup(fileName):
+        pickle.dump(__class__.memory, open(f'log/{fileName}-mem.pickle', 'wb'))
+
     @classmethod
-    def backup(cls, fileName):
-        pickle.dump(cls, open(f'log/{fileName}-mem.pickle', 'wb'))
+    def emulate(cls, fileName):
+        _memory = pickle.load(open(fileName, 'rb'))
+        # assert(isinstance(_memory, Memory), 'this file is different Class type')
+        cls.memory = _memory
+        return cls

@@ -4,8 +4,7 @@ import pickle
 from random import random
 import time
 import numpy as np
-from _tpg.action_object import ActionObject
-from _tpg.memory_object import MemoryObject
+
 
 """
 Simplified wrapper around a (root) team for easier interface for user.
