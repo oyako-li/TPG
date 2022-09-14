@@ -1,7 +1,9 @@
 import random
 import numpy as np
+from numpy import pi, inf, NINF, float64, finfo
+from numpy.random import rand
 # from numba import njit
-import math
+from math import sin, cos, tanh, log, sqrt, exp, pow, isnan
 import copy
 from _tpg.utils import flip
 import uuid
@@ -31,12 +33,13 @@ class _Program:
     Executes the program which returns a single final value.
     """
     def execute(
-            inpt:np.ndarray,  # state
-            regs:np.ndarray,   # self.registers
+            inpt:np.ndarray,        # state
+            regs:np.ndarray,        # self.registers
             modes:np.ndarray,       # self.program.instructions[:,0]
-            ops:np.ndarray,  # self.program.instructions[:,1]
+            ops:np.ndarray,         # self.program.instructions[:,1]
             dsts:np.ndarray,        # self.program.instructions[:,2]
-            srcs:np.ndarray         # self.program.instructions[:,3]
+            srcs:np.ndarray,        # self.program.instructions[:,3]
+            memMatrix, memRows, memCols, memWriteProbFunc
         ): 
         regSize = len(regs)
         inptLen = len(inpt)
@@ -44,7 +47,6 @@ class _Program:
             # first get source
             if modes[i] == 0:   src = regs[srcs[i]%regSize]
             else:               src = inpt[srcs[i]%inptLen]
-
 
             # get data for operation
             op = ops[i]
@@ -56,14 +58,49 @@ class _Program:
             try:
                 if op == 0:             regs[dest] = x+y
                 elif op == 1:           regs[dest] = x-y
-                elif op == 2:           regs[dest] = x*2
-                elif op == 3:           regs[dest] = x/2
-                elif op == 4 and x < y: regs[dest] = x*(-1)
+                elif op == 2:           regs[dest] = x*y
+                elif op == 3 and y != 0:regs[dest] = x/y
+                elif op == 4:           pass#regs[dest] = x**y
+                elif op == 5 and x < y: regs[dest] = x*(-1)
+                elif op == 6 and x > y: regs[dest] = x*(-1)
+                elif op == 7:           regs[dest] = sin(y)
+                elif op == 8:           regs[dest] = cos(y)
+                elif op == 9:           regs[dest] = tanh(y)
+                elif op == 10 and y > 0:regs[dest] = log(y)
+                elif op == 11 and y > 0:regs[dest] = sqrt(y)
+                elif op == 12:          regs[dest] = exp(y)
+                elif op == 13:          regs[dest] = pow(y,2)
+                elif op == 14:          regs[dest] = pow(y,3)
+                elif op == 15:          regs[dest] = abs(y)
+                elif op == 16:
+                    index = srcs[i]
+                    index %= (memRows*memCols)
+                    row = int(index / memRows)
+                    col = index % memCols
+                    regs[dest] = memMatrix[row, col]
+                elif op == 17:
+                    # row offset (start from center, go to edges)
+                    halfRows = int(memRows/2) # halfRows
+                    for i in range(halfRows):
+                        # probability to write (gets smaller as i increases)
+                        # TODO: swap out write prob func by passing in an array of values for that row.
+                        writeProb = memWriteProbFunc(i)
+                        # column to maybe write corresponding value into
+                        for col in range(memCols):
+                            # try write to lower half
+                            if rand(1)[0] < writeProb:
+                                row = (halfRows - i) - 1
+                                memMatrix[row,col] = regs[col]
+                            # try write to upper half
+                            if rand(1)[0] < writeProb:
+                                row = halfRows + i
+                                memMatrix[row,col] = regs[col]
             except Exception:  pass
 
-            if math.isnan(regs[dest]):  regs[dest] = 0
-            elif regs[dest] == np.inf:  regs[dest] = np.finfo(np.float64).max
-            elif regs[dest] == np.NINF: regs[dest] = np.finfo(np.float64).min
+
+            if isnan(regs[dest]):       regs[dest] = 0
+            elif regs[dest] == inf:     regs[dest] = finfo(float64).max
+            elif regs[dest] == NINF:    regs[dest] = finfo(float64).min
 
     
     """
@@ -137,6 +174,7 @@ class _Program:
         - is an instance of the program class
         - has identical instructions
     '''
+
     def __eq__(self, __o:object) -> bool:
         # The other object must be an instance of the Program class
         if not isinstance(__o, __class__): return False
@@ -149,3 +187,10 @@ class _Program:
     '''
     def __ne__(self, __o: object) -> bool:
         return not self.__eq__(__o)
+
+    """
+    Returns probability of write at given index using cauchy distribution with
+    lambda = 1.
+    """
+    def memWriteProb(i):
+        return 1/(pi*(i**2+1))

@@ -1,8 +1,4 @@
 from math import tanh
-from _tpg.action_object import ActionObject1, ActionObject3
-from _tpg.agent import Agent1, Agent3, Agent2
-from _tpg.trainer import Trainer, Trainer1, Trainer3, Trainer2, loadTrainer
-from _tpg.memory_object import MemoryObject
 from _tpg.base_log import setup_logger
 from _tpg.utils import breakpoint
 from concurrent.futures import ThreadPoolExecutor
@@ -16,10 +12,18 @@ import signal
 import time
 
 class TPG:
+    Trainer=None
+    _comp=None
+
+    @classmethod
+    def importance(cls):
+        from _tpg.trainer import _Trainer
+        cls.Trainer = _Trainer
+        cls._comp = True
 
     def __init__(self, 
-        actions=2,
-        teamPopSize:int=1000,               # *
+        actions=None,
+        teamPopSize:int=10,               # *
         rootBasedPop:bool=True,             
         gap:float=0.5,                      
         inputSize:int=33600,                
@@ -38,16 +42,53 @@ class TPG:
         pInstSwp:float=0.2,                 # *
         pInstMut:float=1.0,                 # *
         doElites:bool=True, 
-        memType="def", 
         memMatrixShape:tuple=(100,8),       # *
         rampancy:tuple=(0,0,0),
-        operationSet:str="custom", 
-        traversal:str="team", 
         prevPops=None, mutatePrevs=True,
         initMaxActProgSize:int=6,           # *
         nActRegisters:int=4,
-    ): pass
+    ):
+        if not __class__._comp: __class__.importance()
+        self.trainer = __class__.Trainer(
+            actions=actions, 
+            teamPopSize=teamPopSize,               # *
+            rootBasedPop=rootBasedPop,             
+            gap=gap,                      
+            inputSize=inputSize,                
+            nRegisters=nRegisters,                   # *
+            initMaxTeamSize=initMaxTeamSize,             # *
+            initMaxProgSize=initMaxProgSize,             # *
+            maxTeamSize=maxTeamSize,                 # *
+            pLrnDel=pLrnDel,                  # *
+            pLrnAdd=pLrnAdd,                  # *
+            pLrnMut=pLrnMut,                  # *
+            pProgMut=pProgMut,                 # *
+            pActMut=pActMut,                  # *
+            pActAtom=pActAtom,                # *
+            pInstDel=pInstDel,                 # *
+            pInstAdd=pInstAdd,                 # *
+            pInstSwp=pInstSwp,                 # *
+            pInstMut=pInstMut,                 # *
+            doElites=doElites, 
+            # memType=memType, 
+            memMatrixShape=memMatrixShape,       # *
+            rampancy=rampancy,
+            # operationSet=operationSet, 
+            # traversal=traversal, 
+            prevPops=prevPops, mutatePrevs=mutatePrevs,
+            initMaxActProgSize=initMaxActProgSize,           # *
+            nActRegisters=nActRegisters)
 
+    def setActions(self, actions):
+        self.actions = self.trainer.setActions(actions)
+
+    def setEnv(self, env):
+        self.env = env
+
+    def getAgents(self):
+        return self.trainer.getAgents()
+
+    
     def show_state(self,env, step=0, name='', info=''):
         plt.figure(3)
         plt.clf()
@@ -64,23 +105,21 @@ class TPG:
         return np.add(np.left_shift(rgbRows[0], 16),
             np.add(np.left_shift(rgbRows[1], 8), rgbRows[2]))
 
-    def episode(self,_agents, _env, _logger=None, _scores={}, _frames:int=500, _show=False):
+    def episode(self, _logger=None, _scores={}, _frames:int=500, _show=False):
+        assert self.trainer is not None and self.env is not None, 'You should set Ac'
         
-        for agent in _agents: # to multi-proccess
-            
-            state = _env.reset() # get initial state and prep environment
+        for agent in self.trainer.getAgents(): # to multi-proccess
+            state = self.env.reset() # get initial state and prep environment
             score = 0
             _id = str(agent.team.id)
             for _ in range(_frames): # run episodes that last 500 frames
                 act = agent.act(state)
-                # feedback from env
-                if not act in range(_env.action_space.n): continue
-                state, reward, isDone, debug = _env.step(act)
+                if not act in range(self.env.action_space.n): continue
+                state, reward, isDone, debug = self.env.step(act)
                 score += reward # accumulate reward in score
 
                 if isDone: break # end early if losing state
-                if _show:
-                    self.show_state(_env, _)
+                if _show: self.show_state(self.env, _)
 
             if _scores.get(_id) is None : _scores[_id]=0
             _scores[_id] += score # store score
@@ -91,32 +130,41 @@ class TPG:
 
         return _scores
 
-    def generation(self,_trainer, _env, _logger=None, _episodes=1, _frames= 500, _show=False):
+    def generation(self,_logger=None, _episodes=1, _frames= 500, _show=False):
         _scores = {}
-        agents = _trainer.getAgents()
-        _task = _env.spec.id
-        for _ in range(_episodes):      _scores = self.episode(agents, _env, _logger=_logger, _scores=_scores, _frames=_frames, _show=_show)
-        for i in _scores:               _scores[i]/=_episodes
-        for agent in agents:            agent.reward(_scores[str(agent.team.id)],task=_task)
-        _trainer.evolve([_task])
+        _task = self.env.spec.id
+        for _ in range(_episodes):     
+            _scores = self.episode(_logger=_logger, _scores=_scores, _frames=_frames, _show=_show)
+        for i in _scores:               
+            _scores[i]/=_episodes
+        for agent in self.trainer.getAgents(): 
+            agent.reward(_scores[str(agent.team.id)],task=_task)
+        self.trainer.evolve([_task])
 
         return _scores
     
-    def growing(self, _trainer, _task:str, _generations:int=1000, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True):
-        self.instance_valid(_trainer)
-        logger, filename = setup_logger(__name__, _task, test=_test, load=_load)
-        # print(_task,filename)
-        env = gym.make(_task) # make the environment
-        action_space = env.action_space
+    def growing(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True):
+        if _trainer: 
+            self.instance_valid(_trainer)
+            self.trainer = _trainer
+        
+        if _task:
+            self.env = gym.make(_task)
+        
+        task = self.env.spec.id
+
+        logger, filename = setup_logger(__name__, task, test=_test, load=_load)
+        
+        action_space = self.env.action_space
         action = 0
         if isinstance(action_space, gym.spaces.Box):
             action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
         elif isinstance(action_space, gym.spaces.Discrete):
             action = action_space.n
-        _trainer.resetActions(actions=action)
+        self.trainer.setActions(actions=action)
 
         def outHandler(signum, frame):
-            if not _test: _trainer.saveToFile(f'{_task}/{filename}')
+            if not _test: self.trainer.save(f'{task}/{filename}')
             print('exit')
             sys.exit()
         
@@ -128,7 +176,7 @@ class TPG:
 
         tStart = time.time()
         for gen in tqdm(range(_generations)): # generation loop
-            scores = self.generation(_trainer, env, logger, _episodes=_episodes, _frames=_frames, _show=_show)
+            scores = self.generation(logger, _episodes=_episodes, _frames=_frames, _show=_show)
 
             score = (min(scores.values()), max(scores.values()), sum(scores.values())/len(scores))
 
@@ -154,67 +202,47 @@ class TPG:
         if not _test: _trainer.saveToFile(f'{_task}/{_filename}')
         return _filename
     
-    def instance_valid(self, trainer)->bool: pass
-
-class NativeTPG(TPG):
-
-    def __init__(self, actions=2, teamPopSize: int = 1000, rootBasedPop: bool = True, gap: float = 0.5, inputSize: int = 33600, nRegisters: int = 8, initMaxTeamSize: int = 10, initMaxProgSize: int = 10, maxTeamSize: int = -1, pLrnDel: float = 0.7, pLrnAdd: float = 0.6, pLrnMut: float = 0.2, pProgMut: float = 0.1, pActMut: float = 0.1, pActAtom: float = 0.95, pInstDel: float = 0.5, pInstAdd: float = 0.4, pInstSwp: float = 0.2, pInstMut: float = 1.0, doElites: bool = True, memType="def", memMatrixShape: tuple = (100, 8), rampancy: tuple = (0, 0, 0), operationSet: str = "custom", traversal: str = "team", prevPops=None, mutatePrevs=True, initMaxActProgSize: int = 6, nActRegisters: int = 4):
-        self.trainer = Trainer(
-            actions=actions, 
-            teamPopSize=teamPopSize,               # *
-            rootBasedPop=rootBasedPop,             
-            gap=gap,                      
-            inputSize=inputSize,                
-            nRegisters=nRegisters,                   # *
-            initMaxTeamSize=initMaxTeamSize,             # *
-            initMaxProgSize=initMaxProgSize,             # *
-            maxTeamSize=maxTeamSize,                 # *
-            pLrnDel=pLrnDel,                  # *
-            pLrnAdd=pLrnAdd,                  # *
-            pLrnMut=pLrnMut,                  # *
-            pProgMut=pProgMut,                 # *
-            pActMut=pActMut,                  # *
-            pActAtom=pActAtom,                # *
-            pInstDel=pInstDel,                 # *
-            pInstAdd=pInstAdd,                 # *
-            pInstSwp=pInstSwp,                 # *
-            pInstMut=pInstMut,                 # *
-            doElites=doElites, 
-            memType=memType, 
-            memMatrixShape=memMatrixShape,       # *
-            rampancy=rampancy,
-            operationSet=operationSet, 
-            traversal=traversal, 
-            prevPops=prevPops, mutatePrevs=mutatePrevs,
-            initMaxActProgSize=initMaxActProgSize,           # *
-            nActRegisters=nActRegisters)
-
     def instance_valid(self, trainer) -> bool:
-        if not isinstance(trainer, Trainer): raise Exception('this object is not Trainer')
+        if not isinstance(trainer, __class__.Trainer): raise Exception(f'this object is not {__class__.Trainer}')
 
-class MemoryAndHierarchicalTPG(TPG):
+# class NativeTPG(TPG):
 
-    def __init__(self, actions=2, teamPopSize: int = 1000, rootBasedPop: bool = True, gap: float = 0.5, inputSize: int = 33600, nRegisters: int = 8, initMaxTeamSize: int = 10, initMaxProgSize: int = 10, maxTeamSize: int = -1, pLrnDel: float = 0.7, pLrnAdd: float = 0.6, pLrnMut: float = 0.2, pProgMut: float = 0.1, pActMut: float = 0.1, pActAtom: float = 0.95, pInstDel: float = 0.5, pInstAdd: float = 0.4, pInstSwp: float = 0.2, pInstMut: float = 1.0, doElites: bool = True, memType="def", memMatrixShape: tuple = (100, 8), rampancy: tuple = (0, 0, 0), operationSet: str = "custom", traversal: str = "team", prevPops=None, mutatePrevs=True, initMaxActProgSize: int = 6, nActRegisters: int = 4):
-        self.trainer = Trainer1(actions, teamPopSize, rootBasedPop, gap, inputSize, nRegisters, initMaxTeamSize, initMaxProgSize, maxTeamSize, pLrnDel, pLrnAdd, pLrnMut, pProgMut, pActMut, pActAtom, pInstDel, pInstAdd, pInstSwp, pInstMut, doElites, memType, memMatrixShape, rampancy, operationSet, traversal, prevPops, mutatePrevs, initMaxActProgSize, nActRegisters)
+#     @classmethod
+#     def importance(cls):
+#         return super().importance()
 
-    def instance_valid(self, trainer) -> bool:
-        if not isinstance(trainer, Trainer1): raise Exception('this object is not Trainer1')
+#     def __init__(self, actions=2, teamPopSize: int = 1000, rootBasedPop: bool = True, gap: float = 0.5, inputSize: int = 33600, nRegisters: int = 8, initMaxTeamSize: int = 10, initMaxProgSize: int = 10, maxTeamSize: int = -1, pLrnDel: float = 0.7, pLrnAdd: float = 0.6, pLrnMut: float = 0.2, pProgMut: float = 0.1, pActMut: float = 0.1, pActAtom: float = 0.95, pInstDel: float = 0.5, pInstAdd: float = 0.4, pInstSwp: float = 0.2, pInstMut: float = 1.0, doElites: bool = True, memType="def", memMatrixShape: tuple = (100, 8), rampancy: tuple = (0, 0, 0), operationSet: str = "custom", traversal: str = "team", prevPops=None, mutatePrevs=True, initMaxActProgSize: int = 6, nActRegisters: int = 4):
+#         if not __class__._comp: __class__.importance()
+        
 
-class MemoryAndHierarchicalTPG1(TPG):
+class MHTPG(TPG):
+    @classmethod
+    def importance(cls):
+        from _tpg.trainer import Trainer1
+        cls.Trainer = Trainer1
+        cls._comp = True
 
-    def __init__(self, actions=2, teamPopSize: int = 1000, rootBasedPop: bool = True, gap: float = 0.5, inputSize: int = 33600, nRegisters: int = 8, initMaxTeamSize: int = 10, initMaxProgSize: int = 10, maxTeamSize: int = -1, pLrnDel: float = 0.7, pLrnAdd: float = 0.6, pLrnMut: float = 0.2, pProgMut: float = 0.1, pActMut: float = 0.1, pActAtom: float = 0.95, pInstDel: float = 0.5, pInstAdd: float = 0.4, pInstSwp: float = 0.2, pInstMut: float = 1.0, doElites: bool = True, memType="def", memMatrixShape: tuple = (100, 8), rampancy: tuple = (0, 0, 0), operationSet: str = "custom", traversal: str = "team", prevPops=None, mutatePrevs=True, initMaxActProgSize: int = 6, nActRegisters: int = 4):
-        self.trainer = Trainer3(actions, teamPopSize, rootBasedPop, gap, inputSize, nRegisters, initMaxTeamSize, initMaxProgSize, maxTeamSize, pLrnDel, pLrnAdd, pLrnMut, pProgMut, pActMut, pActAtom, pInstDel, pInstAdd, pInstSwp, pInstMut, doElites, memType, memMatrixShape, rampancy, operationSet, traversal, prevPops, mutatePrevs, initMaxActProgSize, nActRegisters)
+# class MemoryAndHierarchicalTPG1(TPG):
 
-    def instance_valid(self, trainer) -> bool:
-        if not isinstance(trainer, Trainer3): raise Exception('this object is not Trainer3')
+#     def __init__(self, actions=2, teamPopSize: int = 1000, rootBasedPop: bool = True, gap: float = 0.5, inputSize: int = 33600, nRegisters: int = 8, initMaxTeamSize: int = 10, initMaxProgSize: int = 10, maxTeamSize: int = -1, pLrnDel: float = 0.7, pLrnAdd: float = 0.6, pLrnMut: float = 0.2, pProgMut: float = 0.1, pActMut: float = 0.1, pActAtom: float = 0.95, pInstDel: float = 0.5, pInstAdd: float = 0.4, pInstSwp: float = 0.2, pInstMut: float = 1.0, doElites: bool = True, memType="def", memMatrixShape: tuple = (100, 8), rampancy: tuple = (0, 0, 0), operationSet: str = "custom", traversal: str = "team", prevPops=None, mutatePrevs=True, initMaxActProgSize: int = 6, nActRegisters: int = 4):
+#         self.trainer = Trainer3(actions, teamPopSize, rootBasedPop, gap, inputSize, nRegisters, initMaxTeamSize, initMaxProgSize, maxTeamSize, pLrnDel, pLrnAdd, pLrnMut, pProgMut, pActMut, pActAtom, pInstDel, pInstAdd, pInstSwp, pInstMut, doElites, memType, memMatrixShape, rampancy, operationSet, traversal, prevPops, mutatePrevs, initMaxActProgSize, nActRegisters)
+
+#     def instance_valid(self, trainer) -> bool:
+#         if not isinstance(trainer, Trainer3): raise Exception('this object is not Trainer3')
 
 class StateTPG(TPG):
+    MemoryObject = None
 
-    def __init__(self, state=np.array([1.]), teamPopSize: int = 1000, rootBasedPop: bool = True, gap: float = 0.5, inputSize: int = 33600, nRegisters: int = 8, initMaxTeamSize: int = 10, initMaxProgSize: int = 10, maxTeamSize: int = -1, pLrnDel: float = 0.7, pLrnAdd: float = 0.6, pLrnMut: float = 0.2, pProgMut: float = 0.1, pActMut: float = 0.1, pActAtom: float = 0.95, pInstDel: float = 0.5, pInstAdd: float = 0.4, pInstSwp: float = 0.2, pInstMut: float = 1.0, doElites: bool = True, memType="def", memMatrixShape: tuple = (100, 8), rampancy: tuple = (0, 0, 0), operationSet: str = "custom", traversal: str = "team", prevPops=None, mutatePrevs=True, initMaxActProgSize: int = 6, nActRegisters: int = 4):
-        self.trainer = Trainer2(state, teamPopSize, rootBasedPop, gap, inputSize, nRegisters, initMaxTeamSize, initMaxProgSize, maxTeamSize, pLrnDel, pLrnAdd, pLrnMut, pProgMut, pActMut, pActAtom, pInstDel, pInstAdd, pInstSwp, pInstMut, doElites, memType, memMatrixShape, rampancy, operationSet, traversal, prevPops, mutatePrevs, initMaxActProgSize, nActRegisters)
+    @classmethod
+    def importance(cls):
+        from _tpg.memory_object import _MemoryObject
+        cls.MemoryObject = _MemoryObject
+        return super().importance()
+    # def __init__(self, state=np.array([1.]), teamPopSize: int = 1000, rootBasedPop: bool = True, gap: float = 0.5, inputSize: int = 33600, nRegisters: int = 8, initMaxTeamSize: int = 10, initMaxProgSize: int = 10, maxTeamSize: int = -1, pLrnDel: float = 0.7, pLrnAdd: float = 0.6, pLrnMut: float = 0.2, pProgMut: float = 0.1, pActMut: float = 0.1, pActAtom: float = 0.95, pInstDel: float = 0.5, pInstAdd: float = 0.4, pInstSwp: float = 0.2, pInstMut: float = 1.0, doElites: bool = True, memType="def", memMatrixShape: tuple = (100, 8), rampancy: tuple = (0, 0, 0), operationSet: str = "custom", traversal: str = "team", prevPops=None, mutatePrevs=True, initMaxActProgSize: int = 6, nActRegisters: int = 4):
+    #     self.trainer = Trainer2(state, teamPopSize, rootBasedPop, gap, inputSize, nRegisters, initMaxTeamSize, initMaxProgSize, maxTeamSize, pLrnDel, pLrnAdd, pLrnMut, pProgMut, pActMut, pActAtom, pInstDel, pInstAdd, pInstSwp, pInstMut, doElites, memType, memMatrixShape, rampancy, operationSet, traversal, prevPops, mutatePrevs, initMaxActProgSize, nActRegisters)
 
-    def instance_valid(self, trainer) -> bool:
-        if not isinstance(trainer, Trainer2): raise Exception('this object is not Trainer2')
+    # def instance_valid(self, trainer) -> bool:
+    #     if not isinstance(trainer, Trainer2): raise Exception('this object is not Trainer2')
     
     def episode(self,_agents, _env, _logger=None, _scores={}, _frames:int=500, _show=False):
         
@@ -229,7 +257,7 @@ class StateTPG(TPG):
                 act = _env.action_space.sample()
                 imageCode = agent.image(act, state.flatten())
                 state, reward, isDone, debug = _env.step(act)
-                diff, unex = MemoryObject.memories[imageCode].memorize(state.flatten(), reward)
+                diff, unex = __class__.MemoryObject.memories[imageCode].memorize(state.flatten(), reward)
 
                 score += tanh(np.power(diff, 2).sum())
                 states+=[state.flatten()]

@@ -11,16 +11,19 @@ action to take in the graph.
 
 class _Team:
     Learner = None
+    _comp = None
 
 
     # you should inherit
-    def importance(self): 
+    @classmethod
+    def importance(cls): 
         from _tpg.learner import _Learner
-        __class__.Learner = _Learner
+        cls.Learner = _Learner
+        cls._comp = True
 
 
     def __init__(self, initParams:int or dict=0): 
-        self.importance()
+        if not __class__._comp: __class__.importance()
         self.learners = []
         self.outcomes = {} # scores at various tasks
         self.fitness = None
@@ -365,3 +368,11 @@ class _Team:
 
     def numLearnersReferencing(self):
         return len(self.inLearners)
+
+class Team1(_Team):
+    
+    def __init__(self, initParams: int or dict = 0):
+        super().__init__(initParams)
+        print('Team1')
+
+    

@@ -10,9 +10,8 @@ class _Agent:
     """
     Create an agent with a team.
     """
-    def __init__(self, team, functionsDict:dict, num:int=1, actVars:dict=None)->None:
+    def __init__(self, team, num:int=1, actVars:dict=None)->None:
         self.team = team
-        self.functionsDict = functionsDict
         self.agentNum = num
         self.actVars = actVars
 
