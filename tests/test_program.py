@@ -1,9 +1,8 @@
-from dis import Instruction
 import unittest
 import numpy as np
 import copy
 
-class _LearnerTest(unittest.TestCase):
+class _ProgramTest(unittest.TestCase):
     def setUp(self) -> None:
         from _tpg.program import _Program
         import gym

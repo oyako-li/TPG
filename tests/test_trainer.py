@@ -1,7 +1,7 @@
 from datetime import datetime
 import unittest
 
-class TrainerTest(unittest.TestCase):
+class _TrainerTest(unittest.TestCase):
 
     def setUp(self) -> None:
         import gym
@@ -86,7 +86,7 @@ class TrainerTest(unittest.TestCase):
         trainer.save(filename)
         self.Trainer.load(filename)
 
-class Trainer1Test(TrainerTest):
+class Trainer1Test(_TrainerTest):
     def setUp(self) -> None:
         super().setUp()
         from _tpg.trainer import Trainer1
