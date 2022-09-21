@@ -11,21 +11,6 @@ class _TrainerTest(unittest.TestCase):
         self.Trainer = _Trainer
         self.actions = self.env.action_space.n
 
-    def test_importance(self):
-        '''test importance'''
-        from _tpg.trainer import _Trainer
-        from _tpg.agent import _Agent
-        from _tpg.team import _Team
-        from _tpg.learner import _Learner
-        from _tpg.program import _Program
-        from _tpg.action_object import _ActionObject
-        _Trainer.importance()
-        self.assertEqual(_Trainer.Agent, _Agent)
-        self.assertEqual(_Trainer.Team, _Team)
-        self.assertEqual(_Trainer.Learner, _Learner)
-        self.assertEqual(_Trainer.Program, _Program)
-        self.assertEqual(_Trainer.ActionObject, _ActionObject)
-
     def test_init_(self):
         '''trainer initiation test'''
         trainer = self.Trainer()
@@ -91,21 +76,6 @@ class Trainer1Test(_TrainerTest):
         super().setUp()
         from _tpg.trainer import Trainer1
         self.Trainer = Trainer1
-
-    def test_importance(self):
-        '''test importance'''
-        from _tpg.trainer import Trainer1
-        from _tpg.agent import _Agent
-        from _tpg.team import Team1
-        from _tpg.learner import _Learner
-        from _tpg.program import _Program
-        from _tpg.action_object import _ActionObject
-        Trainer1.importance()
-        self.assertEqual(Trainer1.Agent, _Agent)
-        self.assertEqual(Trainer1.Team, Team1)
-        self.assertEqual(Trainer1.Learner, _Learner)
-        self.assertEqual(Trainer1.Program, _Program)
-        self.assertEqual(Trainer1.ActionObject, _ActionObject)
 
 if __name__ == '__main__':
     unittest.main()

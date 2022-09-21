@@ -11,14 +11,15 @@ run if just a discrete action code.
 class _ActionObject:
     actions=[0]
     Team = None
-    _comp = None
+    __instance = None
 
     # you should inherit
-    @classmethod
-    def importance(cls):
-        from _tpg.team import _Team
-        cls.Team = _Team
-        cls._comp = True
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+            from _tpg.team import _Team
+            cls.Team = _Team
+        return cls.__instance
     '''
     An action object can be initalized by:
         - Copying another action object
@@ -26,15 +27,13 @@ class _ActionObject:
         - Passing a team as the action
     '''
     def __init__(self, initParams:dict or int =None, action = None, _task='task'):
-
         '''
         Defer importing the Team class to avoid circular dependency.
         This may require refactoring to fix properly
         '''
-        if not __class__._comp: __class__.importance()
 
         # The action is a team
-        if isinstance(action, __class__.Team):
+        if isinstance(action, self.__class__.Team):
             self.teamAction = action
             self.actionCode = None
             #print("chose team action")
@@ -42,7 +41,7 @@ class _ActionObject:
     
 
         # The action is another action object
-        if isinstance(action, __class__):
+        if isinstance(action, self.__class__):
             self.actionCode = action.actionCode
             self.teamAction = action.teamAction
             return
@@ -50,7 +49,7 @@ class _ActionObject:
         # An int means the action is an index into the action codes in initParams
         if isinstance(action, int):
             try:
-                self.actionCode=random.choice(__class__.actions)
+                self.actionCode=random.choice(self.__class__.actions)
                 self.teamAction=None
             except:
                 print('諦めな・・・')
@@ -63,7 +62,7 @@ class _ActionObject:
     def __eq__(self, __o:object)->bool:
 
         # The other object must be an instance of the ActionObject class
-        if not isinstance(__o, __class__):    return False
+        if not isinstance(__o, self.__class__):    return False
         
         # The other object's action code must be equal to ours
         if self.actionCode != __o.actionCode:     return False
@@ -115,7 +114,7 @@ class _ActionObject:
     def mutate(self, mutateParams=None, parentTeam=None, teams=None, pActAtom=None, learner_id=None):
         # mutate action
         if any(item is None for item in (mutateParams, parentTeam, teams, pActAtom, learner_id)):
-            self.actionCode = random.choice(__class__.actions)
+            self.actionCode = random.choice(self.__class__.actions)
             self.teamAction = None
             print('0 valid_learners')
 
@@ -128,9 +127,9 @@ class _ActionObject:
             TODO handle case where there is only 1 action code.
             '''
             if self.actionCode is not None:
-                options = list(filter(lambda code: code != self.actionCode,__class__.actions))
+                options = list(filter(lambda code: code != self.actionCode,self.__class__.actions))
             else:
-                options = __class__.actions
+                options = self.__class__.actions
 
             # let our current team know we won't be pointing to them anymore
             if not self.isAtomic():

@@ -8,15 +8,19 @@ class _Learner:
     Team = None
     ActionObject = None
     Program = None
+    __instance = None
 
     # you should inherit
-    def importance(self):
-        from _tpg.team import _Team
-        from _tpg.action_object import _ActionObject
-        from _tpg.program import _Program
-        __class__.Team = _Team
-        __class__.ActionObject = _ActionObject
-        __class__.Program = _Program
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+            from _tpg.team import _Team
+            from _tpg.action_object import _ActionObject
+            from _tpg.program import _Program
+            cls.Team = _Team
+            cls.ActionObject = _ActionObject
+            cls.Program = _Program
+        return cls.__instance
 
     def __init__(self, 
         initParams:int or dict=0, 
@@ -28,9 +32,8 @@ class _Learner:
         _inTeams:list=[],
         _frameNum:int=0
     ):
-        self.importance()
-        self.program = __class__.Program() if program is None else __class__.Program(instructions=program.instructions)
-        self.actionObj = __class__.ActionObject(actionObj) if isinstance(actionObj, int) else __class__.ActionObject(action=actionObj,initParams=initParams)
+        self.program = self.__class__.Program() if program is None else self.__class__.Program(instructions=program.instructions)
+        self.actionObj = self.__class__.ActionObject(actionObj) if isinstance(actionObj, int) else self.__class__.ActionObject(action=actionObj,initParams=initParams)
         if isinstance(numRegisters, int): 
             self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
         else: 
@@ -61,11 +64,11 @@ class _Learner:
 
         self.frameNum = actVars["frameNum"]
 
-        __class__.Program.execute(state, self.registers,
+        self.__class__.Program.execute(state, self.registers,
                         self.program.instructions[:,0], self.program.instructions[:,1],
                         self.program.instructions[:,2], self.program.instructions[:,3],
                         actVars["memMatrix"], actVars["memMatrix"].shape[0], actVars["memMatrix"].shape[1],
-                        __class__.Program.memWriteProb)
+                        self.__class__.Program.memWriteProb)
 
         return self.registers[0]
 

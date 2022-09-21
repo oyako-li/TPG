@@ -9,9 +9,13 @@ from _tpg.utils import flip
 import uuid
 
 class _Program:
+    __instance = None
 
     # you should inherit
-    def importance(self):pass
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
 
     def __init__(self, instructions=None, maxProgramLength=128, nOperations=5,
             nDestinations=8, inputSize=30720, initParams=None):
@@ -177,7 +181,7 @@ class _Program:
 
     def __eq__(self, __o:object) -> bool:
         # The other object must be an instance of the Program class
-        if not isinstance(__o, __class__): return False
+        if not isinstance(__o, self.__class__): return False
 
         # Compare instructions
         return np.array_equal(self.instructions, __o.instructions)

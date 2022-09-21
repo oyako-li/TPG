@@ -109,37 +109,40 @@ class Memory:
 class _MemoryObject:
     memory=Memory()
     Team = None
+    __instance = None
 
     # you should inherit
-    def importance(self):
-        from _tpg.team import _Team
-        __class__.Team = _Team
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+            from _tpg.team import _Team
+            cls.Team = _Team
+        return cls.__instance
     
     def __init__(self, state=1, initParam=None):
-        self.importance()
 
-        if isinstance(state, __class__.Team):
+        if isinstance(state, self.__class__.Team):
             self.teamMemory = state
             self.memoryCode = None
             return
-        elif isinstance(state, __class__):
+        elif isinstance(state, self.__class__):
             self.memoryCode = state.memoryCode
             self.teamMemory = state.teamMemory
             return
         elif isinstance(state, int):
             # if _state > len(MemoryObject._memorys)-1: raise IndexError
-            self.memoryCode = __class__.memory.choice()
+            self.memoryCode = self.__class__.memory.choice()
             self.teamMemory = None
             return
         elif isinstance(state, np.ndarray):
             key = np.random.choice(range(state.size), random.randint(1, state.size-1))
-            self.memoryCode = __class__.memory.append(key, state)
+            self.memoryCode = self.__class__.memory.append(key, state)
             self.teamMemory = None
 
 
     def __eq__(self, __o: object) -> bool:
 
-        if not isinstance(__o, __class__):   return False
+        if not isinstance(__o, self.__class__):   return False
         
         # The other object's action code must be equal to ours
         if self.memoryCode != __o.memoryCode:   return False
@@ -152,14 +155,14 @@ class _MemoryObject:
         return not self.__eq__(__o)
     
     def __getitem__(self, _key):
-        return __class__.memory[self.memoryCode][_key]
+        return self.__class__.memory[self.memoryCode][_key]
     
     def getImage(self, _act, _state, visited, actVars, path_trace=None):
         if self.teamMemory is not None:
             return self.teamMemory.image(_act, _state, visited, actVars=actVars, path_trace=path_trace)
         else:
-            __class__.memory.weights[self.memoryCode]*=0.9 # 忘却確立減算
-            __class__.memory.updateWeights()               # 忘却確立計上
+            self.__class__.memory.weights[self.memoryCode]*=0.9 # 忘却確立減算
+            self.__class__.memory.updateWeights()               # 忘却確立計上
             return self.memoryCode
 
     def isAtomic(self):
@@ -168,7 +171,7 @@ class _MemoryObject:
     
     def mutate(self, mutateParams=None, parentTeam=None, teams=None, pMemAtom=None, learner_id=None):
         if None in (mutateParams, parentTeam, teams, pMemAtom, learner_id):
-            self.memoryCode=__class__.memory.choice([self.memoryCode])
+            self.memoryCode=self.__class__.memory.choice([self.memoryCode])
             self.teamMemory=None
             # print('0 valid_learners')
             return self
@@ -186,7 +189,7 @@ class _MemoryObject:
             if not self.isAtomic():
                 self.teamMemory.inLearners.remove(str(learner_id))
             
-            self.memoryCode = __class__.memory.choice([_ignore])
+            self.memoryCode = self.__class__.memory.choice([_ignore])
             self.teamMemory = None
         else:
             selection_pool = [t for t in teams if t is not self.teamMemory and t is not parentTeam]
@@ -200,7 +203,7 @@ class _MemoryObject:
         return self
     
     def backup(fileName):
-        pickle.dump(__class__.memory, open(f'log/{fileName}-mem.pickle', 'wb'))
+        pickle.dump(self.__class__.memory, open(f'log/{fileName}-mem.pickle', 'wb'))
 
     @classmethod
     def emulate(cls, fileName):

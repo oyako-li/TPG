@@ -11,19 +11,18 @@ action to take in the graph.
 
 class _Team:
     Learner = None
-    _comp = None
+    __instance = None
 
 
     # you should inherit
-    @classmethod
-    def importance(cls): 
-        from _tpg.learner import _Learner
-        cls.Learner = _Learner
-        cls._comp = True
-
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+            from _tpg.learner import _Learner
+            cls.Learner = _Learner
+        return cls.__instance
 
     def __init__(self, initParams:int or dict=0): 
-        if not __class__._comp: __class__.importance()
         self.learners = []
         self.outcomes = {} # scores at various tasks
         self.fitness = None
@@ -44,7 +43,7 @@ class _Team:
         visited.append(str(self.id)) 
         if len(self.learners)==0:
             print('0 valid')
-            self.addLearner(__class__.Learner())
+            self.addLearner(self.__class__.Learner())
 
         '''
         Valid learners are ones which:
@@ -290,7 +289,7 @@ class _Team:
 
                 #print("Team {} creating learner".format(self.id))
                 # Create a new new learner 
-                newLearner = __class__.Learner(mutateParams, learner.program, learner.actionObj, len(learner.registers), learner.id)
+                newLearner = self.__class__.Learner(mutateParams, learner.program, learner.actionObj, len(learner.registers), learner.id)
                 new_learners.append(newLearner)
                 # Add the mutated learner to our learners
                 # Must add before mutate so that the new learner has this team in its inTeams
@@ -308,7 +307,7 @@ class _Team:
         return mutated_learners, new_learners
 
     def clone(self): 
-        _clone = __class__()
+        _clone = self.__class__()
         # assert type(_clone)== Tiem1
         _clone.inLearners = self.inLearners
         self.inLearners = []
@@ -322,7 +321,7 @@ class _Team:
 
     def __eq__(self, __o: object) -> bool: 
         # Object must be instance of Team
-        if not isinstance(__o, __class__):    return False
+        if not isinstance(__o, self.__class__):    return False
 
         # Object must be created the same generation as us
         if self.genCreate != __o.genCreate:   return False

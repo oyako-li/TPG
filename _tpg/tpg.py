@@ -13,13 +13,14 @@ import time
 
 class TPG:
     Trainer=None
-    _comp=None
+    __instance=None
 
-    @classmethod
-    def importance(cls):
-        from _tpg.trainer import _Trainer
-        cls.Trainer = _Trainer
-        cls._comp = True
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+            from _tpg.trainer import _Trainer
+            cls.Trainer = _Trainer
+        return cls.__instance
 
     def __init__(self, 
         actions=None,
@@ -48,8 +49,7 @@ class TPG:
         initMaxActProgSize:int=6,           # *
         nActRegisters:int=4,
     ):
-        if not __class__._comp: __class__.importance()
-        self.trainer = __class__.Trainer(
+        self.trainer = self.__class__.Trainer(
             actions=actions, 
             teamPopSize=teamPopSize,               # *
             rootBasedPop=rootBasedPop,             
@@ -124,7 +124,7 @@ class TPG:
             if _scores.get(_id) is None : _scores[_id]=0
             _scores[_id] += score # store score
 
-            if _logger is not None: _logger.info(f'{_id},{score}')
+            # if _logger is not None: _logger.info(f'{_id},{score}')
 
         # _summaryScores = (min(curScores), max(curScores), sum(curScores)/len(curScores)) # min, max, avg
 
@@ -181,11 +181,10 @@ class TPG:
             score = (min(scores.values()), max(scores.values()), sum(scores.values())/len(scores))
 
             logger.info(f'generation:{gen}, score:{score}')
-            summaryScores.append(score)
             
         #clear_output(wait=True)
-        logger.info(f'Time Taken (Hours): {str((time.time() - tStart)/3600)}')
-        logger.info(f'Results: Min, Max, Avg, {summaryScores}')
+        # logger.info(f'Time Taken (Hours): {str((time.time() - tStart)/3600)}')
+        # logger.info(f'Results: Min, Max, Avg, {summaryScores}')
         # logger.shutdown()
         # logging.disable(logging.NOTSET)
 
@@ -203,7 +202,7 @@ class TPG:
         return _filename
     
     def instance_valid(self, trainer) -> bool:
-        if not isinstance(trainer, __class__.Trainer): raise Exception(f'this object is not {__class__.Trainer}')
+        if not isinstance(trainer, self.__class__.Trainer): raise Exception(f'this object is not {self.__class__.Trainer}')
 
 # class NativeTPG(TPG):
 
@@ -216,11 +215,14 @@ class TPG:
         
 
 class MHTPG(TPG):
-    @classmethod
-    def importance(cls):
-        from _tpg.trainer import Trainer1
-        cls.Trainer = Trainer1
-        cls._comp = True
+    __instance= None
+
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls, *args, **kwargs)
+            from _tpg.trainer import Trainer1
+            cls.Trainer = Trainer1
+        return cls.__instance
 
 # class MemoryAndHierarchicalTPG1(TPG):
 
@@ -257,7 +259,7 @@ class StateTPG(TPG):
                 act = _env.action_space.sample()
                 imageCode = agent.image(act, state.flatten())
                 state, reward, isDone, debug = _env.step(act)
-                diff, unex = __class__.MemoryObject.memories[imageCode].memorize(state.flatten(), reward)
+                diff, unex = self.__class__.MemoryObject.memories[imageCode].memorize(state.flatten(), reward)
 
                 score += tanh(np.power(diff, 2).sum())
                 states+=[state.flatten()]

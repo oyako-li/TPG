@@ -5,19 +5,6 @@ class TeamTest(unittest.TestCase):
         from _tpg.team import _Team
         self.Team = _Team
 
-    def test_importance(self):
-        '''test importance '''
-
-        self.assertFalse(self.Team._comp)
-        self.assertIsNone(self.Team.Learner)
-        
-        from _tpg.team import _Team
-        from _tpg.learner import _Learner
-        _Team.importance()
-        self.assertTrue(_Team._comp)
-        self.assertFalse(not _Team._comp)
-        self.assertEqual(_Team.Learner, _Learner)
-
     def test_init(self):
         '''test team object creation'''
         team = self.Team()
