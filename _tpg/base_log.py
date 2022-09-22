@@ -6,8 +6,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk
-# LOG = logging
-# LOG.basicConfig(format='[%(asctime)s][%(levelname)s](%(filename)s:%(lineno)s) %(name)s:%(message)s')
 
 def setup_logger(_name, _logfile='LOGFILENAME', test=False, load=True):
     
@@ -42,9 +40,6 @@ def setup_logger(_name, _logfile='LOGFILENAME', test=False, load=True):
         # add the handlers to the logger
         _logger.addHandler(_ch)
     return _logger, _filename
-
-import numpy as np
-import matplotlib.pyplot as plt
 
 
 def log_load(_filename, _renge, _step=5):
@@ -93,8 +88,9 @@ def log_show(filename, renge=100, step=5):
     ax1.plot(ge, mi, label='min')
     ax1.plot(ge, ma, label='max')
     ax1.plot(ge, av, label='ave')
-    ax1.set_title('line plot')
-    ax1.set_ylabel('Damped oscillation')
+    ax1.set_title(f'{filename}')
+    ax1.set_ylabel('Score')
+    ax1.set_xlabel('Generation')
     ax1.legend()
 
     # # ax2
@@ -110,8 +106,10 @@ def log_show(filename, renge=100, step=5):
     # When windows is closed.
 
     def _destroyWindow():
+        fig.savefig(f'{filename}.png')
         root.quit()
         root.destroy()
+
 
 
     # Tkinter Class

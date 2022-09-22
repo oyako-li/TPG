@@ -757,15 +757,12 @@ class Trainer1(_Trainer):
 
             # then clone the referenced rootTeams
             for new_learner in new_learners:
-                if new_learner.actionObj.teamAction is not None and new_learner.actionObj.teamAction in self.rootTeams:
-                    referenced_rt = new_learner.actionObj.teamAction
-                    clone = referenced_rt.clone()
+                tm = new_learner.getActionTeam()
+                if tm in self.rootTeams:
+                    clone = tm.clone()
                     self.teams.append(clone)
-
-                    # new_learner's teamAction change to clone
-                    new_learner.actionObj.teamAction = clone
-                    print('cloned')
-                    # self.rootTeams.remove(rt)
+                    
+                    assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
 
             self.teams.append(child)
 
