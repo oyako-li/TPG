@@ -11,22 +11,26 @@ run if just a discrete action code.
 class _ActionObject:
     actions=[0]
     Team = None
-    __instance = None
+    _instance = None
 
     # you should inherit
     def __new__(cls, *args, **kwargs):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
+        if cls._instance is None:
             from _tpg.team import _Team
+            cls._instance = True
             cls.Team = _Team
-        return cls.__instance
+        return super().__new__(cls)
     '''
     An action object can be initalized by:
         - Copying another action object
         - Passing an index into the action codes in initParams as the action
         - Passing a team as the action
     '''
-    def __init__(self, initParams:dict or int =None, action = None, _task='task'):
+    def __init__(self,
+        initParams:dict or int =None,
+        action = None,
+        _task='task'
+    ):
         '''
         Defer importing the Team class to avoid circular dependency.
         This may require refactoring to fix properly
@@ -38,16 +42,13 @@ class _ActionObject:
             self.actionCode = None
             #print("chose team action")
             return
-    
-
         # The action is another action object
-        if isinstance(action, self.__class__):
+        elif isinstance(action, self.__class__):
             self.actionCode = action.actionCode
             self.teamAction = action.teamAction
             return
-
         # An int means the action is an index into the action codes in initParams
-        if isinstance(action, int):
+        else:
             try:
                 self.actionCode=random.choice(self.__class__.actions)
                 self.teamAction=None

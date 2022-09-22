@@ -11,12 +11,12 @@ class _Trainer:
     Program = None
     ActionObject = None
     MemoryObject = None
-    __instance = None
+    _instance = None
 
     # should inherit
     def __new__(cls, *args, **kwargs):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
+        if cls._instance is None:
+            cls._instance = True
             from _tpg.agent import _Agent
             from _tpg.team import _Team
             from _tpg.learner import _Learner
@@ -28,7 +28,8 @@ class _Trainer:
             cls.Learner = _Learner
             cls.Program = _Program
             cls.ActionObject = _ActionObject
-        return cls.__instance        
+
+        return super().__new__(cls)        
 
     def __init__(self, 
         actions=None, 
@@ -178,7 +179,7 @@ class _Trainer:
             "pInstMut": pInstMut,
             "pInstSwp": pInstSwp, 
             "nOperations": 18,
-            "nDestinations": nRegisters, 
+            "nDestinations": nRegisters,
             "inputSize": inputSize, 
             "initMaxProgSize": initMaxProgSize,
             "rampantGen": rampancy[0], 
@@ -200,9 +201,9 @@ class _Trainer:
 
     def getAgents(self, sortTasks=[], multiTaskType='min', skipTasks=[]):
         # remove those that get skipped
-        rTeams = [team for team in self.rootTeams
+        rTeams = [rt for rt in self.rootTeams
                 if len(skipTasks) == 0
-                        or any(task not in team.outcomes for task in skipTasks)]
+                        or any(task not in rt.outcomes for task in skipTasks)]
 
         if len(sortTasks) == 0: # just get all
             return [self.__class__.Agent(team, num=i, actVars=self.actVars)
@@ -248,7 +249,6 @@ class _Trainer:
         self._scoreIndividuals(
             tasks, 
             multiTaskType=multiTaskType,
-            doElites=self.doElites
         ) # assign scores to individuals
         self._saveFitnessStats() # save fitness stats
         self._select(extraTeams) # select individuals to keep
@@ -269,12 +269,52 @@ class _Trainer:
         return self._initializePopulations()
 
     def _initializePopulations(self):
-        try:
-            for _ in range(self.teamPopSize):
-                # create 2 unique actions and learners
-                a1,a2 = random.sample(self.__class__.ActionObject.actions, 2)
 
-                l1 = self.__class__.Learner(
+        # if len(self.teams)>self.teamPopSize: return True
+
+        for _ in range(self.teamPopSize):
+            # create 2 unique actions and learners
+            a1,a2 = random.sample(self.__class__.ActionObject.actions, 2)
+
+            l1 = self.__class__.Learner(
+                initParams=self.mutateParams,
+                program=self.__class__.Program(
+                    maxProgramLength=self.initMaxProgSize,
+                    nOperations=self.nOperations,
+                    nDestinations=self.nRegisters,
+                    inputSize=self.inputSize,
+                    initParams=self.mutateParams),
+                actionObj=self.__class__.ActionObject(action=a1),
+                numRegisters=self.nRegisters)
+            
+            l2 = self.__class__.Learner(
+                initParams=self.mutateParams,
+                program=self.__class__.Program(
+                    maxProgramLength=self.initMaxProgSize,
+                    nOperations=self.nOperations,
+                    nDestinations=self.nRegisters,
+                    inputSize=self.inputSize,
+                    initParams=self.mutateParams),
+                actionObj=self.__class__.ActionObject(action=a2),
+                numRegisters=self.nRegisters)
+
+            # save learner population
+            self.learners.append(l1)
+            self.learners.append(l2)
+
+            # create team and add initial learners
+            team = self.__class__.Team(initParams=self.mutateParams)
+            team.addLearner(l1)
+            team.addLearner(l2)
+
+            # add more learners
+            moreLearners = random.randint(0, self.initMaxTeamSize-2)
+            for __ in range(moreLearners):
+                # select action
+                act = random.choice(self.__class__.ActionObject.actions)
+
+                # create new learner
+                learner = self.__class__.Learner(
                     initParams=self.mutateParams,
                     program=self.__class__.Program(
                         maxProgramLength=self.initMaxProgSize,
@@ -282,63 +322,22 @@ class _Trainer:
                         nDestinations=self.nRegisters,
                         inputSize=self.inputSize,
                         initParams=self.mutateParams),
-                    actionObj=self.__class__.ActionObject(action=a1),
-                    numRegisters=self.nRegisters)
-                
-                l2 = self.__class__.Learner(
-                    initParams=self.mutateParams,
-                    program=self.__class__.Program(
-                        maxProgramLength=self.initMaxProgSize,
-                        nOperations=self.nOperations,
-                        nDestinations=self.nRegisters,
-                        inputSize=self.inputSize,
-                        initParams=self.mutateParams),
-                    actionObj=self.__class__.ActionObject(action=a2),
+                    actionObj=self.__class__.ActionObject(
+                        action=act),  
                     numRegisters=self.nRegisters)
 
-                # save learner population
-                self.learners.append(l1)
-                self.learners.append(l2)
+                team.addLearner(learner)
+                self.learners.append(learner)
 
-                # create team and add initial learners
-                team = self.__class__.Team(initParams=self.mutateParams)
-                team.addLearner(l1)
-                team.addLearner(l2)
-
-                # add more learners
-                moreLearners = random.randint(0, self.initMaxTeamSize-2)
-                for __ in range(moreLearners):
-                    # select action
-                    act = random.choice(self.__class__.ActionObject.actions)
-
-                    # create new learner
-                    learner = self.__class__.Learner(
-                        initParams=self.mutateParams,
-                        program=self.__class__.Program(
-                            maxProgramLength=self.initMaxProgSize,
-                            nOperations=self.nOperations,
-                            nDestinations=self.nRegisters,
-                            inputSize=self.inputSize,
-                            initParams=self.mutateParams),
-                        actionObj=self.__class__.ActionObject(
-                            action=act, 
-                            initParams=self.mutateParams),  
-                        numRegisters=self.nRegisters)
-
-                    team.addLearner(learner)
-                    self.learners.append(learner)
-
-                # save to team populations
-                self.teams.append(team)
-                self.rootTeams.append(team)
-        except Exception as e:
-            print('team make error', e)
-            return False
+            # save to team populations
+            self.teams.append(team)
+            self.rootTeams.append(team)
+    
         return True
 
-    def _scoreIndividuals(self, tasks, multiTaskType='min', doElites=True):
+    def _scoreIndividuals(self, tasks, multiTaskType='min'):
         # handle generation of new elites, typically just done in evolution
-        if doElites:
+        if self.doElites:
             # get the best agent at each task
             self.elites = [] # clear old elites
             for task in tasks:
@@ -346,8 +345,8 @@ class _Trainer:
                                         key=lambda t: t.outcomes[task]))
 
         if len(tasks) == 1: # single fitness
-            for team in self.rootTeams:
-                team.fitness = team.outcomes[tasks[0]]
+            for rt in self.rootTeams:
+                rt.fitness = rt.outcomes[tasks[0]]
         else: # multi fitness
             # assign fitness to each agent based on tasks and score type
             if 'pareto' not in multiTaskType or 'lexicase' not in multiTaskType:
@@ -700,12 +699,23 @@ class _Trainer:
         return trainer
 
 class Trainer1(_Trainer):
-    __instance = None
 
     def __new__(cls, *args, **kwargs):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls, *args, **kwargs)
-        return cls.__instance
+        if cls._instance is None:
+            from _tpg.agent import _Agent
+            from _tpg.team import _Team
+            from _tpg.learner import _Learner
+            from _tpg.program import _Program
+            from _tpg.action_object import _ActionObject
+
+            cls._instance = True
+            cls.Agent = _Agent
+            cls.Team = _Team
+            cls.Learner = _Learner
+            cls.Program = _Program
+            cls.ActionObject = _ActionObject
+
+        return super().__new__(cls, *args, **kwargs)
     
     def _generate(self, extraTeams=None):
         # extras who are already part of the team population
@@ -754,8 +764,7 @@ class Trainer1(_Trainer):
 
                     # new_learner's teamAction change to clone
                     new_learner.actionObj.teamAction = clone
-
-                    breakpoint('prease come')
+                    print('cloned')
                     # self.rootTeams.remove(rt)
 
             self.teams.append(child)

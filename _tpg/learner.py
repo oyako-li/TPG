@@ -8,46 +8,46 @@ class _Learner:
     Team = None
     ActionObject = None
     Program = None
-    __instance = None
+    _instance = None
 
-    # you should inherit
     def __new__(cls, *args, **kwargs):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
+        if cls._instance is None:
+            cls._instance = True
             from _tpg.team import _Team
             from _tpg.action_object import _ActionObject
             from _tpg.program import _Program
             cls.Team = _Team
             cls.ActionObject = _ActionObject
             cls.Program = _Program
-        return cls.__instance
+            
+        return super().__new__(cls)
 
     def __init__(self, 
-        initParams:int or dict=0, 
         program=None, 
-        actionObj=0, 
+        actionObj=None, 
         numRegisters:int or np.ndarray=8, 
-        _ancestor=None,
-        _states:list=[],
-        _inTeams:list=[],
-        _frameNum:int=0
+        # _ancestor=None,
+        states:list=[],
+        inTeams:list=[],
+        frameNum:int=0,
+        initParams:int or dict=0
     ):
         self.program = self.__class__.Program() if program is None else self.__class__.Program(instructions=program.instructions)
-        self.actionObj = self.__class__.ActionObject(actionObj) if isinstance(actionObj, int) else self.__class__.ActionObject(action=actionObj,initParams=initParams)
+        self.actionObj = self.__class__.ActionObject(actionObj) if actionObj is None else self.__class__.ActionObject(action=actionObj,initParams=initParams)
         if isinstance(numRegisters, int): 
             self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
         else: 
-            self.registers = numRegisters
+            self.registers = copy.deepcopy(numRegisters)
         if isinstance(initParams, int): 
             self.genCreate = initParams # Store the generation that this learner was created on
         elif isinstance(initParams, dict): 
             self.genCreate = initParams["generation"] # Store the generation that this learner was created on
 
-        self.ancestor = _ancestor #By default no ancestor
-        self.states = _states
-        self.inTeams = _inTeams # Store a list of teams that reference this learner, incoming edges
+        # self.ancestor = _ancestor #By default no ancestor
+        self.states = list(states)
+        self.inTeams = list(inTeams) # Store a list of teams that reference this learner, incoming edges
         # self.actionCodes = initParams["actionCodes"]
-        self.frameNum = _frameNum # Last seen frame is 0
+        self.frameNum = frameNum # Last seen frame is 0
         self.id = uuid.uuid4()
 
 
@@ -117,10 +117,18 @@ class _Learner:
         return self
 
     def clone(self): 
-        _clone = copy.deepcopy(self)
-        _clone.inTeams = []
-        _clone.id = uuid.uuid4()
-        if _clone.actionObj.teamAction : _clone.actionObj.teamAction.inLearners.append(str(_clone.id))
+        _clone = self.__class__(
+            program = self.program,
+            actionObj = self.actionObj,
+            numRegisters=self.registers,
+            states=self.states,
+            inTeams=self.inTeams,
+            frameNum=self.frameNum,
+            initParams=self.genCreate
+        )
+        if not _clone.isActionAtomic(): 
+            _clone.getActionTeam().inLearners.append(str(_clone.id))
+
         return _clone
 
     def zeroRegisters(self):
@@ -133,7 +141,7 @@ class _Learner:
 
     def __eq__(self, __o: object) -> bool:
         # Object must be an instance of Learner
-        if not isinstance(__o, __class__): return False
+        if not isinstance(__o, self.__class__): return False
 
         # The object must have been created the same generation as us
         if self.genCreate != __o.genCreate:   return False

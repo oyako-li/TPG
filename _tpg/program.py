@@ -9,13 +9,13 @@ from _tpg.utils import flip
 import uuid
 
 class _Program:
-    __instance = None
+    _instance = None
 
     # you should inherit
     def __new__(cls, *args, **kwargs):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
-        return cls.__instance
+        if cls._instance is None:
+            cls._instance = True
+        return super().__new__(cls)
 
     def __init__(self, instructions=None, maxProgramLength=128, nOperations=5,
             nDestinations=8, inputSize=30720, initParams=None):

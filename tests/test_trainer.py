@@ -30,29 +30,38 @@ class _TrainerTest(unittest.TestCase):
         self.assertIsNotNone(trainer.doElites)
         self.assertIsNotNone(trainer.memMatrix)
         self.assertIsNotNone(trainer.rampancy)
-        # self.assertIsNotNone(trainer.traversal)
         self.assertIsNotNone(trainer.initMaxActProgSize)
         self.assertIsNotNone(trainer.nActRegisters)
         self.assertIsNotNone(trainer.generation)
         self.assertIsNotNone(trainer.mutateParams)
         self.assertIsNotNone(trainer.actVars)
-        self.assertIsNotNone(trainer.nOperations)
-        # self.assertIsNotNone(trainer.operations)
+        # self.assertIsNotNone(trainer.nOperations)
         self.assertIn("nOperations", trainer.mutateParams)
 
     def test_set_actions(self):
         ''' test set actions'''
         trainer = self.Trainer()
         trainer.setActions(self.actions)
-        self.assertNotEqual(len(trainer.teams),0)
-        self.assertNotEqual(len(trainer.rootTeams),0)
-        self.assertNotEqual(len(trainer.learners),0)
+        self.assertNotEqual(len(trainer.teams), 0)
 
+        def allUnique(x):
+            seen = set()
+            return not any(i in seen or seen.add(i) for i in x)
+        self.assertTrue(allUnique(trainer.teams))
+        self.assertEqual(trainer.ActionObject.actions, range(self.actions))
+
+    # @unittest.skip('')
     def test_get_agents(self):
         ''' test get agents '''
         trainer = self.Trainer()
         trainer.setActions(self.actions)
-        self.assertIsNotNone(trainer.getAgents())
+        agents = trainer.getAgents()
+        self.assertIsNotNone(agents)
+        def allUnique(x):
+            seen = set()
+            return not any(i in seen or seen.add(i) for i in x)
+
+        self.assertTrue(allUnique(agents))
 
     @unittest.skip("pass impriment")
     def test_get_elite_agent(self):
@@ -71,11 +80,15 @@ class _TrainerTest(unittest.TestCase):
         trainer.save(filename)
         self.Trainer.load(filename)
 
+# @unittest.skip('')
 class Trainer1Test(_TrainerTest):
     def setUp(self) -> None:
         super().setUp()
         from _tpg.trainer import Trainer1
         self.Trainer = Trainer1
 
+    # def test_evolve_(self):
+    #     trainer = self.Trainer(actions=self.actions)
+    #     trainer.evolve()
 if __name__ == '__main__':
     unittest.main()

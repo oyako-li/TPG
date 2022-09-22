@@ -11,16 +11,18 @@ import gym
 import signal
 import time
 
-class TPG:
+class _TPG:
     Trainer=None
-    __instance=None
+    _instance=None
 
     def __new__(cls, *args, **kwargs):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
+        if not cls._instance:
             from _tpg.trainer import _Trainer
+
+            cls._instance = True
             cls.Trainer = _Trainer
-        return cls.__instance
+
+        return super().__new__(cls)
 
     def __init__(self, 
         actions=None,
@@ -78,6 +80,12 @@ class TPG:
             prevPops=prevPops, mutatePrevs=mutatePrevs,
             initMaxActProgSize=initMaxActProgSize,           # *
             nActRegisters=nActRegisters)
+        
+        self.generations=10
+        self.episodes=1
+        self.frames = 500
+        self.show = False
+        self.logger = None
 
     def setActions(self, actions):
         self.actions = self.trainer.setActions(actions)
@@ -105,45 +113,46 @@ class TPG:
         return np.add(np.left_shift(rgbRows[0], 16),
             np.add(np.left_shift(rgbRows[1], 8), rgbRows[2]))
 
-    def episode(self, _logger=None, _scores={}, _frames:int=500, _show=False):
-        assert self.trainer is not None and self.env is not None, 'You should set Ac'
+    def episode(self, _scores):
+        assert self.trainer is not None and self.env is not None, 'You should set Actioins'
         
-        for agent in self.trainer.getAgents(): # to multi-proccess
+        for agent in self.agents: # to multi-proccess
             state = self.env.reset() # get initial state and prep environment
             score = 0
             _id = str(agent.team.id)
-            for _ in range(_frames): # run episodes that last 500 frames
+            for _ in range(self.frames): # run episodes that last 500 frames
                 act = agent.act(state)
                 if not act in range(self.env.action_space.n): continue
                 state, reward, isDone, debug = self.env.step(act)
                 score += reward # accumulate reward in score
 
                 if isDone: break # end early if losing state
-                if _show: self.show_state(self.env, _)
+                if self.show: self.show_state(self.env, _)
 
             if _scores.get(_id) is None : _scores[_id]=0
             _scores[_id] += score # store score
 
-            # if _logger is not None: _logger.info(f'{_id},{score}')
+            # if self.logger is not None: self.logger.info(f'{_id},{score}')
 
         # _summaryScores = (min(curScores), max(curScores), sum(curScores)/len(curScores)) # min, max, avg
 
         return _scores
 
-    def generation(self,_logger=None, _episodes=1, _frames= 500, _show=False):
+    def generation(self):
         _scores = {}
         _task = self.env.spec.id
-        for _ in range(_episodes):     
-            _scores = self.episode(_logger=_logger, _scores=_scores, _frames=_frames, _show=_show)
+        self.agents = self.trainer.getAgents()
+        for _ in range(self.episodes):     
+            _scores = self.episode(_scores)
         for i in _scores:               
-            _scores[i]/=_episodes
-        for agent in self.trainer.getAgents(): 
+            _scores[i]/=self.episodes
+        for agent in self.agents: 
             agent.reward(_scores[str(agent.team.id)],task=_task)
         self.trainer.evolve([_task])
 
         return _scores
     
-    def growing(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True):
+    def growing(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
         if _trainer: 
             self.instance_valid(_trainer)
             self.trainer = _trainer
@@ -151,10 +160,16 @@ class TPG:
         if _task:
             self.env = gym.make(_task)
         
-        task = self.env.spec.id
+        task = _dir+self.env.spec.id
 
         logger, filename = setup_logger(__name__, task, test=_test, load=_load)
-        
+        self.logger = logger
+        self.generations = _generations
+        self.episodes = _episodes
+        self.frames = _frames
+        self.show = _show
+
+
         action_space = self.env.action_space
         action = 0
         if isinstance(action_space, gym.spaces.Box):
@@ -170,17 +185,10 @@ class TPG:
         
         signal.signal(signal.SIGINT, outHandler)
 
-        
-
-        summaryScores = []
-
-        tStart = time.time()
         for gen in tqdm(range(_generations)): # generation loop
-            scores = self.generation(logger, _episodes=_episodes, _frames=_frames, _show=_show)
+            scores = self.generation()
 
-            score = (min(scores.values()), max(scores.values()), sum(scores.values())/len(scores))
-
-            logger.info(f'generation:{gen}, score:{score}')
+            self.logger.info(f'generation:{gen}, min:{min(scores.values())}, max:{max(scores.values())}, ave:{sum(scores.values())/len(scores)}')
             
         #clear_output(wait=True)
         # logger.info(f'Time Taken (Hours): {str((time.time() - tStart)/3600)}')
@@ -188,9 +196,10 @@ class TPG:
         # logger.shutdown()
         # logging.disable(logging.NOTSET)
 
-        list(map(logger.removeHandler, logger.handlers))
-        list(map(logger.removeFilter, logger.filters))
-        return filename
+        list(map(self.logger.removeHandler, self.logger.handlers))
+        list(map(self.logger.removeFilter, self.logger.filters))
+
+        return f'{task}/{filename}'
 
     def start(self, _task, _show, _test, _load, _trainer=None, _generations=1000, _episodes=1, _frames=500):
         if _trainer is None : 
@@ -214,15 +223,16 @@ class TPG:
 #         if not __class__._comp: __class__.importance()
         
 
-class MHTPG(TPG):
-    __instance= None
+class MHTPG(_TPG):
 
     def __new__(cls, *args, **kwargs):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls, *args, **kwargs)
+        if not cls._instance:
             from _tpg.trainer import Trainer1
+
+            cls._instance = True
             cls.Trainer = Trainer1
-        return cls.__instance
+
+        return super().__new__(cls, *args, **kwargs)
 
 # class MemoryAndHierarchicalTPG1(TPG):
 
@@ -232,7 +242,7 @@ class MHTPG(TPG):
 #     def instance_valid(self, trainer) -> bool:
 #         if not isinstance(trainer, Trainer3): raise Exception('this object is not Trainer3')
 
-class StateTPG(TPG):
+class StateTPG(_TPG):
     MemoryObject = None
 
     @classmethod
@@ -325,7 +335,7 @@ class StateTPG(TPG):
         
         return filename
     
-class EmulatorTPG(TPG):
+class EmulatorTPG(_TPG):
     state=np.array([],dtype=float)
     def __init__(self, 
         actions=2,
@@ -685,7 +695,7 @@ class EmulatorTPG(TPG):
             _emulator.saveToFile(f'{task}/{_filename}-emu')
         return _filename
 
-class Automata(TPG):
+class Automata(_TPG):
     def __init__(self, actions=2, teamPopSize: int = 1000, rootBasedPop: bool = True, gap: float = 0.5, inputSize: int = 33600, nRegisters: int = 8, initMaxTeamSize: int = 10, initMaxProgSize: int = 10, maxTeamSize: int = -1, pLrnDel: float = 0.7, pLrnAdd: float = 0.6, pLrnMut: float = 0.2, pProgMut: float = 0.1, pActMut: float = 0.1, pActAtom: float = 0.95, pInstDel: float = 0.5, pInstAdd: float = 0.4, pInstSwp: float = 0.2, pInstMut: float = 1., doElites: bool = True, memType="def", memMatrixShape: tuple = (100, 8), rampancy: tuple = (0, 0, 0), operationSet: str = "custom", traversal: str = "team", prevPops=None, mutatePrevs=True, initMaxActProgSize: int = 6, nActRegisters: int = 4):
         super().__init__(actions, teamPopSize, rootBasedPop, gap, inputSize, nRegisters, initMaxTeamSize, initMaxProgSize, maxTeamSize, pLrnDel, pLrnAdd, pLrnMut, pProgMut, pActMut, pActAtom, pInstDel, pInstAdd, pInstSwp, pInstMut, doElites, memType, memMatrixShape, rampancy, operationSet, traversal, prevPops, mutatePrevs, initMaxActProgSize, nActRegisters)
 

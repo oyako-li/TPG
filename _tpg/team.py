@@ -11,23 +11,29 @@ action to take in the graph.
 
 class _Team:
     Learner = None
-    __instance = None
+    _instance = None
 
 
     # you should inherit
     def __new__(cls, *args, **kwargs):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
+        if cls._instance is None:
             from _tpg.learner import _Learner
+            cls._instance = True
             cls.Learner = _Learner
-        return cls.__instance
+        return super().__new__(cls)
 
-    def __init__(self, initParams:int or dict=0): 
-        self.learners = []
-        self.outcomes = {} # scores at various tasks
-        self.fitness = None
-        self.inLearners = [] # ids of learners referencing this team
+    def __init__(self,
+            learners:list = [],
+            inLearners:list = [],
+            outcomes:dict = {'task':0},
+            fitness:float = 0.0,
+            initParams:int or dict=0
+        ): 
+        self.learners = list(learners)
+        self.inLearners = list(inLearners) # ids of learners referencing this team
+        self.outcomes =  dict(outcomes)# scores at various tasks
         self.id = uuid.uuid4()
+        self.fitness = fitness
         if isinstance(initParams, dict): self.genCreate = initParams["generation"]
         elif isinstance(initParams, int): self.genCreate = initParams
 
@@ -289,7 +295,13 @@ class _Team:
 
                 #print("Team {} creating learner".format(self.id))
                 # Create a new new learner 
-                newLearner = self.__class__.Learner(mutateParams, learner.program, learner.actionObj, len(learner.registers), learner.id)
+                newLearner = self.__class__.Learner(
+                    program=learner.program, 
+                    actionObj=learner.actionObj, 
+                    numRegisters=len(learner.registers), 
+                    initParams=mutateParams,
+                    frameNum=learner.frameNum
+                )
                 new_learners.append(newLearner)
                 # Add the mutated learner to our learners
                 # Must add before mutate so that the new learner has this team in its inTeams
@@ -307,13 +319,11 @@ class _Team:
         return mutated_learners, new_learners
 
     def clone(self): 
-        _clone = self.__class__()
-        # assert type(_clone)== Tiem1
-        _clone.inLearners = self.inLearners
-        self.inLearners = []
-        _clone.outcomes = self.outcomes
-        _clone.fitness = self.fitness
-        _clone.id = uuid.uuid4()
+        _clone = self.__class__(
+            inLearners=self.inLearners,
+            outcomes=self.outcomes,
+            fitness=self.fitness
+        )
         for learner in self.learners:
             _clone.addLearner(learner.clone())
 
@@ -361,17 +371,12 @@ class _Team:
     def __ne__(self, o: object) -> bool:
         return not self.__eq__(o)
 
+    def __hash__(self):
+        return int(self.id)
+
     def zeroRegisters(self):
         for learner in self.learners:
             learner.zeroRegisters()
 
     def numLearnersReferencing(self):
         return len(self.inLearners)
-
-class Team1(_Team):
-    
-    def __init__(self, initParams: int or dict = 0):
-        super().__init__(initParams)
-        print('Team1')
-
-    

@@ -109,15 +109,16 @@ class Memory:
 class _MemoryObject:
     memory=Memory()
     Team = None
-    __instance = None
+    _instance = None
 
     # you should inherit
     def __new__(cls, *args, **kwargs):
-        if cls.__instance is None:
-            cls.__instance = super().__new__(cls)
+        if cls._instance is None:
             from _tpg.team import _Team
+            cls._instance = True
             cls.Team = _Team
-        return cls.__instance
+
+        return super().__new__(cls)
     
     def __init__(self, state=1, initParam=None):
 
