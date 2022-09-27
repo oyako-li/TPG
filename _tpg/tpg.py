@@ -401,22 +401,22 @@ class EmulatorTPG(_TPG):
 
         return f'{task}/{filename}'
 
-class Automata:
+class Automata(_TPG):
     Actor=None
     Emulator=None
-    ActionObject=None
-    MemoryObject=None
+    # ActionObject=None
+    # MemoryObject=None
     _instance=None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            from _tpg.action_object import _ActionObject
-            from _tpg.memory_object import _MemoryObject
+            # from _tpg.action_object import _ActionObject
+            # from _tpg.memory_object import _MemoryObject
             cls._instance = True
             cls.Actor = MHTPG
             cls.Emulator = EmulatorTPG
-            cls.ActionObject = _ActionObject
-            cls.MemoryObject = _MemoryObject
+            # cls.ActionObject = _ActionObject
+            # cls.MemoryObject = _MemoryObject
         return super().__new__(cls)
 
     def __init__(self, 

@@ -7,7 +7,14 @@ from _tpg.utils import flip, breakpoint
 
 
 
-class Fragment:
+class _Fragment:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+        return super().__new__(cls)
+
     def __init__(self, _key=np.array([0]), _state=np.array([[0.]])):
         state = np.array(_state)
         key = np.array(_key)
@@ -57,9 +64,17 @@ class Fragment:
         return state
     
 
-class Memory:
+class _Memory:
+    Fragment = None
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls.Fragment = _Fragment
+        return super().__new__(cls)
+
     def __init__(self):
-        fragment = Fragment()
+        fragment = self.__class__.Fragment()
         self.memories:dict={fragment.id:fragment} # uuid:flagment
         self.weights:dict={fragment.id:1.}
 
@@ -72,7 +87,7 @@ class Memory:
     
     def append(self, _key, _state):
         _key= list(set(_key))
-        memory = Fragment(_key, _state)
+        memory = self.__class__.Fragment(_key, _state)
         self.memories[memory.id]    = memory
         self.weights[memory.id]     = 1.
         return memory.id
@@ -108,7 +123,7 @@ class Memory:
 
 
 class _MemoryObject:
-    memories=Memory()
+    memories=_Memory()
     Team = None
     _instance = None
 
@@ -180,10 +195,6 @@ class _MemoryObject:
 
         if flip(pMemAtom):
             if self.memoryCode is not None:
-                # try:
-                #     MemoryObject.memories.referenced[self.memoryCode]-=1
-                # except:
-                #     print('memory is crashed')
                 _ignore = self.memoryCode
             else:
                 _ignore = None
@@ -210,6 +221,5 @@ class _MemoryObject:
     @classmethod
     def emulate(cls, fileName):
         _memories = pickle.load(open(fileName, 'rb'))
-        # assert(isinstance(_memories, Memory), 'this file is different Class type')
         cls.memories = _memories
-        return cls
+        return cls.__init__()
