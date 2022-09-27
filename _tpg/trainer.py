@@ -2,7 +2,6 @@ from _tpg.utils import breakpoint
 import random
 import pickle
 import numpy as np
-from tqdm import tqdm
 
 class _Trainer:
     Agent = None
@@ -272,16 +271,18 @@ class _Trainer:
 
     def _scoreIndividuals(self, tasks, multiTaskType='min'):
         # handle generation of new elites, typically just done in evolution
+        assert isinstance(tasks, list), f'{tasks} is not list'
+
         if self.doElites:
             # get the best agent at each task
             self.elites = [] # clear old elites
             for task in tasks:
-                self.elites.append(max([team for team in self.rootTeams],
-                                        key=lambda t: t.outcomes[task]))
+                self.elites.append(max([rt for rt in self.rootTeams],
+                                        key=lambda t: t[task]))
 
         if len(tasks) == 1: # single fitness
             for rt in self.rootTeams:
-                rt.fitness = rt.outcomes[tasks[0]]
+                rt.fitness = rt[tasks[0]]
         else: # multi fitness
             # assign fitness to each agent based on tasks and score type
             if 'pareto' not in multiTaskType or 'lexicase' not in multiTaskType:
@@ -300,21 +301,21 @@ class _Trainer:
         mins = []
         maxs = []
         for task in tasks:
-            mins.append(min([team.outcomes[task] for team in self.rootTeams]))
-            maxs.append(max([team.outcomes[task] for team in self.rootTeams]))
+            mins.append(min([team[task] for team in self.rootTeams]))
+            maxs.append(max([team[task] for team in self.rootTeams]))
 
         # assign fitness
         if multiTaskType == 'min':
             for rt in self.rootTeams:
-                rt.fitness = min([(rt.outcomes[task]-mins[i])/(maxs[i]-mins[i])
+                rt.fitness = min([(rt[task]-mins[i])/(maxs[i]-mins[i])
                         for i,task in enumerate(tasks)])
         elif multiTaskType == 'max':
             for rt in self.rootTeams:
-                rt.fitness = max([(rt.outcomes[task]-mins[i])/(maxs[i]-mins[i])
+                rt.fitness = max([(rt[task]-mins[i])/(maxs[i]-mins[i])
                         for i,task in enumerate(tasks)])
         elif multiTaskType == 'average':
             for rt in self.rootTeams:
-                scores = [(rt.outcomes[task]-mins[i])/(maxs[i]-mins[i])
+                scores = [(rt[task]-mins[i])/(maxs[i]-mins[i])
                             for i,task in enumerate(tasks)]
                 rt.fitness = sum(scores)/len(scores)
 
@@ -326,7 +327,7 @@ class _Trainer:
                     continue # don't compare to self
 
                 # compare on all tasks
-                if all([t1.outcomes[task] >= t2.outcomes[task]
+                if all([t1[task] >= t2[task]
                          for task in tasks]):
                     t1.fitness += 1
 
@@ -338,7 +339,7 @@ class _Trainer:
                     continue # don't compare to self
 
                 # compare on all tasks
-                if all([t1.outcomes[task] < t2.outcomes[task]
+                if all([t1[task] < t2[task]
                          for task in tasks]):
                     t1.fitness -= 1
 
@@ -347,7 +348,7 @@ class _Trainer:
         random.shuffle(stasks)
 
         for rt in self.rootTeams:
-            rt.fitness = rt.outcomes[tasks[0]]
+            rt.fitness = rt[tasks[0]]
 
     def _lexicaseDynamicScorer(self, tasks):
         pass
@@ -461,7 +462,8 @@ class _Trainer:
         self._initialize()
         return self.__class__.ActionObject.actions
 
-    def getAgents(self, sortTasks=[], multiTaskType='min', skipTasks=[]):
+    def getAgents(self, sortTasks=[], multiTaskType='min', skipTasks=[], task='task'):
+        self.actVars['task']=task
         # remove those that get skipped
         rTeams = [rt for rt in self.rootTeams
                 if len(skipTasks) == 0
@@ -616,7 +618,6 @@ class Trainer(_Trainer):
                     self.teams.remove(team)
 
 class Trainer1(Trainer):
-
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.agent import Agent1
@@ -823,8 +824,7 @@ class Trainer2(Trainer):
         if state: self.setMemories(state)
 
     def _initialize(self, _state=None):
-        print('team popUp ...')
-        for _ in tqdm(range(self.teamPopSize)):
+        for _ in range(self.teamPopSize):
             # create 2 unique actions and learners
             # m1,m2 = random.choices(range(len(self.memoryCodes)), 2)
 
@@ -880,8 +880,7 @@ class Trainer2(Trainer):
             # save to team populations
             self.teams.append(team)
             self.rootTeams.append(team)
-        print('... complete.')
-        
+
     def _select(self, extraTeams=None, task='task'):
 
         rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.outcomes[task])
@@ -1037,6 +1036,7 @@ class Trainer2(Trainer):
 
     def setMemories(self, state):
         assert isinstance(state, np.ndarray)
+
         for _ in range(self.initMaxTeamSize):
             key = np.random.choice(range(state.size), random.randint(1, state.size-1))
             self.__class__.MemoryObject.memories.append(key, state)
@@ -1064,3 +1064,141 @@ class Trainer2(Trainer):
 
         cls.MemoryObject.memories = trainer._memories
         return trainer
+
+class Trainer3(Trainer2):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.agent import Agent2
+            from _tpg.team import Team2
+            from _tpg.learner import Learner2
+            from _tpg.program import Program2
+            from _tpg.memory_object import _MemoryObject
+
+            cls._instance = True
+            cls.Agent = Agent2
+            cls.Team = Team2
+            cls.Learner = Learner2
+            cls.Program = Program2
+            cls.MemoryObject = _MemoryObject
+
+        return super().__new__(cls, *args, **kwargs)
+
+    def _select(self, extraTeams=None, task='task'):
+
+        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.outcomes[task])
+        numKeep = len(self.rootTeams) - int(len(self.rootTeams)*self.gap)
+        deleteTeams = rankedTeams[numKeep:]
+
+        for team in [t for t in deleteTeams if t not in self.elites]:
+            # remove learners from team and delete team from populations
+            if extraTeams is None or team not in extraTeams: team.removeLearners()
+            self.teams.remove(team)
+            self.rootTeams.remove(team)
+
+        orphans = [learner for learner in self.learners if learner.numTeamsReferencing() == 0]
+
+        for cursor in orphans:
+            if not cursor.isMemoryAtomic(): # If the orphan does NOT point to an atomic action
+                # Get the team the orphan is pointing to and remove the orphan's id from the team's in learner list
+                cursor.memoryObj.teamMemory.inLearners.remove(str(cursor.id))
+
+        # Finaly, purge the orphans
+        # AtomicActionのLearnerはどのように生成すれば良いのだろうか？ -> actionObj.mutate()による
+        self.learners = [learner for learner in self.learners if learner.numTeamsReferencing() > 0] 
+
+    def _generate(self, extraTeams=None, _states=None, _unexpectancies=None):
+        # extras who are already part of the team population
+        protectedExtras = []
+        extrasAdded = 0
+
+        # add extras into the population
+        if extraTeams is not None:
+            for team in extraTeams:
+                if team not in self.teams:
+                    self.teams.append(team)
+                    extrasAdded += 1
+                else:
+                    protectedExtras.append(team)
+
+        oLearners = list(self.learners)
+        oTeams = list(self.teams)
+
+        # update generation in mutateParams
+        self.mutateParams["generation"] = self.generation
+
+        # get all the current root teams to be parents
+        # mutate or clone
+        while (len(self.teams) < self.teamPopSize + extrasAdded or
+                (self.rootBasedPop and self.countRootTeams() < self.teamPopSize)):
+            # get parent root team, and child to be based on that
+
+            # ここをランダムではなく、階層上あるいは、過去の経験よりセレクトする。
+            # rootTeamsを混ぜて、新しい、チームを作る。この時、そのチームは、プログラムへの１階層目のポインタを混ぜるだけである。
+            parent = random.choice(self.rootTeams)
+            child = self.__class__.Team(initParams=self.mutateParams)
+
+            # child starts just like parent
+            for learner in parent.learners: child.addLearner(learner)
+
+            # then mutates
+            # child.mutate(self.mutateParams, oLearners, oTeams)
+            _, __, new_learners = child.mutate(self.mutateParams, oLearners, oTeams)
+
+            # then clone the referenced rootTeams
+            for new_learner in new_learners:
+                tm = new_learner.getMemoryTeam()
+                if tm in self.rootTeams:
+                    clone = tm.clone()
+                    self.teams.append(clone)
+                    
+                    assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
+
+            if not _states is None and not _unexpectancies is None: 
+                states = np.array(_states)
+                unexpectancies = np.array(_unexpectancies)
+                if len(unexpectancies[unexpectancies>0])!=0:
+                    state = random.choices(states[unexpectancies>0], unexpectancies[unexpectancies>0])[0]
+                else:
+                    state = None
+                child.addLearner(self.__class__.Learner(memoryObj=self.__class__.MemoryObject(state=state)))
+                # breakpoint(state)
+                # どういう時の状態をメモライズすれば良いか？
+                # 理想は予想外に報酬の高い状態を記憶する。
+                # 状態＋報酬　の　メモライズではどうだろうか？
+                # つまり、報酬値の予想値との差異に基づいて、記憶すべき状態を優先づける。
+                # この場合、
+                # 
+
+            self.teams.append(child)
+
+
+        # remove unused extras
+        if extraTeams is not None:
+            for team in extraTeams:
+                if team.numLearnersReferencing() == 0 and team not in protectedExtras:
+                    self.teams.remove(team)
+
+    def _nextEpoch(self):
+        # add in newly added learners, and decide root teams
+        memory_code_list = set()
+        self.rootTeams = []
+        for team in self.teams:
+            for learner in team.learners:
+                if learner not in self.learners:
+                    self.learners.append(learner)
+
+            # maybe make root team
+            if team.numLearnersReferencing() == 0 or team in self.elites:
+                self.rootTeams.append(team)
+
+        for lrnr in self.learners:
+            if lrnr.isMemoryAtomic():
+                memory_code_list.add(lrnr.memoryObj.memoryCode)
+
+        memory_code_list = list(memory_code_list)
+        self.__class__.MemoryObject.memories.oblivion(memory_code_list)
+
+        self.generation += 1
+
+        # assert 
+        breakpoint(self.__class__.MemoryObject.memories)

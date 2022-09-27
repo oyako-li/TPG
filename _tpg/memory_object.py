@@ -5,8 +5,6 @@ import numpy as np
 import random
 from _tpg.utils import flip, breakpoint
 
-
-
 class _Fragment:
     _instance = None
 
@@ -54,7 +52,6 @@ class _Fragment:
         self.fragment   = self.fragment - diff*unexpectancy
         return diff, unexpectancy
 
-
     def recall(self, state):
         assert isinstance(state, np.ndarray), f'should be ndarray {state}'
 
@@ -62,7 +59,6 @@ class _Fragment:
         val = self.fragment[self.index<state.size]
         state[key] = val
         return state
-    
 
 class _Memory:
     Fragment = None
@@ -84,6 +80,15 @@ class _Memory:
     def __delattr__(self, __name: str) -> None:
         del self.memories[__name]
         del self.weights[__name]
+
+    def __contains__(self, __o):
+        return __o in self.memories.keys()
+
+    def __repr__(self) -> str:
+        result = '<'
+        for code in self.memories.keys():
+            result+=f'{code}, '
+        return result+'>'
     
     def append(self, _key, _state):
         _key= list(set(_key))
@@ -120,7 +125,6 @@ class _Memory:
         p = 1-self.popus(_ignore)
         if len(p[p>0])==0: return random.choice(self.codes(_ignore))
         return random.choices(self.codes(_ignore)[p>0], p[p>0])[0]
-
 
 class _MemoryObject:
     memories=_Memory()
@@ -178,6 +182,7 @@ class _MemoryObject:
         if self.teamMemory is not None:
             return self.teamMemory.image(_act, _state, visited, memVars=memVars, path_trace=path_trace)
         else:
+            assert self.memoryCode in self.__class__.memories, f'{self.memoryCode} is not in {self.__class__.memories}'
             self.__class__.memories.weights[self.memoryCode]*=0.9 # 忘却確立減算
             self.__class__.memories.updateWeights()               # 忘却確立計上
             return self.memoryCode

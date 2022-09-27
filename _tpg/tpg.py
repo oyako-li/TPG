@@ -98,15 +98,13 @@ class _TPG:
     def getAgents(self):
         return self.trainer.getAgents()
     
-    def setAgents(self):
-        self.agents = self.trainer.getAgents()
+    def setAgents(self, task='task'):
+        self.agents = self.trainer.getAgents(task=task)
 
-    
     def flush_render(self, step=0, name='', info=''):
         self.ax1.imshow(self.env.render(mode='rgb_array'))
         self.ax1.set_title(f'{name}| Step: {step} {info}')
         self.ax1.axis('off')
-    
 
     def set_tk_render(self):
         # ge = np.linspace(step, renge, mi.size)
@@ -253,6 +251,10 @@ class MHTPG(_TPG):
 
         return super().__new__(cls, *args, **kwargs)
 
+    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None):
+        self.trainer.evolve(tasks, multiTaskType, extraTeams)
+        
+
 class EmulatorTPG(_TPG):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -321,6 +323,9 @@ class EmulatorTPG(_TPG):
         self.frames = 500
         self.show = False
         self.logger = None
+
+    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _states=None, _unexpectancies=None):
+        self.trainer.evolve(tasks, multiTaskType, extraTeams, _states, _unexpectancies)
 
     def setMemories(self, states):
         self.memories = self.trainer.setMemories(states)
@@ -400,6 +405,15 @@ class EmulatorTPG(_TPG):
         list(map(self.logger.removeFilter, self.logger.filters))
 
         return f'{task}/{filename}'
+
+class EmulatorTPG1(EmulatorTPG):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.trainer import Trainer3
+            cls._instance = True
+            cls.Trainer = Trainer3
+
+        return super().__new__(cls, *args, **kwargs)
 
 class Automata(_TPG):
     Actor=None
@@ -505,7 +519,7 @@ class Automata(_TPG):
         )
         self.thinkingTimeLimit=thinkingTime
 
-        self.generations=10
+        self.generations=100
         self.episodes=1
         self.frames = 500
         self.show = False
@@ -520,8 +534,8 @@ class Automata(_TPG):
         if actions is not None: self.actions[actor_id] = actions
 
         self.pairs[actor_id] = emulator_id
-        if not self.emulator.memories.get(emulator_id) : self.emulator.memories[emulator_id]=[]
-        if images is not None: self.emulator.memories[emulator_id]   += images
+        if not self.memories.get(emulator_id) : self.memories[emulator_id]=[]
+        if images is not None: self.memories[emulator_id]   += images
 
     def setAction(self, action):
         self.actor.setActions(action)
@@ -530,8 +544,16 @@ class Automata(_TPG):
         self.emulator.setMemories(state)
 
     def setAgents(self):
+        _scores = {}
+        _states = {}
         self.actors = self.actor.getAgents()
         self.emulators = self.emulator.getAgents()
+        for actor in self.actors:
+            _scores[actor.id] = []
+        for emulator in self.emulators:
+            _states[emulator.id] = []
+
+        return _scores, _states
 
     def setEnv(self, _env):
         self.env = _env
@@ -551,8 +573,8 @@ class Automata(_TPG):
         self.rewards    = {}
 
     def think(self, hippocampus, _actor, _emulator):
-        # self.__class__.Emulator.Trainer.MemoryObject.memories = hippocampus['memories']
-        # self.__class__.Actor.Trainer.ActionObject.actions = hippocampus['actions']
+        self.__class__.Emulator.Trainer.MemoryObject.memories = hippocampus['memories']
+        self.__class__.Actor.Trainer.ActionObject.actions = hippocampus['actions']
         assert isinstance(_actor, self.__class__.Actor.Trainer.Agent)
         assert isinstance(_emulator, self.__class__.Emulator.Trainer.Agent)
         assert self.__class__.Actor.Trainer.ActionObject.actions is not None
@@ -565,7 +587,7 @@ class Automata(_TPG):
         memoryCodes = []
         rewards     = []
         # timeout_start = time.time()
-        for i in range(hippocampus['frame']):
+        for i in range(self.frames):
             actionCode = _actor.act(state)
             imageCode  = _emulator.image(actionCode, state)
             actionCodes  += [actionCode]
@@ -625,12 +647,7 @@ class Automata(_TPG):
                         # end early if losing state
                     if self.show:  self.show_state(self.env, frame)
                     self.state = state
-                
-                # breakpoint('thinker ok')
-                if _scores.get(bestActor)    is None : _scores[bestActor]=[]
-                if _states.get(pairEmulator) is None : 
-                    assert pairEmulator, pairEmulator
-                    _states[pairEmulator]=[]
+
                 _scores[bestActor]    += scores    # store score
                 _states[pairEmulator] += states    # store states
                 thinker = executor.submit(self.thinker)
@@ -659,10 +676,8 @@ class Automata(_TPG):
 
     def generation(self):
 
-        _scores = {}
-        _states = {}
         _task   = self.env.spec.id
-        self.setAgents()
+        _scores, _states = self.setAgents()
         # breakpoint(type(emulators))
         for _ in range(self.episodes):
             _scores, _states, total_reward = self.episode(_scores, _states)
@@ -683,7 +698,6 @@ class Automata(_TPG):
             reward_for_actor[ac] = re_total
             em = self.pairs[ac]
             score = 0.
-            assert len(_states[em])==len(_scores[ac])
             # unexpectancyが予想よりいいか悪いかを表す。
             # unexpectancy = abs(total)
 
@@ -704,24 +718,19 @@ class Automata(_TPG):
                 
         # 報酬の贈与
         for actor in self.actors:
-            if reward_for_actor.get(str(actor.team.id)) : 
-                actor.reward(reward_for_actor[str(actor.team.id)], task=_task)
+            actor.reward(score=reward_for_actor[actor.id], task=_task)
+
         # ここらへんのエミュレータの報酬設計
         for emulator in self.emulators:
-            if _states.get(str(emulator.team.id)): 
-                emulator.reward(_states[str(emulator.team.id)], task=_task)
-        # breakpoint()
-        self.actor.trainer.evolve([_task])
-        # breakpoint('finish')
-        self.emulator.trainer.evolve([_task], _states=states, _unexpectancies=unexpectancies)
-        # breakpoint('after evolving')
-        # print(unexpectancies)
+            emulator.reward(_states[emulator.id], task=_task)
+
+        self.actor.evolve([_task])
+        self.emulator.evolve([_task], _states=states, _unexpectancies=unexpectancies)
 
         self.initParams()
-
         return total_reward
     
-    def growing(self, _actor=None, _emulator=None, _task:str=None, _generations:int=1000, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
+    def growing(self, _actor=None, _emulator=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=False, _test=False, _load=True, _dir=''):
         if _actor: 
             self.instance_valid(_actor)
             self.actor.trainer = _actor
@@ -730,6 +739,12 @@ class Automata(_TPG):
             self.emulator.trainer = _emulator
         if _task:
             self.env = gym.make(_task)
+        if _generations:
+            self.generations=_generations
+        if _episodes:
+            self.episodes = _episodes
+        if _frames:
+            self.frames = _frames
         
         task = _dir+self.env.spec.id
 
@@ -761,7 +776,7 @@ class Automata(_TPG):
         summaryScores = []
 
         tStart = time.time()
-        for gen in tqdm(range(_generations)): # generation loop
+        for gen in tqdm(range(self.generations)): # generation loop
             # breakpoint(type(_emulator))
             total_score = self.generation()
             # score = (min(scores.values()), max(scores.values()), sum(scores.values())/len(scores))
