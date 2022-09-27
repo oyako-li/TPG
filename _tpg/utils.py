@@ -1,15 +1,11 @@
 import random
 import numpy as np
 
-"""
-Various useful functions for use within TPG, and for using TPG, like metrics,
-etc.
-"""
 
-"""
-Coin flips, at varying levels of success based on prob.
-"""
 def flip(prob):
+    """
+    Coin flips, at varying levels of success based on prob.
+    """
     return random.uniform(0.0,1.0) < prob
     
 def breakpoint(*_print):
@@ -17,11 +13,11 @@ def breakpoint(*_print):
     print(_print)
     sys.exit()
 
-"""
-Returns the teams that this team references, either immediate or
-recursively.
-"""
 def getTeams(team, rec=True, visited=None, result=None):
+    """
+    Returns the teams that this team references, either immediate or
+    recursively.
+    """
     if rec:
         # recursively search all teams
         nTeams = 0
@@ -59,10 +55,10 @@ def getTeams(team, rec=True, visited=None, result=None):
         return [lrnr.getActionTeam() for lrnr in team.learners
             if not lrnr.isActionAtomic()]
 
-"""
-Returns the learners on this team, immediately or recursively.
-"""
 def getLearners(team, rec=True, tVisited=None, lVisited=None, result=None, map=None):
+    """
+    Returns the learners on this team, immediately or recursively.
+    """
     if rec:
 
         # track visited learners/teams to not repeat
@@ -132,25 +128,13 @@ def getLearners(team, rec=True, tVisited=None, lVisited=None, result=None, map=N
         # just the teams attached directly to this team
         return list(team.learners)
 
-"""
-
-"""
-def outDegree():
-    pass
-
-"""
-
-"""
-def meanLearners():
-    pass
-
-"""
-Returns a dictionary containing counts of each type of instruction and other basic
-stats relating to instructions.
-"learners" is a list of learners that you want the stats from. "operations" is a
-list of strings representing the current operation set, can be obtained from Program.
-"""
 def learnerInstructionStats(learners, operations):
+    """
+    Returns a dictionary containing counts of each type of instruction and other basic
+    stats relating to instructions.
+    "learners" is a list of learners that you want the stats from. "operations" is a
+    list of strings representing the current operation set, can be obtained from Program.
+    """
 
     # stats tracked for each operation and overall
     partialStats = {
@@ -182,13 +166,13 @@ def learnerInstructionStats(learners, operations):
 
     return results
 
-"""
-Returns a dictionary containing counts of each type of instruction and other basic
-stats relating to instructions in action programs.
-"learners" is a list of learners that you want the stats from. "operations" is a
-list of strings representing the current operation set, can be obtained from Program.
-"""
 def actionInstructionStats(learners, operations):
+    """
+    Returns a dictionary containing counts of each type of instruction and other basic
+    stats relating to instructions in action programs.
+    "learners" is a list of learners that you want the stats from. "operations" is a
+    list of strings representing the current operation set, can be obtained from Program.
+    """
 
     # stats tracked for each operation and overall
     partialStats = {
@@ -228,10 +212,10 @@ def actionInstructionStats(learners, operations):
 
     return results
 
-"""
-Obtains the longest execution possible in the graph from the starting (root) team.
-"""
 def pathDepths(team, prevDepth=0, parents=[]):
+    """
+    Obtains the longest execution possible in the graph from the starting (root) team.
+    """
 
     # depth is one deeper than the last
     myDepth = prevDepth + 1
@@ -249,4 +233,3 @@ def pathDepths(team, prevDepth=0, parents=[]):
         depths.extend(pathDepths(nTeam, myDepth, list(parents)))
 
     return depths
-
