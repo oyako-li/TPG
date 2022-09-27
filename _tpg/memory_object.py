@@ -1,4 +1,3 @@
-from fileinput import filename
 from math import tanh
 import pickle
 from uuid import uuid4
@@ -31,10 +30,12 @@ class Fragment:
         assert isinstance(value, list) or isinstance(value, np.ndarray)
         if isinstance(value, list): value = np.array(value)
         assert value.size==self.index.size
+
         self.fragment[[i for i,x in enumerate(self.index) if x in key]] = value
 
     def memorize(self, state, _reward):
-        assert isinstance(state, np.ndarray), state
+        assert isinstance(state, np.ndarray), f'should be ndarray {state}'
+
         reward_unexpectancy = (self.reward-_reward)
         self.reward     -= reward_unexpectancy
         unexpectancy = abs(tanh(reward_unexpectancy))
@@ -48,7 +49,8 @@ class Fragment:
 
 
     def recall(self, state):
-        assert isinstance(state, np.ndarray)
+        assert isinstance(state, np.ndarray), f'should be ndarray {state}'
+
         key = self.index[self.index<state.size]
         val = self.fragment[self.index<state.size]
         state[key] = val
@@ -99,7 +101,6 @@ class Memory:
         for key in deleat_key:
             self.__delattr__(key)
 
-
     def choice(self, _ignore:list=[])->list:
         p = 1-self.popus(_ignore)
         if len(p[p>0])==0: return random.choice(self.codes(_ignore))
@@ -107,20 +108,20 @@ class Memory:
 
 
 class _MemoryObject:
-    memory=Memory()
+    memories=Memory()
     Team = None
     _instance = None
 
     # you should inherit
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            from _tpg.team import _Team
+            from _tpg.team import Team2
             cls._instance = True
-            cls.Team = _Team
+            cls.Team = Team2
 
         return super().__new__(cls)
     
-    def __init__(self, state=1, initParam=None):
+    def __init__(self, state=None, initParams=None):
 
         if isinstance(state, self.__class__.Team):
             self.teamMemory = state
@@ -130,15 +131,15 @@ class _MemoryObject:
             self.memoryCode = state.memoryCode
             self.teamMemory = state.teamMemory
             return
-        elif isinstance(state, int):
-            # if _state > len(MemoryObject._memorys)-1: raise IndexError
-            self.memoryCode = self.__class__.memory.choice()
-            self.teamMemory = None
-            return
         elif isinstance(state, np.ndarray):
             key = np.random.choice(range(state.size), random.randint(1, state.size-1))
-            self.memoryCode = self.__class__.memory.append(key, state)
+            self.memoryCode = self.__class__.memories.append(key, state)
             self.teamMemory = None
+            return
+        else:
+            self.memoryCode = self.__class__.memories.choice()
+            self.teamMemory = None
+            return
 
 
     def __eq__(self, __o: object) -> bool:
@@ -156,14 +157,14 @@ class _MemoryObject:
         return not self.__eq__(__o)
     
     def __getitem__(self, _key):
-        return self.__class__.memory[self.memoryCode][_key]
+        return self.__class__.memories[self.memoryCode][_key]
     
-    def getImage(self, _act, _state, visited, actVars, path_trace=None):
+    def getImage(self, _act, _state, visited, memVars, path_trace=None):
         if self.teamMemory is not None:
-            return self.teamMemory.image(_act, _state, visited, actVars=actVars, path_trace=path_trace)
+            return self.teamMemory.image(_act, _state, visited, memVars=memVars, path_trace=path_trace)
         else:
-            self.__class__.memory.weights[self.memoryCode]*=0.9 # 忘却確立減算
-            self.__class__.memory.updateWeights()               # 忘却確立計上
+            self.__class__.memories.weights[self.memoryCode]*=0.9 # 忘却確立減算
+            self.__class__.memories.updateWeights()               # 忘却確立計上
             return self.memoryCode
 
     def isAtomic(self):
@@ -172,7 +173,7 @@ class _MemoryObject:
     
     def mutate(self, mutateParams=None, parentTeam=None, teams=None, pMemAtom=None, learner_id=None):
         if None in (mutateParams, parentTeam, teams, pMemAtom, learner_id):
-            self.memoryCode=self.__class__.memory.choice([self.memoryCode])
+            self.memoryCode=self.__class__.memories.choice([self.memoryCode])
             self.teamMemory=None
             # print('0 valid_learners')
             return self
@@ -190,7 +191,7 @@ class _MemoryObject:
             if not self.isAtomic():
                 self.teamMemory.inLearners.remove(str(learner_id))
             
-            self.memoryCode = self.__class__.memory.choice([_ignore])
+            self.memoryCode = self.__class__.memories.choice([_ignore])
             self.teamMemory = None
         else:
             selection_pool = [t for t in teams if t is not self.teamMemory and t is not parentTeam]
@@ -203,12 +204,12 @@ class _MemoryObject:
 
         return self
     
-    def backup(fileName):
-        pickle.dump(self.__class__.memory, open(f'log/{fileName}-mem.pickle', 'wb'))
+    def backup(self, fileName):
+        pickle.dump(self.__class__.memories, open(f'log/{fileName}-mem.pickle', 'wb'))
 
     @classmethod
     def emulate(cls, fileName):
-        _memory = pickle.load(open(fileName, 'rb'))
-        # assert(isinstance(_memory, Memory), 'this file is different Class type')
-        cls.memory = _memory
+        _memories = pickle.load(open(fileName, 'rb'))
+        # assert(isinstance(_memories, Memory), 'this file is different Class type')
+        cls.memories = _memories
         return cls

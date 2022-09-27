@@ -25,7 +25,7 @@ class _Team:
     def __init__(self,
             learners:list = [],
             inLearners:list = [],
-            outcomes:dict = {'task':0},
+            outcomes:dict = {'task':0.},
             fitness:float = 0.0,
             initParams:int or dict=0
         ): 
@@ -39,11 +39,7 @@ class _Team:
 
     def act(self, state, visited, actVars=None, path_trace=None): 
         # If we've already visited me, throw an exception
-        if str(self.id) in visited:
-            print("Visited:")
-            for i,cursor in enumerate(visited):
-                print("{}|{}".format(i, cursor))
-            raise(Exception("Already visited team {}!".format(str(self.id))))
+        assert not str(self.id) in visited, f"Already visited team {str(self.id)}"
 
         # Add this team's id to the list of visited ids
         visited.append(str(self.id)) 
@@ -205,8 +201,8 @@ class _Team:
                 new_learners.remove(cursor)
 
         for cursor in new_learners:
-                if len(cursor.inTeams) == 0 and not cursor.isActionAtomic():
-                    cursor.actionObj.teamAction.inLearners.remove(str(cursor.id))
+            if len(cursor.inTeams) == 0 and not cursor.isActionAtomic():
+                cursor.actionObj.teamAction.inLearners.remove(str(cursor.id))
 
         # return the number of iterations of mutation
         return rampantReps, mutation_delta, new_learners
@@ -380,3 +376,239 @@ class _Team:
 
     def numLearnersReferencing(self):
         return len(self.inLearners)
+
+class Team1(_Team):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.learner import Learner1
+
+            cls._instance = True
+            cls.Learner = Learner1
+
+        return super().__new__(cls, *args, **kwargs)
+
+class Team2(_Team):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.learner import Learner2
+
+            cls._instance = True
+            cls.Learner = Learner2
+
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self, 
+        learners: list = [], 
+        inLearners: list = [], 
+        outcomes: dict = { 'task': 0., 'survive':1., 'reward':0., 'inheritance':0. }, 
+        fitness: float = 0, 
+        initParams: int or dict = 0
+    ):
+        super().__init__(learners, inLearners, outcomes, fitness, initParams)
+
+    def image(self,
+        act,
+        state,
+        visited:list,
+        memVars={"frameNum":1},
+        path_trace=None
+    ):
+        # If we've already visited me, throw an exception
+        assert not str(self.id) in visited, f"Already visited team {str(self.id)}"
+        # Add this team's id to the list of visited ids
+        visited.append(str(self.id)) 
+        if len(self.learners)==0:
+            self.addLearner(self.__class__.Learner())
+
+
+        valid_learners = [lrnr for lrnr in self.learners if lrnr.isMemoryAtomic() or str(lrnr.getMemoryTeam().id) not in visited]
+        
+        if len(valid_learners)==0: 
+
+            mutate_learner = random.choice(self.learners)
+            clone = mutate_learner.clone()
+            if not clone.isMemoryAtomic():
+                clone.memoryObj.teamMemory.inLearner.remove(str(clone.id))
+            clone.memoryObj.mutate()
+
+            self.addLearner(clone)
+            valid_learners.append(clone)
+
+
+        top_learner = max(valid_learners, key=lambda lrnr: lrnr.bid(act, state, memVars=memVars))
+
+    
+        # If we're tracing this path
+        if path_trace != None:
+            
+            last_segment = path_trace[-1] if len(path_trace) != 0 else None
+
+            # Create our path segment
+            path_segment =  {
+                'team_id': str(self.id),
+                'top_learner': str(top_learner.id),
+                'top_bid': top_learner.bid(act, state, memVars=memVars),
+                'top_memory': top_learner.memoryObj.memoryCode if top_learner.isMemoryAtomic() else str(top_learner.memoryObj.teamMemory.id),
+                'depth': last_segment['depth'] + 1 if last_segment != None else 0,# Record path depth
+                'bids': []
+            }
+
+            # Populate bid values
+            for cursor in valid_learners:
+                path_segment['bids'].append({
+                    'learner_id': str(cursor.id),
+                    'bid': cursor.bid(act, state, memVars=memVars),
+                    'memory': cursor.memoryObj.memoryCode if cursor.isMemoryAtomic() else str(cursor.memoryObj.teamMemory.id)
+                })
+
+            # Append our path segment to the trace
+            path_trace.append(path_segment)
+
+        return top_learner.getImage(act, state, visited=visited, memVars=memVars, path_trace=path_trace)
+
+    def numAtomicMemories(self):
+        num = 0
+        for lrnr in self.learners:
+            if lrnr.isMemoryAtomic():
+                num += 1
+
+        return num
+
+
+    def mutate(self, mutateParams, allLearners, teams):
+        # Throw an error if rampantMin > rampant Max
+        if mutateParams['rampantGen'] != 0 and mutateParams['rampantMin'] > mutateParams['rampantMax']:
+            raise Exception("Min rampant iterations is greater than max rampant iterations!", mutateParams)
+        
+        if (mutateParams["rampantGen"] > 0 and # The rapantGen cannot be 0, as x mod 0 is undefined
+            mutateParams["generation"] % mutateParams["rampantGen"] == 0 and # Determine if this is a rampant generation
+            mutateParams["generation"] > mutateParams["rampantGen"]  # Rampant generations cannot occur before generation passes rampantGen
+            ): 
+            rampantReps = random.randrange(mutateParams["rampantMin"], mutateParams["rampantMax"]) if mutateParams['rampantMin'] < mutateParams['rampantMax'] else mutateParams['rampantMin']
+        else:
+            rampantReps = 1
+
+        # increase diversity by repeating mutations
+
+        mutation_delta = {}
+        new_learners = []
+
+        for i in range(rampantReps):
+            #print("i/rampant reps:  {}/{} ".format(i, rampantReps))
+            # delete some learners
+            '''
+            TODO log mutation deltas...
+            '''
+            deleted_learners = self._mutation_delete(mutateParams["pLrnDel"])
+
+            # Create a selection pool from which to add learners to this team
+            
+            # Filter out learners that already belong to this team
+            selection_pool = list(filter(lambda x: x not in self.learners, allLearners))
+            
+            # Filter out learners that point to this team
+            selection_pool = list(filter(lambda x: str(x.id) not in self.inLearners, selection_pool))
+
+            # Filter out learners we just deleted
+            selection_pool = list(filter(lambda x: x not in deleted_learners, selection_pool))
+            
+            added_learners = self._mutation_add(mutateParams["pLrnAdd"], mutateParams["maxTeamSize"], selection_pool)
+
+            # give chance to mutate all learners
+            mutated_learners, mutation_added_learners = self._mutation_mutate(mutateParams["pLrnMut"], mutateParams, teams)
+            new_learners += mutation_added_learners
+
+            # Compile mutation_delta for this iteration
+            mutation_delta[i] = {} 
+            mutation_delta[i]['deleted_learners'] = deleted_learners
+            mutation_delta[i]['added_learners'] = added_learners
+            mutation_delta[i]['mutated_learners'] = mutated_learners
+
+        for cursor in new_learners:
+            if cursor in self.learners:
+                new_learners.remove(cursor)
+
+        for cursor in new_learners:
+            if len(cursor.inTeams) == 0 and not cursor.isMemoryAtomic():
+                cursor.memoryObj.teamMemory.inLearners.remove(str(cursor.id))
+
+        # return the number of iterations of mutation
+        return rampantReps, mutation_delta, new_learners
+
+    def _mutation_delete(self, probability):
+
+            original_probability = float(probability)
+
+            if probability == 0.0:
+                return []
+
+            if probability >= 1.0: 
+                raise Exception("pLrnDel is greater than or equal to 1.0!")
+
+            # Freak out if we don't have an atomic action
+            if self.numAtomicMemories() < 1: 
+                raise Exception("Less than one atomic memory in team! This shouldn't happen", self)
+
+
+            deleted_learners = []
+
+            # delete some learners
+            while flip(probability) and len(self.learners) > 2: # must have >= 2 learners
+                probability *= original_probability # decrease next chance
+                # If we have more than one learner with an atomic action pick any learner to delete
+                if self.numAtomicMemories() > 1:
+                    learner = random.choice(self.learners)
+                else: 
+                    # Otherwise if we only have one, filter it out and pick from the remaining learners
+                    valid_choices = list(filter(lambda x: not x.isMemoryAtomic(), self.learners)) # isActionAtomic以外から削除を決定。
+                    learner = random.choice(valid_choices)
+
+                deleted_learners.append(learner)
+                self.removeLearner(learner)
+
+            return deleted_learners
+
+    def _mutation_mutate(self, probability, mutateParams, teams):
+        mutated_learners = {}
+        '''
+         This original learners thing is important, otherwise may mutate learners that we just added through mutation. 
+         This breaks reference tracking because it results in 'ghost learners' that were created during mutation, added themselves 
+         to inLearners in the teams they pointed to, but them were mutated out before being tracked by the trainer. So you end up
+         with teams hold a record in their inLearners to a learner that doesn't exist
+        '''
+        original_learners = list(self.learners)
+        new_learners = []
+        for learner in original_learners:
+            if flip(probability):
+
+                # If we only have one learner with an atomic memory and the current learner is it
+                if self.numAtomicMemories() == 1 and learner.isMemoryAtomic():
+                    pMemAtom0 = 1.1 # Ensure their memory remains atomic
+                else:
+                    # Otherwise let there be a probability that the learner's memory is atomic as defined in the mutate params
+                    pMemAtom0 = mutateParams['pMemAtom']
+
+                #print("Team {} creating learner".format(self.id))
+                # Create a new new learner 
+                newLearner = self.__class__.Learner(
+                    program=learner.program, 
+                    memoryObj=learner.memoryObj, 
+                    numRegisters=len(learner.registers), 
+                    initParams=mutateParams,
+                    frameNum=learner.frameNum
+                )
+                new_learners.append(newLearner)
+                # Add the mutated learner to our learners
+                # Must add before mutate so that the new learner has this team in its inTeams
+                self.addLearner(newLearner)
+
+
+                # mutate it
+                newLearner.mutate(mutateParams, self, teams, pMemAtom0)
+                # Remove the existing learner from the team
+                self.removeLearner(learner)
+
+                mutated_learners[str(learner.id)] = str(newLearner.id)
+
+      
+        return mutated_learners, new_learners

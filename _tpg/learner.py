@@ -53,11 +53,10 @@ class _Learner:
 
         if not self.isActionAtomic(): self.actionObj.teamAction.inLearners.append(str(self.id))
 
-
-    """
-    Get the bid value, highest gets its action selected.
-    """
     def bid(self, state, actVars=None): 
+        """
+        Get the bid value, highest gets its action selected.
+        """
         # exit early if we already got bidded this frame
         if self.frameNum == actVars["frameNum"]:
             return self.registers[0]
@@ -72,31 +71,30 @@ class _Learner:
 
         return self.registers[0]
 
-    """
-    Returns the action of this learner, either atomic, or requests the action
-    from the action team.
-    """
     def getAction(self, state, visited, actVars=None, path_trace=None): 
+        """
+        Returns the action of this learner, either atomic, or requests the action
+        from the action team.
+        """
         return self.actionObj.getAction(state, visited, actVars=actVars, path_trace=path_trace)
 
-
-    """
-    Gets the team that is the action of the learners action object.
-    """
     def getActionTeam(self): 
+        """
+        Gets the team that is the action of the learners action object.
+        """
         return self.actionObj.teamAction
 
-    """
-    Returns true if the action is atomic, otherwise the action is a team.
-    """
     def isActionAtomic(self): 
+        """
+        Returns true if the action is atomic, otherwise the action is a team.
+        """
         return self.actionObj.isAtomic()
 
-    """
-    Mutates either the program or the action or both. 
-    A mutation creates a new instance of the learner, removes it's anscestor and adds itself to the team.
-    """
     def mutate(self, mutateParams, parentTeam, teams, pActAtom): 
+        """
+        Mutates either the program or the action or both. 
+        A mutation creates a new instance of the learner, removes it's anscestor and adds itself to the team.
+        """
         
         changed = False
         while not changed:
@@ -138,7 +136,6 @@ class _Learner:
     def numTeamsReferencing(self):
         return len(self.inTeams)
 
-
     def __eq__(self, __o: object) -> bool:
         # Object must be an instance of Learner
         if not isinstance(__o, self.__class__): return False
@@ -170,17 +167,16 @@ class _Learner:
         
         return True
 
-
-    '''
-    Negation of __eq__
-    '''
     def __ne__(self, o:object)-> bool:
+        '''
+        Negation of __eq__
+        '''
         return not self.__eq__(o)
 
-    '''
-    String representation of a learner
-    '''
     def __str__(self):
+        '''
+        String representation of a learner
+        '''
         
         result = """id: {}
                     created_at_gen: {}
@@ -201,3 +197,171 @@ class _Learner:
             result += "\t{}\n".format(cursor)
         
         return result
+
+class Learner1(_Learner):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            from _tpg.team import Team1
+            from _tpg.action_object import _ActionObject
+            from _tpg.program import Program1
+            cls.Team = Team1
+            cls.ActionObject = _ActionObject
+            cls.Program = Program1
+            
+        return super().__new__(cls, *args, **kwargs)
+
+class Learner2(_Learner):
+    MemoryObject = None
+    
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            from _tpg.team import Team2
+            from _tpg.program import Program2
+            from _tpg.memory_object import _MemoryObject
+            cls.Team = Team2
+            cls.Program = Program2
+            cls.MemoryObject = _MemoryObject
+
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self, 
+        program=None, 
+        memoryObj=None, 
+        numRegisters:int or np.ndarray=8, 
+        states:list=[],
+        inTeams:list=[],
+        frameNum:int=0,
+        initParams:int or dict=0
+    ):
+        self.program = self.__class__.Program() if program is None else self.__class__.Program(instructions=program.instructions)
+        self.memoryObj = self.__class__.MemoryObject(memoryObj) if memoryObj is None else self.__class__.MemoryObject(state=memoryObj)
+        if isinstance(numRegisters, int): 
+            self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
+        else: 
+            self.registers = copy.deepcopy(numRegisters)
+        if isinstance(initParams, int): 
+            self.genCreate = initParams # Store the generation that this learner was created on
+        elif isinstance(initParams, dict): 
+            self.genCreate = initParams["generation"] # Store the generation that this learner was created on
+
+        # self.ancestor = _ancestor #By default no ancestor
+        self.states = list(states)
+        self.inTeams = list(inTeams) # Store a list of teams that reference this learner, incoming edges
+        # self.actionCodes = initParams["actionCodes"]
+        self.frameNum = frameNum # Last seen frame is 0
+        self.id = uuid.uuid4()
+
+        if not self.isMemoryAtomic(): self.memoryObj.teamMemory.inLearners.append(str(self.id))
+ 
+    def __eq__(self, __o: object) -> bool:
+        # Object must be an instance of Learner
+        if not isinstance(__o, self.__class__): return False
+
+        # The object must have been created the same generation as us
+        if self.genCreate != __o.genCreate:   return False
+
+        # The object's program must be equal to ours
+        if self.program != __o.program:   return False
+
+        # The object's action object must be equal to ours
+        if self.memoryObj != __o.memoryObj:   return False
+
+        '''
+        The other object's inTeams must match our own, therefore:
+            - len(inTeams) must be equal
+            - every id that appears in our inTeams must appear in theirs (order doesn't matter)
+        '''
+        if len(self.inTeams) != len(__o.inTeams): return False
+
+        '''
+        Collection comparison via collection counters
+        https://www.journaldev.com/37089/how-to-compare-two-lists-in-python
+        '''
+        if collections.Counter(self.inTeams) != collections.Counter(__o.inTeams): return False
+
+        # The other object's id must be equal to ours
+        if self.id != __o.id: return False
+        
+        return True
+
+    def zeroRegisters(self):
+        self.registers = np.zeros(len(self.registers), dtype=float)
+        self.memoryObj.zeroRegisters()
+
+    def clone(self): 
+        _clone = self.__class__(
+            program = self.program,
+            memoryObj = self.memoryObj,
+            numRegisters=self.registers,
+            states=self.states,
+            inTeams=self.inTeams,
+            frameNum=self.frameNum,
+            initParams=self.genCreate
+        )
+        if not _clone.isMemoryAtomic(): 
+            _clone.getMemoryTeam().inLearners.append(str(_clone.id))
+
+        return _clone
+
+    def mutate(self, mutateParams, parentTeam, teams, pMemAtom): 
+        """
+        Mutates either the program or the action or both. 
+        A mutation creates a new instance of the learner, removes it's anscestor and adds itself to the team.
+        """
+        
+        changed = False
+        while not changed:
+            # mutate the program
+            if flip(mutateParams["pProgMut"]):
+
+                changed = True
+              
+                self.program.mutate(mutateParams)
+
+            # mutate the action
+            if flip(mutateParams["pMemMut"]):
+
+                changed = True
+                
+                self.memoryObj.mutate(mutateParams, parentTeam, teams, pMemAtom, learner_id=self.id)
+
+        return self
+
+    def isMemoryAtomic(self): 
+        """
+        Returns true if the action is atomic, otherwise the action is a team.
+        """
+        return self.memoryObj.isAtomic()
+
+    def getMemoryTeam(self):
+        """
+        Gets the team that is the action of the learners action object.
+        """
+        return self.memoryObj.teamMemory
+
+    def getImage(self, act, state, visited, memVars=None, path_trace=None): 
+        """
+        Returns the action of this learner, either atomic, or requests the action
+        from the action team.
+        """
+        return self.memoryObj.getImage(act, state, visited, memVars=memVars, path_trace=path_trace)
+
+    def bid(self, act, state, memVars=None): 
+        """
+        Get the bid value, highest gets its action selected.
+        """
+        # exit early if we already got bidded this frame
+        if self.frameNum == memVars["frameNum"]:
+            return self.registers[0]
+
+        self.frameNum = memVars["frameNum"]
+
+        self.__class__.Program.execute(act, state, self.registers,
+                        self.program.instructions[:,0], self.program.instructions[:,1],
+                        self.program.instructions[:,2], self.program.instructions[:,3],
+                        memVars["memMatrix"], memVars["memMatrix"].shape[0], memVars["memMatrix"].shape[1],
+                        self.__class__.Program.memWriteProb)
+
+        return self.registers[0]

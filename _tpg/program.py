@@ -198,3 +198,87 @@ class _Program:
     """
     def memWriteProb(i):
         return 1/(pi*(i**2+1))
+
+class Program1(_Program):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+        return super().__new__(cls, *args, **kwargs)
+
+
+class Program2(_Program):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+        return super().__new__(cls, *args, **kwargs)
+
+    def execute(
+        act: int,
+        inpt: np.ndarray, 
+        regs: np.ndarray, 
+        modes: np.ndarray, 
+        ops: np.ndarray, 
+        dsts: np.ndarray, 
+        srcs: np.ndarray, 
+        memMatrix, memRows, memCols, memWriteProbFunc
+    ):
+        regSize = len(regs)
+        inptLen = len(inpt)
+        for i in range(len(modes)):
+            # first get source
+            if modes[i] == 0:   src = regs[srcs[i]%regSize]
+            else:               src = inpt[srcs[i]%inptLen]
+
+            # get data for operation
+            op = ops[i]
+            x = regs[dsts[i]]
+            y = src
+            dest = (dsts[i]+act)%regSize
+
+            # do an operation
+            try:
+                if op == 0:             regs[dest] = x+y
+                elif op == 1:           regs[dest] = x-y
+                elif op == 2:           regs[dest] = x*y
+                elif op == 3 and y != 0:regs[dest] = x/y
+                elif op == 4:           pass#regs[dest] = x**y
+                elif op == 5 and x < y: regs[dest] = x*(-1)
+                elif op == 6 and x > y: regs[dest] = x*(-1)
+                elif op == 7:           regs[dest] = sin(y)
+                elif op == 8:           regs[dest] = cos(y)
+                elif op == 9:           regs[dest] = tanh(y)
+                elif op == 10 and y > 0:regs[dest] = log(y)
+                elif op == 11 and y > 0:regs[dest] = sqrt(y)
+                elif op == 12:          regs[dest] = exp(y)
+                elif op == 13:          regs[dest] = pow(y,2)
+                elif op == 14:          regs[dest] = pow(y,3)
+                elif op == 15:          regs[dest] = abs(y)
+                elif op == 16:
+                    index = srcs[i]
+                    index %= (memRows*memCols)
+                    row = int(index / memRows)
+                    col = index % memCols
+                    regs[dest] = memMatrix[row, col]
+                elif op == 17:
+                    # row offset (start from center, go to edges)
+                    halfRows = int(memRows/2) # halfRows
+                    for i in range(halfRows):
+                        # probability to write (gets smaller as i increases)
+                        # TODO: swap out write prob func by passing in an array of values for that row.
+                        writeProb = memWriteProbFunc(i)
+                        # column to maybe write corresponding value into
+                        for col in range(memCols):
+                            # try write to lower half
+                            if rand(1)[0] < writeProb:
+                                row = (halfRows - i) - 1
+                                memMatrix[row,col] = regs[col]
+                            # try write to upper half
+                            if rand(1)[0] < writeProb:
+                                row = halfRows + i
+                                memMatrix[row,col] = regs[col]
+            except Exception:  pass
+
+
+            if isnan(regs[dest]):       regs[dest] = 0
+            elif regs[dest] == inf:     regs[dest] = finfo(float64).max
+            elif regs[dest] == NINF:    regs[dest] = finfo(float64).min
