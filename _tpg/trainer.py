@@ -1,4 +1,3 @@
-# from _tpg.configuration import configurer
 from _tpg.utils import breakpoint
 import random
 import pickle
@@ -882,6 +881,7 @@ class Trainer2(Trainer):
             self.teams.append(team)
             self.rootTeams.append(team)
         print('... complete.')
+        
     def _select(self, extraTeams=None, task='task'):
 
         rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.outcomes[task])

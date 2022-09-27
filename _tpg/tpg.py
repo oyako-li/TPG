@@ -512,6 +512,17 @@ class Automata:
         self.logger = None
         self.initParams()
 
+    def _setupParams(self, actor_id, emulator_id, actions=None, images=None, rewards=None):
+        self.actions[actor_id]=[]
+        # self.rewards[actor_id]=0.
+        if not self.rewards.get(actor_id) : self.rewards[actor_id]=0.
+        if rewards is not None: self.rewards[actor_id] = sum(rewards)
+        if actions is not None: self.actions[actor_id] = actions
+
+        self.pairs[actor_id] = emulator_id
+        if not self.emulator.memories.get(emulator_id) : self.emulator.memories[emulator_id]=[]
+        if images is not None: self.emulator.memories[emulator_id]   += images
+
     def setAction(self, action):
         self.actor.setActions(action)
 
@@ -532,18 +543,6 @@ class Automata:
             assert isinstance(_actor, self.__class__.Actor.Trainer), f'this actor is not {self.__class__.Actor}'
         if _emulator:
             assert isinstance(_emulator, self.__class__.Emulator.Trainer), f'this emulator is not {self.__class__.Emulator}'
-
-
-    def _setupParams(self, actor_id, emulator_id, actions=None, images=None, rewards=None):
-        self.actions[actor_id]=[]
-        # self.rewards[actor_id]=0.
-        if not self.rewards.get(actor_id) : self.rewards[actor_id]=0.
-        if rewards is not None: self.rewards[actor_id] = sum(rewards)
-        if actions is not None: self.actions[actor_id] = actions
-
-        self.pairs[actor_id] = emulator_id
-        if not self.emulator.memories.get(emulator_id) : self.emulator.memories[emulator_id]=[]
-        if images is not None: self.emulator.memories[emulator_id]   += images
 
     def initParams(self):
         self.actions    = {}
