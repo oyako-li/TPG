@@ -84,7 +84,7 @@ class EmulatorTPGTest(unittest.TestCase):
     def setUp(self) -> None:
         from _tpg.tpg import EmulatorTPG
         self.TPG = EmulatorTPG
-        self.task = "ALE/Centipede-v5"
+        self.task = "Centipede-v4"
         self.env = gym.make(self.task)
         self.state = self.env.observation_space.sample().flatten()
 

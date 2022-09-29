@@ -158,3 +158,12 @@ class _ActionObject:
                 #    print("Learner {} switched from Team {} to Team {}".format(learner_id, oldTeam.id, self.teamAction.id))
         
         return self
+
+class ActionObject1(_ActionObject):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.team import Team1
+            cls._instance = True
+            cls.Team = Team1
+            
+        return super().__new__(cls, *args, **kwargs)
