@@ -635,6 +635,23 @@ class Trainer1(Trainer):
 
         return super().__new__(cls, *args, **kwargs)
 
+class Trainer4(Trainer1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.agent import Agent1
+            from _tpg.team import Team1
+            from _tpg.learner import Learner1
+            from _tpg.program import Program1
+            from _tpg.action_object import ActionObject1
+
+            cls._instance = True
+            cls.Agent = Agent1
+            cls.Team = Team1
+            cls.Learner = Learner1
+            cls.Program = Program1
+            cls.ActionObject = ActionObject1
+        return super().__new__(*args, **kwargs)
+
 class Trainer2(Trainer):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:

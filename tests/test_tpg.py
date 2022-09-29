@@ -1,6 +1,6 @@
 import unittest
 import gym
-from _tpg.base_log import log_show
+from _tpg.base_log import *
 
 class TPGTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -84,7 +84,7 @@ class EmulatorTPGTest(unittest.TestCase):
     def setUp(self) -> None:
         from _tpg.tpg import EmulatorTPG
         self.TPG = EmulatorTPG
-        self.task = "CartPole-v1"
+        self.task = "Centipede-v4"
         self.env = gym.make(self.task)
         self.state = self.env.observation_space.sample().flatten()
 
@@ -107,7 +107,7 @@ class EmulatorTPGTest(unittest.TestCase):
         for i in _scores:               
             _scores[i]/=1
         for agent in tpg.agents: 
-            agent.reward(_scores[str(agent.team.id)],task=_task)
+            agent.reward(_scores[agent.id],task=_task)
         tpg.trainer.evolve([_task])
         # agents = tpg.getAgents()
 
@@ -134,7 +134,7 @@ class AutomataTest(unittest.TestCase):
     def setUp(self) -> None:
         from _tpg.tpg import Automata
         self.Automata = Automata
-        self.task = "CartPole-v1"
+        self.task = "ALE/Centipede-v5"
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
         self.state = self.env.observation_space.sample().flatten()
@@ -200,7 +200,11 @@ class AutomataTest(unittest.TestCase):
         automata.setMemory(self.state)
         filename = automata.growing(_dir='test/')
         self.assertIsNotNone(filename)
-        log_show(f'log/{filename}')
+        log_show2(f'log/{filename}')
+
+    @unittest.skip('lodad show')
+    def test_load(self):
+        log_show2('log/test/CartPole-v1/2022-09-29_07-44-55')
 
 
 if __name__ == '__main__':

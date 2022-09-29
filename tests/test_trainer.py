@@ -35,7 +35,6 @@ class _TrainerTest(unittest.TestCase):
         self.assertIsNotNone(trainer.generation)
         self.assertIsNotNone(trainer.mutateParams)
         self.assertIsNotNone(trainer.actVars)
-        # self.assertIsNotNone(trainer.nOperations)
         self.assertIn("nOperations", trainer.mutateParams)
 
     def test_set_actions(self):
