@@ -40,13 +40,14 @@ class _Fragment:
 
     def memorize(self, state, _reward):
         assert isinstance(state, np.ndarray), f'should be ndarray {state}'
+        assert len(np.shape(state))==1, f'should {np.shape(state)} flatten'
 
         reward_unexpectancy = (self.reward-_reward)
         self.reward     -= reward_unexpectancy
         unexpectancy = abs(tanh(reward_unexpectancy))
-        key = self.index[self.index<state.size]
-        val = self.fragment[self.index<state.size]
-        dif = val - state[key]
+        key = self.index[ self.index < state.size ]
+        val = self.fragment[ self.index < state.size ]
+        dif = val - state[ key ]
         diff = np.array(self.fragment)
         diff[[i for i,x in enumerate(self.index) if x in key]] = dif
         self.fragment   = self.fragment - diff*unexpectancy
@@ -159,7 +160,6 @@ class _MemoryObject:
             self.memoryCode = self.__class__.memories.choice()
             self.teamMemory = None
             return
-
 
     def __eq__(self, __o: object) -> bool:
 
