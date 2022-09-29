@@ -149,7 +149,6 @@ class _TPG:
         for agent in self.agents: # to multi-proccess
             state = self.env.reset() # get initial state and prep environment
             score = 0
-            _id = str(agent.team.id)
             for i in range(self.frames): # run episodes that last 500 frames
                 act = agent.act(state)
                 if not act in range(self.env.action_space.n): continue
@@ -159,8 +158,8 @@ class _TPG:
                 if isDone: break # end early if losing state
                 if self.show:self.flush_render(i)
 
-            if _scores.get(_id) is None : _scores[_id]=0
-            _scores[_id] += score # store score
+            if _scores.get(agent.id) is None : _scores[agent.id]=0
+            _scores[agent.id] += score # store score
 
             # if self.logger is not None: self.logger.info(f'{_id},{score}')
 
@@ -253,7 +252,39 @@ class MHTPG(_TPG):
 
     def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None):
         self.trainer.evolve(tasks, multiTaskType, extraTeams)
+
+class ActorTPG(MHTPG):
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            from _tpg.trainer import Trainer4
+            cls._instance = True
+            cls.Trainer = Trainer4
+
+        return super().__new__(cls, *args, **kwargs)
+
+    def episode(self, _scores):
+        assert self.trainer is not None and self.env is not None, 'You should set Actioins'
         
+        for agent in self.agents: # to multi-proccess
+            state = self.env.reset() # get initial state and prep environment
+            score = 0
+            frame = 0
+            
+            while frame<self.frames: # run episodes that last 500 frames
+                actionCode = agent.act(state)
+                for action in self.actions[actionCode]:
+                    frame+=1
+                    if not action in range(self.env.action_space.n):continue
+                    state, reward, isDone, debug = self.env.step(action)
+                    score += reward # accumulate reward in score
+
+                    if isDone: break # end early if losing state
+                    if self.show:self.flush_render()
+
+            if _scores.get(agent.id) is None : _scores[agent.id]=0
+            _scores[agent.id] += score # store score
+
+        return _scores
 
 class EmulatorTPG(_TPG):
     def __new__(cls, *args, **kwargs):
@@ -335,13 +366,13 @@ class EmulatorTPG(_TPG):
       
         states = []
         unexpectancies = []
-        for agent in self.agents: # to multi-proccess
+        print('agents loop')
+        for agent in tqdm(self.agents): # to multi-proccess
             
             state = self.env.reset() # get initial state and prep environment
             score = 0
             _id = str(agent.team.id)
-            print('emulator learning')
-            for _ in tqdm(range(self.frames)): # run episodes that last 500 frames
+            for _ in range(self.frames): # run episodes that last 500 frames
                 act = self.env.action_space.sample()
                 imageCode = agent.image(act, state.flatten())
                 state, reward, isDone, debug = self.env.step(act)
