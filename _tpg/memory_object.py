@@ -3,9 +3,10 @@ import pickle
 from uuid import uuid4
 import numpy as np
 import random
-from _tpg.utils import flip, breakpoint
+from _tpg.utils import flip, breakpoint, sigmoid
 
 class _Fragment:
+    """ state memory fragment """
     _instance = None
 
     def __new__(cls, *args, **kwargs):
@@ -61,7 +62,57 @@ class _Fragment:
         state[key] = val
         return state
 
+class Fragment1(_Fragment):
+    """actions fragment"""
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance=True
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self, _actionSequence:list=[]):
+        assert isinstance(_actionSequence, list) or isinstance(_actionSequence, np.ndarray), f'{_actionSequence} is not list'
+
+        self.fragment = np.array(_actionSequence)
+        self.id = str(uuid4())
+    
+    def __getitem__(self, key):
+        return self.fragment[key]
+
+    def keys(self):
+        return range(len(self.fragment))
+
+    def update(self, key, value):
+        assert isinstance(value, list) or isinstance(value, np.ndarray)
+        if isinstance(value, list): value = np.array(value)
+        assert value.size==self.fragment.size
+
+        self.fragment[key] = value
+
+    def recall(self):
+        return self.fragment
+
+class Fragment2(_Fragment):
+    """add compare"""
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance=True
+        return super().__new__(cls, *args, **kwargs)
+
+    def compare(self, state, _reward):
+        assert isinstance(state, np.ndarray), f'should be ndarray {state}'
+        assert len(np.shape(state))==1, f'should {np.shape(state)} flatten'
+
+        reward_unexpectancy = (self.reward-_reward)
+        unexpectancy = abs(tanh(reward_unexpectancy))
+        key = self.index[ self.index < state.size ]
+        val = self.fragment[ self.index < state.size ]
+        dif = val - state[ key ]
+        diff = np.array(self.fragment)
+        diff[[i for i,x in enumerate(self.index) if x in key]] = dif
+        return diff, unexpectancy
+
 class _Memory:
+    """states memory"""
     Fragment = None
     _instance = None
 
@@ -76,6 +127,7 @@ class _Memory:
         self.weights:dict={fragment.id:1.}
 
     def __getitem__(self, key):
+        assert key in self.memories.keys(), f'{key} not in {self.memories.keys()}'
         return self.memories[key] # flagment
 
     def __delattr__(self, __name: str) -> None:
@@ -124,8 +176,49 @@ class _Memory:
 
     def choice(self, _ignore:list=[])->list:
         p = 1-self.popus(_ignore)
-        if len(p[p>0])==0: return random.choice(self.codes(_ignore))
-        return random.choices(self.codes(_ignore)[p>0], p[p>0])[0]
+        p=sigmoid(p)
+        return random.choices(self.codes(_ignore), p)[0]
+
+class Memory1(_Memory):
+    """actions memory"""
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            cls.Fragment = Fragment1
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self, actions=2):
+        self.memories:dict={} # uuid:flagment
+        self.weights:dict={}
+        for i in range(actions):
+            fragment = self.__class__.Fragment([i])
+            self.memories[fragment.id]=fragment
+            self.weights[fragment.id]=1.
+            print(fragment.id)
+
+    def __getitem__(self, key):
+        assert key in self.memories.keys(), f'{key} not in {self.memories.keys()}'
+        return self.memories[key] # flagment
+
+    def append(self, _sequence):
+        assert isinstance(_sequence, list) or isinstance(_sequence, np.ndarray), f'{_sequence} is not list'
+        fragment = self.__class__.Fragment(_sequence)
+        self.memories[fragment.id]    = fragment
+        self.weights[fragment.id]     = 1.
+        return fragment.id
+
+    def choices(self, k=1, _ignore:list=[], )->list:
+        p = 1-self.popus(_ignore)
+        p=sigmoid(p)
+        return random.choices(self.codes(_ignore), p, k=k)
+
+class Memory2(_Memory):
+    """deactivate memorize"""
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            cls.Fragment = Fragment2
+        return super().__new__(cls, *args, **kwargs)
 
 class _MemoryObject:
     memories=_Memory()
@@ -228,3 +321,14 @@ class _MemoryObject:
         _memories = pickle.load(open(fileName, 'rb'))
         cls.memories = _memories
         return cls.__init__()
+
+class MemoryObject(_MemoryObject):
+    memories=Memory2()
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.team import Team2_1
+            cls._instance = True
+            cls.Team = Team2_1
+
+        return super().__new__(cls)
+ 

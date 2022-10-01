@@ -86,6 +86,29 @@ class Trainer1Test(_TrainerTest):
         from _tpg.trainer import Trainer1
         self.Trainer = Trainer1
 
+class Trainer1_1Test(Trainer1Test):
+    def setUp(self) -> None:
+        import gym
+        from _tpg.trainer import Trainer1_1
+        self.task = "BreakoutNoFrameskip-v4"
+        self.env = gym.make(self.task)
+        self.Trainer = Trainer1_1
+        self.actions = self.env.action_space.n
+
+    def test_set_actions(self):
+        ''' test set actions'''
+        trainer = self.Trainer()
+        trainer.setActions(self.actions)
+        self.assertNotEqual(len(trainer.teams), 0)
+
+        def allUnique(x):
+            seen = set()
+            return not any(i in seen or seen.add(i) for i in x)
+            
+        self.assertTrue(allUnique(trainer.teams))
+        # print(trainer.ActionObject.actions)
+
+
 class Trainer2Test(unittest.TestCase):
     def setUp(self) -> None:
         import gym

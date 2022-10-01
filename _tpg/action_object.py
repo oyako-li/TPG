@@ -2,7 +2,10 @@
 
 import numpy as np
 import random
+import pickle
 from _tpg.utils import flip
+from _tpg.memory_object import Memory1
+
 
 """
 Action  Object has a program to produce a value for the action, program doesn't
@@ -91,10 +94,10 @@ class _ActionObject:
         except:
             pass
 
-    """
-    Returns the action code, and if applicable corresponding real action(s).
-    """
     def getAction(self, state, visited, actVars=None, path_trace=None):
+        """
+        Returns the action code, and if applicable corresponding real action(s).
+        """
         if self.teamAction is not None:
             # action from team
             return self.teamAction.act(state, visited, actVars=actVars, path_trace=path_trace)
@@ -102,17 +105,17 @@ class _ActionObject:
             # atomic action
             return self.actionCode
 
-    """
-    Returns true if the action is atomic, otherwise the action is a team.
-    """
     def isAtomic(self):
+        """
+        Returns true if the action is atomic, otherwise the action is a team.
+        """
         return self.teamAction is None
 
 
-    """
-    Change action to team or atomic action.
-    """
     def mutate(self, mutateParams=None, parentTeam=None, teams=None, pActAtom=None, learner_id=None):
+        """
+        Change action to team or atomic action.
+        """
         # mutate action
         if any(item is None for item in (mutateParams, parentTeam, teams, pActAtom, learner_id)):
             self.actionCode = random.choice(self.__class__.actions)
@@ -160,10 +163,105 @@ class _ActionObject:
         return self
 
 class ActionObject1(_ActionObject):
+    actions=Memory1()
+
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            from _tpg.team import Team1
+            from _tpg.team import Team1_1
             cls._instance = True
-            cls.Team = Team1
-            
+            cls.Team = Team1_1
+
         return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self,
+        initParams:dict or int =None,
+        action = None,
+        _task='task'
+    ):
+        '''
+        Defer importing the Team class to avoid circular dependency.
+        This may require refactoring to fix properly
+        '''
+
+        # The action is a team
+        if isinstance(action, self.__class__.Team):
+            self.teamAction = action
+            self.actionCode = None
+            #print("chose team action")
+            return
+        # The action is another action object
+        elif isinstance(action, self.__class__):
+            self.actionCode = action.actionCode
+            self.teamAction = action.teamAction
+            return
+        # An int means the action is an index into the action codes in initParams
+        elif isinstance(action, str):
+            self.actionCode = action
+            self.teamAction = None
+            return
+        else:
+            try:
+                self.actionCode=self.__class__.actions.choice()
+                self.teamAction=None
+            except:
+                print('諦めな・・・')
+
+    def __getitem__(self, _key):
+        return self.__class__.actions[self.actionCode][_key]
+    
+    def getAction(self, _state, visited, actVars, path_trace=None):
+        if self.teamAction is not None:
+            return self.teamAction.act(_state, visited, actVars=actVars, path_trace=path_trace)
+        else:
+            assert self.actionCode in self.__class__.actions, f'{self.actionCode} is not in {self.__class__.actions}'
+            self.__class__.actions.weights[self.actionCode]*=0.9 # 忘却確立減算
+            self.__class__.actions.updateWeights()               # 忘却確立計上
+            return self.actionCode
+
+    def mutate(self, mutateParams=None, parentTeam=None, teams=None, pActAtom=None, learner_id=None):
+        # mutate action
+        if any(item is None for item in (mutateParams, parentTeam, teams, pActAtom, learner_id)):
+            self.actionCode = self.__class__.actions.choice([self.actionCode])
+            self.teamAction = None
+            return self
+
+        if flip(pActAtom):
+            # atomic
+            '''
+            If we already have an action code make sure not to pick the same one.
+            TODO handle case where there is only 1 action code.
+            '''
+            if self.actionCode is not None:
+                _ignore = self.actionCode
+            else:
+                _ignore = None
+
+            # let our current team know we won't be pointing to them anymore
+            if not self.isAtomic():
+                #print("Learner {} switching from Team {} to atomic action".format(learner_id, self.teamAction.id))
+                self.teamAction.inLearners.remove(str(learner_id))
+
+            self.actionCode = self.__class__.actions.choice([_ignore])
+            self.teamAction = None
+        else:
+            # team action
+            selection_pool = [t for t in teams
+                    if t is not self.teamAction and t is not parentTeam]
+
+            if len(selection_pool) > 0:
+                if not self.isAtomic():
+                    self.teamAction.inLearners.remove(str(learner_id))
+
+                self.teamAction = random.choice(selection_pool)
+                self.teamAction.inLearners.append(str(learner_id))
+       
+        return self
+ 
+    def backup(self, fileName):
+        pickle.dump(self.__class__.actions, open(f'log/{fileName}-act.pickle', 'wb'))
+
+    @classmethod
+    def emulate(cls, fileName):
+        _actions = pickle.load(open(fileName, 'rb'))
+        cls.actions = _actions
+        return cls.__init__()
