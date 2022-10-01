@@ -94,6 +94,8 @@ class _TPG:
 
     def setEnv(self, env):
         self.env = env
+        self.task = self.env.spec.id
+        self.state = self.env.reset()
 
     def getAgents(self):
         return self.trainer.getAgents()
@@ -323,7 +325,7 @@ class ActorTPG(MHTPG):
         if _task:
             self.env = gym.make(_task)
         
-        task = _dir+self.env.spec.id
+        task = _dir+self.task
 
         logger, filename = setup_logger(__name__, task, test=_test, load=_load)
         self.logger = logger
@@ -924,14 +926,10 @@ class Automata(_TPG):
 class Automata1(Automata):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            # from _tpg.action_object import _ActionObject
             from _tpg.memory_object import _Memory
             cls._instance = True
             cls.Actor = ActorTPG
             cls.Emulator = EmulatorTPG1
-            # cls.hippocampus = _Memory()
-            # cls.ActionObject = _ActionObject
-            # cls.MemoryObject = _MemoryObject
         return super().__new__(cls)
 
     

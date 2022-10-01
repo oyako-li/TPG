@@ -116,7 +116,6 @@ class ActorTPGTest(MHTPGTest):
         
         tpg.evolve([_task], _actionSequence=actionSequence, _actionReward=actionReward)
 
-
 class EmulatorTPGTest(unittest.TestCase):
     def setUp(self) -> None:
         from _tpg.tpg import EmulatorTPG
