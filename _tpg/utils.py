@@ -233,3 +233,6 @@ def pathDepths(team, prevDepth=0, parents=[]):
         depths.extend(pathDepths(nTeam, myDepth, list(parents)))
 
     return depths
+
+def sigmoid(x):
+    return 1.0 / (1.0 + np.exp(-x))

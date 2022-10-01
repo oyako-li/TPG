@@ -1,7 +1,9 @@
-from _tpg.utils import breakpoint
+from _tpg.utils import breakpoint, sigmoid
 import random
 import pickle
 import numpy as np
+
+
 
 class _Trainer:
     Agent = None
@@ -416,10 +418,10 @@ class _Trainer:
             # ここをランダムではなく、階層上あるいは、過去の経験よりセレクトする。
             # rootTeamsを混ぜて、新しい、チームを作る。この時、そのチームは、プログラムへの１階層目のポインタを混ぜるだけである。
             parent = random.choice(self.rootTeams)
-            child = self.__class__.Team(initParams=self.mutateParams)
+            child = parent.clone
 
             # child starts just like parent
-            for learner in parent.learners: child.addLearner(learner)
+            # for learner in parent.learners: child.addLearner(learner)
 
             # then mutates
             # child.mutate(self.mutateParams, oLearners, oTeams)
@@ -541,7 +543,7 @@ class _Trainer:
         trainer = pickle.load(open(f'log/{fileName}.pickle', 'rb'))
         assert isinstance(trainer, cls), f'this file is not {cls}'
         
-        cls.ActionObject.actions = trainer._actions
+        trainer.ActionObject.actions = trainer._actions
         return trainer
 
 class Trainer(_Trainer):
@@ -590,10 +592,10 @@ class Trainer(_Trainer):
             # ここをランダムではなく、階層上あるいは、過去の経験よりセレクトする。
             # rootTeamsを混ぜて、新しい、チームを作る。この時、そのチームは、プログラムへの１階層目のポインタを混ぜるだけである。
             parent = random.choice(self.rootTeams)
-            child = self.__class__.Team(initParams=self.mutateParams)
+            child = parent.clone
 
             # child starts just like parent
-            for learner in parent.learners: child.addLearner(learner)
+            # for learner in parent.learners: child.addLearner(learner)
 
             # then mutates
             # child.mutate(self.mutateParams, oLearners, oTeams)
@@ -603,7 +605,7 @@ class Trainer(_Trainer):
             for new_learner in new_learners:
                 tm = new_learner.getActionTeam()
                 if tm in self.rootTeams:
-                    clone = tm.clone()
+                    clone = tm.clone
                     self.teams.append(clone)
                     
                     assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
@@ -635,22 +637,208 @@ class Trainer1(Trainer):
 
         return super().__new__(cls, *args, **kwargs)
 
-class Trainer4(Trainer1):
+class Trainer1_1(Trainer1):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.agent import Agent1
-            from _tpg.team import Team1
-            from _tpg.learner import Learner1
+            from _tpg.team import Team1_1
+            from _tpg.learner import Learner1_1
             from _tpg.program import Program1
             from _tpg.action_object import ActionObject1
 
             cls._instance = True
             cls.Agent = Agent1
-            cls.Team = Team1
-            cls.Learner = Learner1
+            cls.Team = Team1_1
+            cls.Learner = Learner1_1
             cls.Program = Program1
             cls.ActionObject = ActionObject1
-        return super().__new__(*args, **kwargs)
+        return super().__new__(cls, *args, **kwargs)
+
+    def _initialize(self):
+
+        for _ in range(self.teamPopSize):
+            # create 2 unique actions and learners
+            a1,a2 = self.__class__.ActionObject.actions.choices(k=2)
+
+            l1 = self.__class__.Learner(
+                initParams=self.mutateParams,
+                program=self.__class__.Program(
+                    maxProgramLength=self.initMaxProgSize,
+                    nOperations=self.nOperations,
+                    nDestinations=self.nRegisters,
+                    inputSize=self.inputSize,
+                    initParams=self.mutateParams),
+                actionObj=self.__class__.ActionObject(action=a1),
+                numRegisters=self.nRegisters)
+            
+            l2 = self.__class__.Learner(
+                initParams=self.mutateParams,
+                program=self.__class__.Program(
+                    maxProgramLength=self.initMaxProgSize,
+                    nOperations=self.nOperations,
+                    nDestinations=self.nRegisters,
+                    inputSize=self.inputSize,
+                    initParams=self.mutateParams),
+                actionObj=self.__class__.ActionObject(action=a2),
+                numRegisters=self.nRegisters)
+
+            # save learner population
+            self.learners.append(l1)
+            self.learners.append(l2)
+
+            # create team and add initial learners
+            team = self.__class__.Team(initParams=self.mutateParams)
+            team.addLearner(l1)
+            team.addLearner(l2)
+
+            # add more learners
+            moreLearners = random.randint(0, self.initMaxTeamSize-2)
+            for __ in range(moreLearners):
+                # select action
+                act = self.__class__.ActionObject.actions.choice()
+
+                # create new learner
+                learner = self.__class__.Learner(
+                    initParams=self.mutateParams,
+                    program=self.__class__.Program(
+                        maxProgramLength=self.initMaxProgSize,
+                        nOperations=self.nOperations,
+                        nDestinations=self.nRegisters,
+                        inputSize=self.inputSize,
+                        initParams=self.mutateParams),
+                    actionObj=self.__class__.ActionObject(action=act),  
+                    numRegisters=self.nRegisters)
+
+                team.addLearner(learner)
+                self.learners.append(learner)
+
+            # save to team populations
+            self.teams.append(team)
+            self.rootTeams.append(team)
+
+    def _generate(self, extraTeams=None, _actionSequence=None, _actionReward=None):
+        # extras who are already part of the team population
+        protectedExtras = []
+        extrasAdded = 0
+
+        # add extras into the population
+        if extraTeams is not None:
+            for team in extraTeams:
+                if team not in self.teams:
+                    self.teams.append(team)
+                    extrasAdded += 1
+                else:
+                    protectedExtras.append(team)
+
+        oLearners = list(self.learners)
+        oTeams = list(self.teams)
+
+        # update generation in mutateParams
+        self.mutateParams["generation"] = self.generation
+
+        # get all the current root teams to be parents
+        # mutate or clone
+        while (len(self.teams) < self.teamPopSize + extrasAdded or
+                (self.rootBasedPop and self.countRootTeams() < self.teamPopSize)):
+            # get parent root team, and child to be based on that
+
+            # ここをランダムではなく、階層上あるいは、過去の経験よりセレクトする。
+            # rootTeamsを混ぜて、新しい、チームを作る。この時、そのチームは、プログラムへの１階層目のポインタを混ぜるだけである。
+            parent = random.choice(self.rootTeams)
+            child = parent.clone
+
+            # child starts just like parent
+            # for learner in parent.learners: child.addLearner(learner)
+
+            # then mutates
+            # child.mutate(self.mutateParams, oLearners, oTeams)
+            _, __, new_learners = child.mutate(self.mutateParams, oLearners, oTeams)
+
+            # then clone the referenced rootTeams
+            for new_learner in new_learners:
+                tm = new_learner.getActionTeam()
+                if tm in self.rootTeams:
+                    clone = tm.clone
+                    self.teams.append(clone)
+                    
+                    assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
+
+            if not _actionSequence is None and not _actionReward is None: 
+                # assert not isinstance(_actionSequence, dict) and not isinstance(_actionReward, dict), f'{_actionSequence}, {_actionReward}'
+                sequences = np.array(_actionSequence)
+                rewards = np.array(_actionReward)
+                assert len(sequences) == len(rewards), f'{sequences.shape}:{rewards.shape}'
+                rewards = sigmoid(rewards)*1000
+                # randome choice story by rewards
+                sequence = random.choices(sequences, rewards)[0]
+                actionCode = self.__class__.ActionObject.actions.append(sequence)
+                child.addLearner(self.__class__.Learner(actionObj=self.__class__.ActionObject(action=actionCode)))
+                # breakpoint(state)
+                # どういう時の状態をメモライズすれば良いか？
+                # 理想は予想外に報酬の高い状態を記憶する。
+                # 状態＋報酬　の　メモライズではどうだろうか？
+                # つまり、報酬値の予想値との差異に基づいて、記憶すべき状態を優先づける。
+                # この場合、
+                # 
+
+            self.teams.append(child)
+
+
+        # remove unused extras
+        if extraTeams is not None:
+            for team in extraTeams:
+                if team.numLearnersReferencing() == 0 and team not in protectedExtras:
+                    self.teams.remove(team)
+
+    def _nextEpoch(self):
+        # add in newly added learners, and decide root teams
+        action_code_list = set()
+        self.rootTeams = []
+        for team in self.teams:
+            for learner in team.learners:
+                if learner not in self.learners:
+                    self.learners.append(learner)
+
+            # maybe make root team
+            if team.numLearnersReferencing() == 0 or team in self.elites:
+                self.rootTeams.append(team)
+
+        for lrnr in self.learners:
+            if lrnr.isActionAtomic():
+                action_code_list.add(lrnr.actionObj.actionCode)
+
+        action_code_list = list(action_code_list)
+        self.__class__.ActionObject.actions.oblivion(action_code_list)
+
+        self.generation += 1
+
+    def setActions(self, actions):
+        for i in range(actions):
+            self.__class__.ActionObject.actions.append([i])
+        self._initialize()
+        return self.__class__.ActionObject.actions
+
+    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _actionSequence=None, _actionReward=None):
+        self._scoreIndividuals(
+            tasks, 
+            multiTaskType=multiTaskType,
+        ) # assign scores to individuals
+        self._saveFitnessStats() # save fitness stats
+        self._select(extraTeams) # select individuals to keep
+        self._generate(extraTeams, _actionSequence=_actionSequence, _actionReward=_actionReward) # create new individuals from those kept
+        self._nextEpoch() # set up for next generation
+
+    def save(self, fileName):
+        self._actions = self.__class__.ActionObject.actions
+        pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
+
+    @classmethod
+    def load(cls, fileName:str):
+        trainer = pickle.load(open(f'log/{fileName}.pickle', 'rb'))
+        assert isinstance(trainer, cls), f'this file is not {cls}'
+
+        trainer.ActionObject.actions = trainer._actions
+        return trainer
 
 class Trainer2(Trainer):
     def __new__(cls, *args, **kwargs):
@@ -900,7 +1088,7 @@ class Trainer2(Trainer):
 
     def _select(self, extraTeams=None, task='task'):
 
-        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.outcomes[task])
+        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt[task])
         numKeep = len(self.rootTeams) - int(len(self.rootTeams)*self.gap)
         deleteTeams = rankedTeams[numKeep:]
 
@@ -952,10 +1140,10 @@ class Trainer2(Trainer):
             # ここをランダムではなく、階層上あるいは、過去の経験よりセレクトする。
             # rootTeamsを混ぜて、新しい、チームを作る。この時、そのチームは、プログラムへの１階層目のポインタを混ぜるだけである。
             parent = random.choice(self.rootTeams)
-            child = self.__class__.Team(initParams=self.mutateParams)
+            child = parent.clone
 
             # child starts just like parent
-            for learner in parent.learners: child.addLearner(learner)
+            # for learner in parent.learners: child.addLearner(learner)
 
             # then mutates
             # child.mutate(self.mutateParams, oLearners, oTeams)
@@ -965,7 +1153,7 @@ class Trainer2(Trainer):
             for new_learner in new_learners:
                 tm = new_learner.getMemoryTeam()
                 if tm in self.rootTeams:
-                    clone = tm.clone()
+                    clone = tm.clone
                     self.teams.append(clone)
                     
                     assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
@@ -973,10 +1161,9 @@ class Trainer2(Trainer):
             if not _states is None and not _unexpectancies is None: 
                 states = np.array(_states)
                 unexpectancies = np.array(_unexpectancies)
-                if len(unexpectancies[unexpectancies>0])!=0:
-                    state = random.choices(states[unexpectancies>0], unexpectancies[unexpectancies>0])[0]
-                else:
-                    state = None
+                unexpectancies = sigmoid(unexpectancies)*1000
+                # randome choice story by rewards
+                state = random.choices(states, unexpectancies)[0]
                 child.addLearner(self.__class__.Learner(memoryObj=self.__class__.MemoryObject(state=state)))
                 # breakpoint(state)
                 # どういう時の状態をメモライズすれば良いか？
@@ -1079,30 +1266,30 @@ class Trainer2(Trainer):
         trainer = pickle.load(open(f'log/{fileName}.pickle', 'rb'))
         assert isinstance(trainer, cls), f'this file is not {cls}'
 
-        cls.MemoryObject.memories = trainer._memories
+        trainer.MemoryObject.memories = trainer._memories
         return trainer
 
-class Trainer3(Trainer2):
+class Trainer2_1(Trainer2):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.agent import Agent2
-            from _tpg.team import Team2
-            from _tpg.learner import Learner2
+            from _tpg.team import Team2_1
+            from _tpg.learner import Learner2_1
             from _tpg.program import Program2
-            from _tpg.memory_object import _MemoryObject
+            from _tpg.memory_object import MemoryObject
 
             cls._instance = True
             cls.Agent = Agent2
-            cls.Team = Team2
-            cls.Learner = Learner2
+            cls.Team = Team2_1
+            cls.Learner = Learner2_1
             cls.Program = Program2
-            cls.MemoryObject = _MemoryObject
+            cls.MemoryObject = MemoryObject
 
         return super().__new__(cls, *args, **kwargs)
 
     def _select(self, extraTeams=None, task='task'):
 
-        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.outcomes[task])
+        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt[task])
         numKeep = len(self.rootTeams) - int(len(self.rootTeams)*self.gap)
         deleteTeams = rankedTeams[numKeep:]
 
@@ -1152,10 +1339,10 @@ class Trainer3(Trainer2):
             # ここをランダムではなく、階層上あるいは、過去の経験よりセレクトする。
             # rootTeamsを混ぜて、新しい、チームを作る。この時、そのチームは、プログラムへの１階層目のポインタを混ぜるだけである。
             parent = random.choice(self.rootTeams)
-            child = self.__class__.Team(initParams=self.mutateParams)
+            child = parent.clone
 
             # child starts just like parent
-            for learner in parent.learners: child.addLearner(learner)
+            # for learner in parent.learners: child.addLearner(learner)
 
             # then mutates
             # child.mutate(self.mutateParams, oLearners, oTeams)
@@ -1165,7 +1352,7 @@ class Trainer3(Trainer2):
             for new_learner in new_learners:
                 tm = new_learner.getMemoryTeam()
                 if tm in self.rootTeams:
-                    clone = tm.clone()
+                    clone = tm.clone
                     self.teams.append(clone)
                     
                     assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
@@ -1173,10 +1360,9 @@ class Trainer3(Trainer2):
             if not _states is None and not _unexpectancies is None: 
                 states = np.array(_states)
                 unexpectancies = np.array(_unexpectancies)
-                if len(unexpectancies[unexpectancies>0])!=0:
-                    state = random.choices(states[unexpectancies>0], unexpectancies[unexpectancies>0])[0]
-                else:
-                    state = None
+                unexpectancies = sigmoid(unexpectancies)*1000
+                # randome choice story by rewards
+                state = random.choices(states, unexpectancies)[0]
                 child.addLearner(self.__class__.Learner(memoryObj=self.__class__.MemoryObject(state=state)))
                 # breakpoint(state)
                 # どういう時の状態をメモライズすれば良いか？
@@ -1216,6 +1402,3 @@ class Trainer3(Trainer2):
         self.__class__.MemoryObject.memories.oblivion(memory_code_list)
 
         self.generation += 1
-
-        # assert 
-        breakpoint(self.__class__.MemoryObject.memories)

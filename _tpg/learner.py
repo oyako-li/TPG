@@ -114,6 +114,7 @@ class _Learner:
 
         return self
 
+    @property
     def clone(self): 
         _clone = self.__class__(
             program = self.program,
@@ -211,6 +212,19 @@ class Learner1(_Learner):
             
         return super().__new__(cls, *args, **kwargs)
 
+class Learner1_1(Learner1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            from _tpg.team import Team1_1
+            from _tpg.action_object import ActionObject1
+            from _tpg.program import Program1
+            cls.Team = Team1_1
+            cls.ActionObject = ActionObject1
+            cls.Program = Program1
+            
+        return super().__new__(cls, *args, **kwargs)   
+
 class Learner2(_Learner):
     MemoryObject = None
     
@@ -290,6 +304,7 @@ class Learner2(_Learner):
         self.registers = np.zeros(len(self.registers), dtype=float)
         self.memoryObj.zeroRegisters()
 
+    @property
     def clone(self): 
         _clone = self.__class__(
             program = self.program,
@@ -365,3 +380,16 @@ class Learner2(_Learner):
                         self.__class__.Program.memWriteProb)
 
         return self.registers[0]
+
+class Learner2_1(Learner2):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            from _tpg.team import Team2
+            from _tpg.program import Program2
+            from _tpg.memory_object import MemoryObject
+            cls.Team = Team2
+            cls.Program = Program2
+            cls.MemoryObject = MemoryObject
+
+        return super().__new__(cls, *args, **kwargs)

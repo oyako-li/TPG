@@ -94,6 +94,8 @@ class _TPG:
 
     def setEnv(self, env):
         self.env = env
+        self.task = self.env.spec.id
+        self.state = self.env.reset()
 
     def getAgents(self):
         return self.trainer.getAgents()
@@ -189,7 +191,6 @@ class _TPG:
         if _task:
             self.env = gym.make(_task)
         
-        
         task = _dir+self.env.spec.id
 
         logger, filename = setup_logger(__name__, task, test=_test, load=_load)
@@ -206,7 +207,7 @@ class _TPG:
             action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
         elif isinstance(action_space, gym.spaces.Discrete):
             action = action_space.n
-        self.trainer.setActions(actions=action)
+        self.setActions(actions=action)
 
         def outHandler(signum, frame):
             if not _test: self.trainer.save(f'{task}/{filename}')
@@ -222,10 +223,10 @@ class _TPG:
         for gen in range(_generations): # generation loop
             scores = self.generation()
 
-            self.logger.info(f'generation:{gen}, min:{min(scores.values())}, max:{max(scores.values())}, ave:{sum(scores.values())/len(scores)}')
+            self.logger.info(f'generation:{gen}, min:{min(scores.values())}, max:{max(scores.values())}, ave:{sum(scores.values())/len(scores)}', extra={'className': self.__class__.__name__})
 
-        list(map(self.logger.removeHandler, self.logger.handlers))
-        list(map(self.logger.removeFilter, self.logger.filters))
+        map(self.logger.removeHandler, self.logger.handlers)
+        map(self.logger.removeFilter, self.logger.filters)
 
         return f'{task}/{filename}'
 
@@ -256,13 +257,26 @@ class MHTPG(_TPG):
 class ActorTPG(MHTPG):
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
-            from _tpg.trainer import Trainer4
+            from _tpg.trainer import Trainer1_1
             cls._instance = True
-            cls.Trainer = Trainer4
+            cls.Trainer = Trainer1_1
 
         return super().__new__(cls, *args, **kwargs)
 
-    def episode(self, _scores):
+    def setAgents(self, task='task'):
+        self.agents = self.trainer.getAgents(task=task)
+        self.actionSequence = {}
+        self.actionReward = {}
+        for actor in self.agents:
+            self.actionSequence[actor.id]=[]
+            self.actionReward[actor.id]=0.
+        
+        return self.agents
+
+    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _actionSequence=None, _actionReward=None):
+        self.trainer.evolve(tasks=tasks, _actionSequence=_actionSequence, _actionReward=_actionReward)
+
+    def episode(self):
         assert self.trainer is not None and self.env is not None, 'You should set Actioins'
         
         for agent in self.agents: # to multi-proccess
@@ -271,20 +285,80 @@ class ActorTPG(MHTPG):
             frame = 0
             
             while frame<self.frames: # run episodes that last 500 frames
-                actionCode = agent.act(state)
+                actionCode = agent.act(state.flatten())
                 for action in self.actions[actionCode]:
                     frame+=1
-                    if not action in range(self.env.action_space.n):continue
+                    if not action in range(self.env.action_space.n): continue
                     state, reward, isDone, debug = self.env.step(action)
                     score += reward # accumulate reward in score
+                    self.actionSequence[agent.id]+=[action]
 
                     if isDone: break # end early if losing state
+                    if frame>self.frames: break
                     if self.show:self.flush_render()
 
-            if _scores.get(agent.id) is None : _scores[agent.id]=0
-            _scores[agent.id] += score # store score
 
-        return _scores
+            self.actionReward[agent.id] += score # store score
+
+    def generation(self):
+        _task = self.env.spec.id
+        self.setAgents(_task)
+        for _ in range(self.episodes):     
+            self.episode()
+        
+        actionSequence = []
+        actionReward   = []
+        for id in self.actionReward:               
+            self.actionReward[id]/=self.episodes
+            actionSequence+=[self.actionSequence[id]]
+            actionReward+=[self.actionReward[id]]
+        for agent in self.agents: 
+            agent.reward(self.actionReward[agent.id],task=_task)
+        
+        self.evolve([_task], _actionSequence=actionSequence, _actionReward=actionReward)
+    
+    def growing(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
+        if _trainer: 
+            self.instance_valid(_trainer)
+            self.trainer = _trainer
+        
+        if _task:
+            self.env = gym.make(_task)
+        
+        task = _dir+self.task
+
+        logger, filename = setup_logger(__name__, task, test=_test, load=_load)
+        self.logger = logger
+        self.generations = _generations
+        self.episodes = _episodes
+        self.frames = _frames
+        self.show = _show
+
+
+        action_space = self.env.action_space
+        action = 0
+        if isinstance(action_space, gym.spaces.Box):
+            action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
+        elif isinstance(action_space, gym.spaces.Discrete):
+            action = action_space.n
+        self.setActions(actions=action)
+
+        def outHandler(signum, frame):
+            if not _test: self.trainer.save(f'{task}/{filename}')
+            print('exit')
+            sys.exit()
+        
+        signal.signal(signal.SIGINT, outHandler)
+
+        for gen in range(_generations): # generation loop
+            self.generation()
+
+            self.logger.info(f'generation:{gen}, min:{min(self.actionReward.values())}, max:{max(self.actionReward.values())}, ave:{sum(self.actionReward.values())/len(self.actionReward)}', extra={'className': self.__class__.__name__})
+
+        map(self.logger.removeHandler, self.logger.handlers)
+        map(self.logger.removeFilter, self.logger.filters)
+
+        return f'{task}/{filename}'
 
 class EmulatorTPG(_TPG):
     def __new__(cls, *args, **kwargs):
@@ -431,21 +505,53 @@ class EmulatorTPG(_TPG):
 
         for gen in tqdm(range(_generations)): # generation loop
             scores = self.generation()
-            self.logger.info(f'generation:{gen}, min:{min(scores.values())}, max:{max(scores.values())}, ave:{sum(scores.values())/len(scores)}')
+            self.logger.info(f'generation:{gen}, min:{min(scores.values())}, max:{max(scores.values())}, ave:{sum(scores.values())/len(scores)}', extra={'className': self.__class__.__name__})
 
-        list(map(self.logger.removeHandler, self.logger.handlers))
-        list(map(self.logger.removeFilter, self.logger.filters))
+        map(self.logger.removeHandler, self.logger.handlers)
+        map(self.logger.removeFilter, self.logger.filters)
 
         return f'{task}/{filename}'
 
 class EmulatorTPG1(EmulatorTPG):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            from _tpg.trainer import Trainer3
+            from _tpg.trainer import Trainer2_1
             cls._instance = True
-            cls.Trainer = Trainer3
+            cls.Trainer = Trainer2_1
 
         return super().__new__(cls, *args, **kwargs)
+
+    def episode(self, _scores):
+        assert self.trainer is not None and self.env is not None, 'You should set Actioins'
+      
+        states = []
+        unexpectancies = []
+        print('agents loop')
+        for agent in tqdm(self.agents): # to multi-proccess
+            
+            state = self.env.reset() # get initial state and prep environment
+            score = 0
+            _id = str(agent.team.id)
+            for _ in range(self.frames): # run episodes that last 500 frames
+                act = self.env.action_space.sample()
+                imageCode = agent.image(act, state.flatten())
+                state, reward, isDone, debug = self.env.step(act)
+                diff, unex = self.memories[imageCode].compare(state.flatten(), reward)
+
+                # オーバーフロー防止のためアークタンジェントに二乗和誤差を入れている。
+                score += tanh(np.power(diff, 2).sum())
+                states+=[state.flatten()]
+                unexpectancies+=[unex]
+
+                if isDone: break # end early if losing state
+                if self.show: self.show_state(self.env, _)
+
+            if _scores.get(_id) is None : _scores[_id]=0
+            _scores[_id] += score # store score
+
+            # if self.logger is not None: self.logger.info(f'{_id},{score}')
+
+        return _scores, states, unexpectancies
 
 class Automata(_TPG):
     Actor=None
@@ -606,12 +712,6 @@ class Automata(_TPG):
         self.memories   = {}
         self.pairs      = {}
         self.predicted_reward    = {}
-
-    @property
-    def consciousness(self):
-        # self.consciousness_channel_key = []
-        # return self.__class__.hippocampus(self.consciousness_channel_key)
-        return self.state.flatten()
 
     def unconsiousness(self, state):
         return self.actor.elite(state)
@@ -809,13 +909,27 @@ class Automata(_TPG):
             total_score = self.generation()
             # score = (min(scores.values()), max(scores.values()), sum(scores.values())/len(scores))
 
-            logger.info(f'generation:{gen}, score:{total_score}')
+            logger.info(f'generation:{gen}, score:{total_score}', extra={'className': self.__class__.__name__})
             summaryScores.append(total_score)
 
-        #clear_output(wait=True)
-        # logger.info(f'Time Taken (Hours): {str((time.time() - tStart)/3600)}')
-        # logger.info(f'Results: Min, Max, Avg, {summaryScores}')
         map(logger.removeHandler, logger.handlers)
         map(logger.removeFilter, logger.filters)
 
         return filename
+    
+    @property
+    def consciousness(self):
+        # self.consciousness_channel_key = []
+        # return self.__class__.hippocampus(self.consciousness_channel_key)
+        return self.state.flatten()
+
+class Automata1(Automata):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.memory_object import _Memory
+            cls._instance = True
+            cls.Actor = ActorTPG
+            cls.Emulator = EmulatorTPG1
+        return super().__new__(cls)
+
+    

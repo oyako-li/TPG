@@ -25,7 +25,7 @@ def setup_logger(_name, _logfile='LOGFILENAME', test=False, load=True):
                 os.makedirs(f'log/{_logfile}')
 
         _fh.setLevel(logging.INFO)
-        _fh_formatter = logging.Formatter('%(asctime)s, %(filename)s:%(module)s, %(message)s')
+        _fh_formatter = logging.Formatter('%(asctime)s, %(filename)s:%(className)s, %(message)s')
         _fh.setFormatter(_fh_formatter)
         _logger.addHandler(_fh)
 
@@ -34,7 +34,7 @@ def setup_logger(_name, _logfile='LOGFILENAME', test=False, load=True):
     if load:
         _ch = logging.StreamHandler()
         _ch.setLevel(logging.DEBUG)
-        _ch_formatter = logging.Formatter('[{}][{}]%(name)s,%(funcName)s:%(message)s'.format(_logfile, _filename))
+        _ch_formatter = logging.Formatter('[{}][{}]%(name)s,%(className)s:%(message)s'.format(_logfile, _filename))
         _ch.setFormatter(_ch_formatter)
 
         # add the handlers to the logger

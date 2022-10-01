@@ -213,7 +213,7 @@ class _Team:
         if len(valid_learners)==0: 
 
             mutate_learner = random.choice(self.learners)
-            clone = mutate_learner.clone()
+            clone = mutate_learner.clone
             if not clone.isActionAtomic(): clone.actionObj.teamAction.inLearner.remove(str(clone.id))
             clone.actionObj.mutate()
 
@@ -252,7 +252,7 @@ class _Team:
 
         return top_learner.getAction(state, visited=visited, actVars=actVars, path_trace=path_trace)
 
-    def addLearner(self, learner=None): 
+    def addLearner(self, learner): 
         self.learners.append(learner)
         learner.inTeams.append(str(self.id)) # Add this team's id to the list of teams that reference the learner
 
@@ -370,6 +370,7 @@ class _Team:
     def numLearnersReferencing(self):
         return len(self.inLearners)
 
+    @property
     def clone(self): 
         _clone = self.__class__(
             inLearners=self.inLearners,
@@ -377,7 +378,7 @@ class _Team:
             fitness=self.fitness
         )
         for learner in self.learners:
-            _clone.addLearner(learner.clone())
+            _clone.addLearner(learner.clone)
 
         return _clone
 
@@ -388,6 +389,15 @@ class Team1(_Team):
 
             cls._instance = True
             cls.Learner = Learner1
+
+        return super().__new__(cls, *args, **kwargs)
+
+class Team1_1(Team1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.learner import Learner1_1
+            cls._instance = True
+            cls.Learner = Learner1_1
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -508,7 +518,7 @@ class Team2(_Team):
         if len(valid_learners)==0: 
 
             mutate_learner = random.choice(self.learners)
-            clone = mutate_learner.clone()
+            clone = mutate_learner.clone
             if not clone.isMemoryAtomic():
                 clone.memoryObj.teamMemory.inLearner.remove(str(clone.id))
             clone.memoryObj.mutate()
@@ -615,3 +625,12 @@ class Team2(_Team):
 
         # return the number of iterations of mutation
         return rampantReps, mutation_delta, new_learners
+
+class Team2_1(Team2):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.learner import Learner2_1
+            cls._instance = True
+            cls.Learner = Learner2_1
+
+        return super().__new__(cls, *args, **kwargs)
