@@ -929,7 +929,7 @@ class Automata1(Automata):
             cls._instance = True
             cls.Actor = ActorTPG
             cls.Emulator = EmulatorTPG1
-            cls.hippocampus = _Memory()
+            # cls.hippocampus = _Memory()
             # cls.ActionObject = _ActionObject
             # cls.MemoryObject = _MemoryObject
         return super().__new__(cls)
