@@ -33,8 +33,8 @@ class _Fragment:
     
     # ここら辺をもっとRewardに沿った形で変更。
     def update(self, key, value):
-        assert isinstance(value, list) or isinstance(value, np.ndarray)
         if isinstance(value, list): value = np.array(value)
+        assert isinstance(value, np.ndarray)
         assert value.size==self.index.size
 
         self.fragment[[i for i,x in enumerate(self.index) if x in key]] = value
@@ -56,7 +56,6 @@ class _Fragment:
 
     def recall(self, state):
         assert isinstance(state, np.ndarray), f'should be ndarray {state}'
-
         key = self.index[self.index<state.size]
         val = self.fragment[self.index<state.size]
         state[key] = val
@@ -82,8 +81,9 @@ class Fragment1(_Fragment):
         return range(len(self.fragment))
 
     def update(self, key, value):
-        assert isinstance(value, list) or isinstance(value, np.ndarray)
         if isinstance(value, list): value = np.array(value)
+
+        assert isinstance(value, np.ndarray)
         assert value.size==self.fragment.size
 
         self.fragment[key] = value
@@ -175,7 +175,7 @@ class _Memory:
             self.__delattr__(key)
 
     def choice(self, _ignore:list=[])->list:
-        p = 1-self.popus(_ignore)
+        p = 0.9999-self.popus(_ignore)
         p=sigmoid(p)
         return random.choices(self.codes(_ignore), p)[0]
 
@@ -207,7 +207,7 @@ class Memory1(_Memory):
         return fragment.id
 
     def choices(self, k=1, _ignore:list=[], )->list:
-        p = 1-self.popus(_ignore)
+        p = 0.9999-self.popus(_ignore)
         p=sigmoid(p)
         return random.choices(self.codes(_ignore), p, k=k)
 

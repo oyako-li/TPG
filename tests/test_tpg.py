@@ -75,7 +75,7 @@ class MHTPGTest(TPGTest):
         tpg = self.TPG()
         self.assertIsInstance(tpg.trainer, Trainer1)
 
-class ActorTPGTest(MHTPGTest):
+class ActorPointTest(MHTPGTest):
     def setUp(self) -> None:
         from _tpg.tpg import ActorTPG
         self.TPG = ActorTPG
@@ -129,6 +129,15 @@ class ActorTPGTest(MHTPGTest):
         filename = tpg.growing(_dir='test/')
         self.assertIsNotNone(filename)
         log_show(f'log/{filename}')
+
+class ActorBiasTest(ActorPointTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import ActorTPG
+        self.TPG = ActorTPG
+        self.task = "CartPole-v1"
+        self.env = gym.make(self.task)
+        self.action = self.env.action_space.n
+
 
 class EmulatorTPGTest(unittest.TestCase):
     def setUp(self) -> None:
