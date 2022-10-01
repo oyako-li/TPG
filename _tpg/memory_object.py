@@ -194,7 +194,6 @@ class Memory1(_Memory):
             fragment = self.__class__.Fragment([i])
             self.memories[fragment.id]=fragment
             self.weights[fragment.id]=1.
-            print(fragment.id)
 
     def __getitem__(self, key):
         assert key in self.memories.keys(), f'{key} not in {self.memories.keys()}'
@@ -288,7 +287,6 @@ class _MemoryObject:
         if None in (mutateParams, parentTeam, teams, pMemAtom, learner_id):
             self.memoryCode=self.__class__.memories.choice([self.memoryCode])
             self.teamMemory=None
-            # print('0 valid_learners')
             return self
 
         if flip(pMemAtom):

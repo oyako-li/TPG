@@ -14,6 +14,10 @@ class TPGTest(unittest.TestCase):
         '''test team object creation'''
         tpg = self.TPG()
         self.assertIsNotNone(tpg.Trainer)
+        from _tpg.action_object import _ActionObject
+        # from _tpg.memory_object import _Memory
+        self.assertEqual(tpg.trainer.ActionObject,_ActionObject)
+        self.assertIsInstance(tpg.trainer.ActionObject.actions, list)
 
     @unittest.skip('next test case')
     def test_episode(self):
@@ -120,7 +124,7 @@ class EmulatorTPGTest(unittest.TestCase):
     def setUp(self) -> None:
         from _tpg.tpg import EmulatorTPG
         self.TPG = EmulatorTPG
-        self.task = "Centipede-v4"
+        self.task = "CartPole-v1"
         self.env = gym.make(self.task)
         self.state = self.env.observation_space.sample().flatten()
 
