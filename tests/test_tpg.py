@@ -47,7 +47,7 @@ class TPGTest(unittest.TestCase):
         tpg = self.TPG()
         tpg.setActions(self.action)
         tpg.setEnv(self.env)
-        filename = tpg.growing(_dir='test/',_show=True)
+        filename = tpg.growing(_dir='test/')
         self.assertIsNotNone(filename)
         log_show(f'log/{filename}')
 
@@ -61,6 +61,7 @@ class MHTPGTest(TPGTest):
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
 
+    # @unittest.skip('wrapper test')
     def test_init_(self):
         '''test init'''
         from _tpg.tpg import MHTPG
@@ -70,15 +71,51 @@ class MHTPGTest(TPGTest):
         tpg = self.TPG()
         self.assertIsInstance(tpg.trainer, Trainer1)
 
-    # @unittest.skip('')
-    def test_growing(self):
-        '''test growing'''
+class ActorTPGTest(MHTPGTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import ActorTPG
+        self.TPG = ActorTPG
+        self.task = "CartPole-v1"
+        self.env = gym.make(self.task)
+        self.action = self.env.action_space.n
+
+    def test_init_(self):
+        '''test init'''
+        from _tpg.tpg import ActorTPG
+        self.assertEqual(self.TPG, ActorTPG)
+
+        from _tpg.trainer import Trainer1_1
+        tpg = self.TPG()
+        self.assertIsInstance(tpg.trainer, Trainer1_1)
+
+    def test_tpg_setpu(self):
+        """tpg setup"""
+        tpg = self.TPG()
+        tpg.setEnv(self.env)
+        tpg.setActions(self.action)
+        tpg.setAgents()
+
+    def test_episode(self):
+        '''test episode'''
         tpg = self.TPG()
         tpg.setActions(self.action)
         tpg.setEnv(self.env)
-        file = tpg.growing(_dir='test/')
-        self.assertIsNotNone(file)
-        log_show(f'log/{file}')
+        _task = self.env.spec.id
+        tpg.setAgents(_task)
+        for _ in range(1):     
+            tpg.episode()
+        
+        actionSequence = []
+        actionReward   = []
+        for id in tpg.actionReward:               
+            tpg.actionReward[id]/=1.
+            actionSequence+=[tpg.actionSequence[id]]
+            actionReward+=[tpg.actionReward[id]]
+        for agent in tpg.agents: 
+            agent.reward(tpg.actionReward[agent.id],task=_task)
+        
+        tpg.evolve([_task], _actionSequence=actionSequence, _actionReward=actionReward)
+
 
 class EmulatorTPGTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -130,11 +167,19 @@ class EmulatorTPGTest(unittest.TestCase):
         self.assertIsNotNone(filename)
         log_show(f'log/{filename}')
 
+class EmulatorTPG1Test(EmulatorTPGTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import EmulatorTPG1
+        self.TPG = EmulatorTPG1
+        self.task = "CartPole-v1"
+        self.env = gym.make(self.task)
+        self.state = self.env.observation_space.sample().flatten()
+
 class AutomataTest(unittest.TestCase):
     def setUp(self) -> None:
         from _tpg.tpg import Automata
         self.Automata = Automata
-        self.task = "ALE/Centipede-v5"
+        self.task = "Centipede-v4"
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
         self.state = self.env.observation_space.sample().flatten()
