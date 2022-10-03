@@ -108,7 +108,6 @@ class Trainer1_1Test(Trainer1Test):
         self.assertTrue(allUnique(trainer.teams))
         # print(trainer.ActionObject.actions)
 
-
 class Trainer2Test(unittest.TestCase):
     def setUp(self) -> None:
         import gym

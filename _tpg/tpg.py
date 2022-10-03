@@ -932,4 +932,4 @@ class Automata1(Automata):
             cls.Emulator = EmulatorTPG1
         return super().__new__(cls)
 
-    
+    # def 
