@@ -841,8 +841,10 @@ class Automata(_TPG):
         _task   = self.env.spec.id
         self.setAgents()
         # breakpoint(type(emulators))
+        print('start episode...')
         for _ in range(self.episodes):
             total_reward = self.episode()
+        print('... end episode')
 
         # 報酬の贈与
         for actor in self.actors:
@@ -932,4 +934,4 @@ class Automata1(Automata):
             cls.Emulator = EmulatorTPG1
         return super().__new__(cls)
 
-    
+    # def 
