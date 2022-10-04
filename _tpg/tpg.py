@@ -780,7 +780,7 @@ class Automata(_TPG):
         # self.best = str(_elite_actor.team.id)
         total_reward = 0.
         # thinking_actor = []
-        for i in tqdm(range(self.frames)):
+        while frame<self.frames:
             if thinker.done(): # 意識的行動
                 # thinking_actor.append(self.best)
                 bestActor, pairEmulator = thinker.result()
