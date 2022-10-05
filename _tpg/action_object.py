@@ -208,6 +208,12 @@ class ActionObject1(_ActionObject):
 
     def __getitem__(self, _key):
         return self.__class__.actions[self.actionCode][_key]
+
+    def __add__(self, __o):
+        return self.__class__.actions[self.actionCode]+__o
+
+    def __sub__(self, __o):
+        return self.__class__.actions[self.actionCode]-__o
     
     def getAction(self, _state, visited, actVars, path_trace=None):
         if self.teamAction is not None:
@@ -216,7 +222,7 @@ class ActionObject1(_ActionObject):
             assert self.actionCode in self.__class__.actions, f'{self.actionCode} is not in {self.__class__.actions}'
             self.__class__.actions.weights[self.actionCode]*=0.9 # 忘却確立減算
             self.__class__.actions.updateWeights()               # 忘却確立計上
-            return self.actionCode
+            return self
 
     def mutate(self, mutateParams=None, parentTeam=None, teams=None, pActAtom=None, learner_id=None):
         # mutate action
@@ -265,3 +271,7 @@ class ActionObject1(_ActionObject):
         _actions = pickle.load(open(fileName, 'rb'))
         cls.actions = _actions
         return cls.__init__()
+
+    @property
+    def action(self):
+        return self.__class__.actions[self.actionCode]

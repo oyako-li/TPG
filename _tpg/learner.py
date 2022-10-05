@@ -53,90 +53,6 @@ class _Learner:
 
         if not self.isActionAtomic(): self.actionObj.teamAction.inLearners.append(str(self.id))
 
-    def bid(self, state, actVars=None): 
-        """
-        Get the bid value, highest gets its action selected.
-        """
-        # exit early if we already got bidded this frame
-        if self.frameNum == actVars["frameNum"]:
-            return self.registers[0]
-
-        self.frameNum = actVars["frameNum"]
-
-        self.__class__.Program.execute(state, self.registers,
-                        self.program.instructions[:,0], self.program.instructions[:,1],
-                        self.program.instructions[:,2], self.program.instructions[:,3],
-                        actVars["memMatrix"], actVars["memMatrix"].shape[0], actVars["memMatrix"].shape[1],
-                        self.__class__.Program.memWriteProb)
-
-        return self.registers[0]
-
-    def getAction(self, state, visited, actVars=None, path_trace=None): 
-        """
-        Returns the action of this learner, either atomic, or requests the action
-        from the action team.
-        """
-        return self.actionObj.getAction(state, visited, actVars=actVars, path_trace=path_trace)
-
-    def getActionTeam(self): 
-        """
-        Gets the team that is the action of the learners action object.
-        """
-        return self.actionObj.teamAction
-
-    def isActionAtomic(self): 
-        """
-        Returns true if the action is atomic, otherwise the action is a team.
-        """
-        return self.actionObj.isAtomic()
-
-    def mutate(self, mutateParams, parentTeam, teams, pActAtom): 
-        """
-        Mutates either the program or the action or both. 
-        A mutation creates a new instance of the learner, removes it's anscestor and adds itself to the team.
-        """
-        
-        changed = False
-        while not changed:
-            # mutate the program
-            if flip(mutateParams["pProgMut"]):
-
-                changed = True
-              
-                self.program.mutate(mutateParams)
-
-            # mutate the action
-            if flip(mutateParams["pActMut"]):
-
-                changed = True
-                
-                self.actionObj.mutate(mutateParams, parentTeam, teams, pActAtom, learner_id=self.id)
-
-        return self
-
-    @property
-    def clone(self): 
-        _clone = self.__class__(
-            program = self.program,
-            actionObj = self.actionObj,
-            numRegisters=self.registers,
-            states=self.states,
-            inTeams=self.inTeams,
-            frameNum=self.frameNum,
-            initParams=self.genCreate
-        )
-        if not _clone.isActionAtomic(): 
-            _clone.getActionTeam().inLearners.append(str(_clone.id))
-
-        return _clone
-
-    def zeroRegisters(self):
-        self.registers = np.zeros(len(self.registers), dtype=float)
-        self.actionObj.zeroRegisters()
-
-    def numTeamsReferencing(self):
-        return len(self.inTeams)
-
     def __eq__(self, __o: object) -> bool:
         # Object must be an instance of Learner
         if not isinstance(__o, self.__class__): return False
@@ -199,6 +115,90 @@ class _Learner:
         
         return result
 
+    def bid(self, state, actVars=None): 
+        """
+        Get the bid value, highest gets its action selected.
+        """
+        # exit early if we already got bidded this frame
+        if self.frameNum == actVars["frameNum"]:
+            return self.registers[0]
+
+        self.frameNum = actVars["frameNum"]
+
+        self.__class__.Program.execute(state, self.registers,
+                        self.program.instructions[:,0], self.program.instructions[:,1],
+                        self.program.instructions[:,2], self.program.instructions[:,3],
+                        actVars["memMatrix"], actVars["memMatrix"].shape[0], actVars["memMatrix"].shape[1],
+                        self.__class__.Program.memWriteProb)
+
+        return self.registers[0]
+
+    def getAction(self, state, visited, actVars=None, path_trace=None): 
+        """
+        Returns the action of this learner, either atomic, or requests the action
+        from the action team.
+        """
+        return self.actionObj.getAction(state, visited, actVars=actVars, path_trace=path_trace)
+
+    def getActionTeam(self): 
+        """
+        Gets the team that is the action of the learners action object.
+        """
+        return self.actionObj.teamAction
+
+    def isActionAtomic(self): 
+        """
+        Returns true if the action is atomic, otherwise the action is a team.
+        """
+        return self.actionObj.isAtomic()
+
+    def mutate(self, mutateParams, parentTeam, teams, pActAtom): 
+        """
+        Mutates either the program or the action or both. 
+        A mutation creates a new instance of the learner, removes it's anscestor and adds itself to the team.
+        """
+        
+        changed = False
+        while not changed:
+            # mutate the program
+            if flip(mutateParams["pProgMut"]):
+
+                changed = True
+              
+                self.program.mutate(mutateParams)
+
+            # mutate the action
+            if flip(mutateParams["pActMut"]):
+
+                changed = True
+                
+                self.actionObj.mutate(mutateParams, parentTeam, teams, pActAtom, learner_id=self.id)
+
+        return self
+
+    def zeroRegisters(self):
+        self.registers = np.zeros(len(self.registers), dtype=float)
+        self.actionObj.zeroRegisters()
+
+    def numTeamsReferencing(self):
+        return len(self.inTeams)
+
+    @property
+    def clone(self): 
+        _clone = self.__class__(
+            program = self.program,
+            actionObj = self.actionObj,
+            numRegisters=self.registers,
+            states=self.states,
+            inTeams=self.inTeams,
+            frameNum=self.frameNum,
+            initParams=self.genCreate
+        )
+        if not _clone.isActionAtomic(): 
+            _clone.getActionTeam().inLearners.append(str(_clone.id))
+
+        return _clone
+
 class Learner1(_Learner):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -223,7 +223,7 @@ class Learner1_1(Learner1):
             cls.ActionObject = ActionObject1
             cls.Program = Program1
             
-        return super().__new__(cls, *args, **kwargs)   
+        return super().__new__(cls, *args, **kwargs)
 
 class Learner2(_Learner):
     MemoryObject = None
