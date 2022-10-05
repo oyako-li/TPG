@@ -139,7 +139,6 @@ def log_load2(_filename, _renge, _step=5):
     __min = []
     __mi = 0.
     for i, item in enumerate(l):
-        print(item)
         _min= item[0]
         __mi+=_min
 

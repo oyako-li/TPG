@@ -14,10 +14,10 @@ class _Fragment:
             cls._instance = True
         return super().__new__(cls)
 
-    def __init__(self, _key=np.array([0]), _state=np.array([[0.]])):
+    def __init__(self, _key=np.array([0]), _state=np.array([[0.]]), _reward=0.):
         state = np.array(_state)
         key = np.array(_key)
-        self.reward = 0.
+        self.reward = _reward
         self.index = key
         self.fragment = state[key]
         self.id = str(uuid4())
@@ -77,6 +77,14 @@ class Fragment1(_Fragment):
     def __getitem__(self, key):
         return self.fragment[key]
 
+    def __add__(self, __o):
+        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
+        return [ self.fragment[i] for i, item in enumerate(__o)]
+        
+    def __sub__(self, __o):
+        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
+        return [ self.fragment[i] for i, item in enumerate(__o)]
+        
     def keys(self):
         return range(len(self.fragment))
 
@@ -88,7 +96,8 @@ class Fragment1(_Fragment):
 
         self.fragment[key] = value
 
-    def recall(self):
+    @property
+    def signal(self):
         return self.fragment
 
 class Fragment2(_Fragment):
@@ -97,6 +106,15 @@ class Fragment2(_Fragment):
         if cls._instance is None:
             cls._instance=True
         return super().__new__(cls, *args, **kwargs)
+
+    def __add__(self, __o):
+        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
+
+        return
+
+    def __sub__(self, __o):
+        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
+        return
 
     def compare(self, state, _reward):
         assert isinstance(state, np.ndarray), f'should be ndarray {state}'
@@ -110,6 +128,12 @@ class Fragment2(_Fragment):
         diff = np.array(self.fragment)
         diff[[i for i,x in enumerate(self.index) if x in key]] = dif
         return diff, unexpectancy
+
+    @property
+    def state(self):
+        _state = np.zeros(np.max(self.index))
+        _state[self.index]=self.fragment
+        return _state
 
 class _Memory:
     """states memory"""
@@ -143,9 +167,9 @@ class _Memory:
             result+=f'{code}, '
         return result+'>'
     
-    def append(self, _key, _state):
+    def append(self, _key, _state, _reward=0.):
         _key= list(set(_key))
-        memory = self.__class__.Fragment(_key, _state)
+        memory = self.__class__.Fragment(_key, _state, _reward)
         self.memories[memory.id]    = memory
         self.weights[memory.id]     = 1.
         return memory.id
@@ -197,7 +221,7 @@ class Memory1(_Memory):
 
     def __getitem__(self, key):
         assert key in self.memories.keys(), f'{key} not in {self.memories.keys()}'
-        return self.memories[key] # flagment
+        return self.memories[key] # fragment
 
     def append(self, _sequence):
         assert isinstance(_sequence, list) or isinstance(_sequence, np.ndarray), f'{_sequence} is not list'
@@ -233,7 +257,7 @@ class _MemoryObject:
 
         return super().__new__(cls)
     
-    def __init__(self, state=None, initParams=None):
+    def __init__(self, state=None, reward=0.):
 
         if isinstance(state, self.__class__.Team):
             self.teamMemory = state
@@ -245,7 +269,7 @@ class _MemoryObject:
             return
         elif isinstance(state, np.ndarray):
             key = np.random.choice(range(state.size), random.randint(1, state.size-1))
-            self.memoryCode = self.__class__.memories.append(key, state)
+            self.memoryCode = self.__class__.memories.append(key, state, reward)
             self.teamMemory = None
             return
         else:
@@ -282,7 +306,6 @@ class _MemoryObject:
     def isAtomic(self):
         return self.teamMemory is None
 
-    
     def mutate(self, mutateParams=None, parentTeam=None, teams=None, pMemAtom=None, learner_id=None):
         if None in (mutateParams, parentTeam, teams, pMemAtom, learner_id):
             self.memoryCode=self.__class__.memories.choice([self.memoryCode])
@@ -329,4 +352,24 @@ class MemoryObject(_MemoryObject):
             cls.Team = Team2_1
 
         return super().__new__(cls)
- 
+
+    def __add__(self, __o):
+        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
+        return self.memory + __o.memory
+
+    def __sub__(self, __o):
+        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
+        return self.memory - __o.memory
+    
+    def getImage(self, _act, _state, visited, memVars, path_trace=None):
+        if self.teamMemory is not None:
+            return self.teamMemory.image(_act, _state, visited, memVars=memVars, path_trace=path_trace)
+        else:
+            assert self.memoryCode in self.__class__.memories, f'{self.memoryCode} is not in {self.__class__.memories}'
+            self.__class__.memories.weights[self.memoryCode]*=0.9 # 忘却確立減算
+            self.__class__.memories.updateWeights()               # 忘却確立計上
+            return self
+
+    @property
+    def memory(self):
+        return self.__class__.memories[self.memoryCode]

@@ -1111,7 +1111,7 @@ class Trainer2(Trainer):
         # AtomicActionのLearnerはどのように生成すれば良いのだろうか？ -> actionObj.mutate()による
         self.learners = [learner for learner in self.learners if learner.numTeamsReferencing() > 0] 
 
-    def _generate(self, extraTeams=None, _states=None, _unexpectancies=None):
+    def _generate(self, extraTeams=None, _states=None, _rewards=None, _unexpectancies=None):
         # extras who are already part of the team population
         protectedExtras = []
         extrasAdded = 0
@@ -1158,13 +1158,14 @@ class Trainer2(Trainer):
                     
                     assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
 
-            if not _states is None and not _unexpectancies is None: 
+            if not _states is None and not _rewards is None and not _unexpectancies is None: 
                 states = np.array(_states)
                 unexpectancies = np.array(_unexpectancies)
                 unexpectancies = sigmoid(unexpectancies)*1000
                 # randome choice story by rewards
-                state = random.choices(states, unexpectancies)[0]
-                child.addLearner(self.__class__.Learner(memoryObj=self.__class__.MemoryObject(state=state)))
+                state = random.choices(range(len(states)), unexpectancies)[0]
+
+                child.addLearner(self.__class__.Learner(memoryObj=self.__class__.MemoryObject(state=states[state], reward=_rewards[state])))
                 # breakpoint(state)
                 # どういう時の状態をメモライズすれば良いか？
                 # 理想は予想外に報酬の高い状態を記憶する。
@@ -1247,14 +1248,14 @@ class Trainer2(Trainer):
         self._initialize(_state=state)
         return self.__class__.MemoryObject.memories
 
-    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _states=None, _unexpectancies=None):
+    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _states=None, _rewards=None, _unexpectancies=None):
         self._scoreIndividuals(
             tasks, 
             multiTaskType=multiTaskType,
         ) # assign scores to individuals
         self._saveFitnessStats() # save fitness stats
         self._select(extraTeams, task=tasks[0]) # select individuals to keep
-        self._generate(extraTeams, _states=_states, _unexpectancies=_unexpectancies) # create new individuals from those kept
+        self._generate(extraTeams, _states=_states, _rewards=_rewards, _unexpectancies=_unexpectancies) # create new individuals from those kept
         self._nextEpoch() # set up for next generation
 
     def save(self, fileName):
@@ -1310,7 +1311,7 @@ class Trainer2_1(Trainer2):
         # AtomicActionのLearnerはどのように生成すれば良いのだろうか？ -> actionObj.mutate()による
         self.learners = [learner for learner in self.learners if learner.numTeamsReferencing() > 0] 
 
-    def _generate(self, extraTeams=None, _states=None, _unexpectancies=None):
+    def _generate(self, extraTeams=None, _states=None, _rewards=None, _unexpectancies=None):
         # extras who are already part of the team population
         protectedExtras = []
         extrasAdded = 0
@@ -1357,13 +1358,14 @@ class Trainer2_1(Trainer2):
                     
                     assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
 
-            if not _states is None and not _unexpectancies is None: 
+            if not _states is None and not _rewards is None and not _unexpectancies is None: 
                 states = np.array(_states)
                 unexpectancies = np.array(_unexpectancies)
                 unexpectancies = sigmoid(unexpectancies)*1000
                 # randome choice story by rewards
-                state = random.choices(states, unexpectancies)[0]
-                child.addLearner(self.__class__.Learner(memoryObj=self.__class__.MemoryObject(state=state)))
+                state = random.choices(range(len(states)), unexpectancies)[0]
+
+                child.addLearner(self.__class__.Learner(memoryObj=self.__class__.MemoryObject(state=states[state], reward=_rewards[state])))
                 # breakpoint(state)
                 # どういう時の状態をメモライズすれば良いか？
                 # 理想は予想外に報酬の高い状態を記憶する。
