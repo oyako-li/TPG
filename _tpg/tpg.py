@@ -843,7 +843,6 @@ class Automata(_TPG):
                 pass
 
         thinker.cancel()
-        breakpoint('come here')
         return total_reward
 
     def generation(self):
