@@ -917,7 +917,7 @@ class Automata(_TPG):
         map(logger.removeHandler, logger.handlers)
         map(logger.removeFilter, logger.filters)
 
-        return filename
+        return f'{task}/{filename}'
     
     @property
     def consciousness(self):
@@ -932,6 +932,316 @@ class Automata1(Automata):
             cls._instance = True
             cls.Actor = ActorTPG
             cls.Emulator = EmulatorTPG1
-        return super().__new__(cls)
+            cls.hippocampus = _Memory()
+        return super().__new__(cls, *args, **kwargs)
 
-    # def 
+    def __init__(self, 
+        actions=None,
+        states=None,
+        teamPopSize:int=10,               # *
+        rootBasedPop:bool=True,             
+        gap:float=0.5,                      
+        inputSize:int=33600,                
+        nRegisters:int=8,                   # *
+        initMaxTeamSize:int=10,             # *
+        initMaxProgSize:int=10,             # *
+        maxTeamSize:int=-1,                 # *
+        pLrnDel:float=0.7,                  # *
+        pLrnAdd:float=0.6,                  # *
+        pLrnMut:float=0.2,                  # *
+        pProgMut:float=0.1,                 # *
+        pActMut:float=0.1,                  # *
+        pActAtom:float=0.95,                # *
+        pInstDel:float=0.5,                 # *
+        pInstAdd:float=0.4,                 # *
+        pInstSwp:float=0.2,                 # *
+        pInstMut:float=1.0,                 # *
+        doElites:bool=True, 
+        memMatrixShape:tuple=(100,8),       # *
+        rampancy:tuple=(0,0,0),
+        prevPops=None, mutatePrevs=True,
+        initMaxActProgSize:int=6,           # *
+        nActRegisters:int=4,
+        thinkingTime=7,
+    ):
+        # super().__init__()
+        self.actor = self.__class__.Actor(
+            actions=actions,
+            teamPopSize=teamPopSize,               # *
+            rootBasedPop=rootBasedPop,             
+            gap=gap,                      
+            inputSize=inputSize,                
+            nRegisters=nRegisters,                   # *
+            initMaxTeamSize=initMaxTeamSize,             # *
+            initMaxProgSize=initMaxProgSize,             # *
+            maxTeamSize=maxTeamSize,                 # *
+            pLrnDel=pLrnDel,                  # *
+            pLrnAdd=pLrnAdd,                  # *
+            pLrnMut=pLrnMut,                  # *
+            pProgMut=pProgMut,                 # *
+            pActMut=pActMut,                  # *
+            pActAtom=pActAtom,                # *
+            pInstDel=pInstDel,                 # *
+            pInstAdd=pInstAdd,                 # *
+            pInstSwp=pInstSwp,                 # *
+            pInstMut=pInstMut,                 # *
+            doElites=doElites, 
+            memMatrixShape=memMatrixShape,       # *
+            rampancy=rampancy,
+            prevPops=prevPops, mutatePrevs=mutatePrevs,
+            initMaxActProgSize=initMaxActProgSize,           # *
+            nActRegisters=nActRegisters
+        )
+        self.emulator = self.__class__.Emulator(
+            state=states,
+            teamPopSize=teamPopSize,               # *
+            rootBasedPop=rootBasedPop,             
+            gap=gap,                      
+            inputSize=inputSize,                
+            nRegisters=nRegisters,                   # *
+            initMaxTeamSize=initMaxTeamSize,             # *
+            initMaxProgSize=initMaxProgSize,             # *
+            maxTeamSize=maxTeamSize,                 # *
+            pLrnDel=pLrnDel,                  # *
+            pLrnAdd=pLrnAdd,                  # *
+            pLrnMut=pLrnMut,                  # *
+            pProgMut=pProgMut,                 # *
+            pMemMut=pActMut,                  # *
+            pMemAtom=pActAtom,                # *
+            pInstDel=pInstDel,                 # *
+            pInstAdd=pInstAdd,                 # *
+            pInstSwp=pInstSwp,                 # *
+            pInstMut=pInstMut,                 # *
+            doElites=doElites, 
+            memMatrixShape=memMatrixShape,       # *
+            rampancy=rampancy,
+            prevPops=prevPops, mutatePrevs=mutatePrevs,
+            initMaxActProgSize=initMaxActProgSize,           # *
+            nMemRegisters=nActRegisters
+        )
+        self.thinkingTimeLimit=thinkingTime
+
+        self.generations=100
+        self.episodes=1
+        self.frames = 500
+        self.show = False
+        self.logger = None
+        self.initParams()
+
+    def initHippocampus(self):
+        self.hippocampus_actions    = {}
+        self.hippocampus_memories   = {}
+        self.hippocampus_pairs      = {}
+        self.hippocampus_predicted_reward    = {}
+
+    def unconsiousness(self, state):
+        return self.actor.elite(state)
+
+    def think(self, cerebral_cortex, _actor, _emulator):
+        self.__class__.Emulator.Trainer.MemoryObject.memories = cerebral_cortex['memories']
+        self.__class__.Actor.Trainer.ActionObject.actions = cerebral_cortex['actions']
+        assert isinstance(_actor, self.__class__.Actor.Trainer.Agent)
+        assert isinstance(_emulator, self.__class__.Emulator.Trainer.Agent)
+        assert self.__class__.Actor.Trainer.ActionObject.actions is not None
+        assert self.__class__.Emulator.Trainer.MemoryObject.memories is not None
+
+        state = np.array(cerebral_cortex['now'])
+        
+        actionCodes = []
+        memoryCodes = []
+        predict_rewards     = []
+        timeout_start = time.time()
+        while (time.time() - timeout_start) < self.thinkingTimeLimit:
+            actionCode = _actor.act(state)
+            imageCode  = _emulator.image(actionCode, state)
+            actionCodes  += [actionCode]
+            memoryCodes  += [imageCode]
+            predict_rewards += [cerebral_cortex['memories'][imageCode].reward]
+            state = cerebral_cortex['memories'][imageCode].recall(state)
+        return _actor.id, _emulator.id, actionCodes, memoryCodes, predict_rewards
+
+    def thinker(self):
+        """
+        意識にとって何が最善の行動となるかの選別
+        """
+        manager = mp.Manager()
+        cerebral_cortex = manager.dict()
+
+        # 脳皮質内の信号
+        cerebral_cortex['actions']  = self.__class__.Actor.Trainer.ActionObject.actions
+        cerebral_cortex['memories'] = self.__class__.Emulator.Trainer.MemoryObject.memories
+        # determined actionによって制限された意識チャンネル範囲内のhippocampusの情報を皮質に流す。
+        cerebral_cortex['now'] = self.consciousness
+        
+        # 認識・計画
+        with mp.Pool(mp.cpu_count()-2) as pool:
+            results = pool.starmap(self.think, [(cerebral_cortex, actor, emulator) for actor, emulator in zip(self.actors, self.emulators)])
+        for result in results:
+            actor_id, emulator_id, actions, images, rewards = result
+            self._setupParams(actor_id=actor_id, emulator_id=emulator_id, actions=actions, images=images, rewards=rewards)
+            assert self.pairs.get(actor_id), (self.pairs[actor_id], emulator_id)
+
+        # 行動の決定
+        bestActor=max(self.predicted_reward, key=lambda k: self.predicted_reward.get(k))
+
+        return bestActor, self.pairs[bestActor]
+
+    def episode(self):
+        """
+        記憶単位
+        行動と報酬のエピソードを生成。
+        エピソードはAutomata.hippocampusに電気的記憶として保存される。
+        睡眠期と行動期を分ける？
+        """
+        frame=0
+        executor = ThreadPoolExecutor(max_workers=2)
+        # state = _env.reset() # get initial state and prep environment
+        thinker = executor.submit(self.thinker)
+        # self.best = str(_elite_actor.team.id)
+        total_reward = 0.
+        # thinking_actor = []
+        while frame<self.frames:
+            if thinker.done(): # 意識的行動
+                # thinking_actor.append(self.best)
+                bestActor, pairEmulator = thinker.result()
+                assert bestActor in list(self.actions.keys()), f'dont has {bestActor} in {self.actions.keys()}'
+                assert pairEmulator in list(self.memories.keys()), f'dont has {pairEmulator} in {self.memories.keys()}'
+                
+
+                for actionCode, imageCode in zip(self.actions[bestActor], self.memories[pairEmulator]):
+                    frame+=1
+                    if not self.actor.actions[actionCode] in range(self.env.action_space.n): continue
+                    state, reward, isDone, debug = self.env.step(self.actor.actions[actionCode]) # state : np.ndarray.flatten
+                    if isDone: 
+                        frame=self.frames
+                        reward=0
+
+                    # assert self.actor_scores.get(bestActor), f'{bestActor} not in the {self.actor_scores}'
+                    if not self.actor_scores.get(bestActor): self.actor_scores[bestActor]=0.
+                    self.actor_scores[bestActor]+=reward
+
+                    # assert self.emulator_scores.get(pairEmulator), f'{pairEmulator} not in the {self.emulator_scores}'
+                    if not self.emulator_scores.get(pairEmulator): self.emulator_scores[pairEmulator]=0.
+                    diff, unex = self.emulator.memories[imageCode].compare(state.flatten(), reward)
+                    self.emulator_scores[pairEmulator] += tanh(np.power(diff, 2).sum())
+                    self.actual_states += [state.flatten()]
+                    self.unexpectancy  += [unex]
+                    total_reward += reward
+ 
+                    if isDone:
+                        self.state=self.env.reset()
+                        break
+
+                    if self.show:  self.show_state(self.env, frame)
+                    self.state = state
+
+                thinker = executor.submit(self.thinker)
+            else: # 無意識的行動
+                """
+                Automata.hippocampusに明記
+                """
+                # actionCode = _elite_actor.act(EmulatorTPG.state.flatten())
+                # if not ActionObject3.actions[actionCode] in range(_env.action_space.n): continue
+
+                # EmulatorTPG.state, reward, isDone, debug = _env.step(ActionObject3.actions[actionCode])
+                # total_reward += reward
+
+                # if isDone: 
+                #     EmulatorTPG.state = _env.reset()
+                #     break
+                # if _show:  self.show_state(_env, frame)
+                pass
+
+        thinker.cancel()
+
+        return total_reward
+
+    def generation(self):
+
+        _task   = self.env.spec.id
+        self.setAgents()
+        # breakpoint(type(emulators))
+        print('start episode...')
+        for _ in range(self.episodes):
+            total_reward = self.episode()
+        print('... end episode')
+
+        # 報酬の贈与
+        for actor in self.actors:
+            actor.reward(score=self.actor_scores[actor.id], task=_task)
+
+        # ここらへんのエミュレータの報酬設計
+        for emulator in self.emulators:
+            emulator.reward(score=self.emulator_scores[emulator.id], task=_task)
+
+        self.actor.evolve([_task])
+        self.emulator.evolve([_task])
+
+        self.initParams()
+        return total_reward
+    
+    def growing(self, _actor=None, _emulator=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=False, _test=False, _load=True, _dir=''):
+        if _actor: 
+            self.instance_valid(_actor)
+            self.actor.trainer = _actor
+        if _emulator: 
+            self.instance_valid(_emulator)
+            self.emulator.trainer = _emulator
+        if _task:
+            self.env = gym.make(_task)
+        if _generations:
+            self.generations=_generations
+        if _episodes:
+            self.episodes = _episodes
+        if _frames:
+            self.frames = _frames
+        
+        task = _dir+self.env.spec.id
+
+        logger, filename = setup_logger(__name__, task, test=_test, load=_load)
+
+        action_space = self.env.action_space
+        observation_space = self.env.observation_space
+
+        
+        action = 2
+        if isinstance(action_space, gym.spaces.Box):
+            action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
+        elif isinstance(action_space, gym.spaces.Discrete):
+            action = action_space.n
+
+        state = observation_space.sample()
+        self.setAction(action=action)
+        self.setMemory(state=state.flatten())
+        self.state = self.env.reset()
+        def outHandler(signum, frame):
+            if not _test: 
+                self.actor.trainer.save(f'{task}/{filename}-act')
+                self.emulator.trainer.save(f'{task}/{filename}-emu')
+            print('exit')
+            sys.exit()
+        
+        signal.signal(signal.SIGINT, outHandler)
+
+        summaryScores = []
+
+        tStart = time.time()
+        for gen in tqdm(range(self.generations)): # generation loop
+            # breakpoint(type(_emulator))
+            total_score = self.generation()
+            # score = (min(scores.values()), max(scores.values()), sum(scores.values())/len(scores))
+
+            logger.info(f'generation:{gen}, score:{total_score}', extra={'className': self.__class__.__name__})
+            summaryScores.append(total_score)
+
+        map(logger.removeHandler, logger.handlers)
+        map(logger.removeFilter, logger.filters)
+
+        return filename
+    
+    @property
+    def consciousness(self):
+        # self.consciousness_channel_key = []
+        # return self.__class__.hippocampus(self.consciousness_channel_key)
+        return self.state.flatten()
+ 
