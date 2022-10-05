@@ -724,6 +724,7 @@ class Automata(_TPG):
     def think(self, cerebral_cortex, _actor, _emulator):
         self.__class__.Emulator.Trainer.MemoryObject.memories = cerebral_cortex['memories']
         self.__class__.Actor.Trainer.ActionObject.actions = cerebral_cortex['actions']
+        
         assert isinstance(_actor, self.__class__.Actor.Trainer.Agent)
         assert isinstance(_emulator, self.__class__.Emulator.Trainer.Agent)
         assert self.__class__.Actor.Trainer.ActionObject.actions is not None
@@ -736,7 +737,7 @@ class Automata(_TPG):
         predict_rewards     = []
         timeout_start = time.time()
         print(self.thinkingTimeLimit, _actor.id)
-        while (time.time() - timeout_start) < self.thinkingTimeLimit:
+        for _ in range(cerebral_cortex['frames']):
             actionCode = _actor.act(state)
             imageCode  = _emulator.image(actionCode, state)
             actionCodes  += [actionCode]
@@ -758,6 +759,7 @@ class Automata(_TPG):
         cerebral_cortex['memories'] = self.emulator.memories
         # determined actionによって制限された意識チャンネル範囲内のhippocampusの情報を皮質に流す。
         cerebral_cortex['now'] = self.consciousness
+        cerebral_cortex['frames'] = self.frames
         
         # 認識・計画
         with mp.Pool(mp.cpu_count()-2) as pool:
@@ -821,6 +823,7 @@ class Automata(_TPG):
 
                     if self.show:  self.show_state(self.env, frame)
                     self.state = state
+                    print(frame)
 
                 thinker = executor.submit(self.thinker)
             else: # 無意識的行動
@@ -840,7 +843,7 @@ class Automata(_TPG):
                 pass
 
         thinker.cancel()
-
+        breakpoint('come here')
         return total_reward
 
     def generation(self):
@@ -1101,8 +1104,9 @@ class Automata1(Automata):
         timeout_start = time.time()
         while (time.time() - timeout_start) < self.thinkingTimeLimit:
             act = _actor.act(state).action
-            mem  = _emulator.image(act.action, state).memory
-            short_memory.append((act.signal, mem.state, mem.reward))
+            mem = _emulator.image(act.signal, state).memory
+            short_memory.append((act.signal, mem.reward))
+            state = mem.state
         
         return _actor.id, _emulator.id, short_memory
 
@@ -1148,7 +1152,7 @@ class Automata1(Automata):
             for actioinCode in actionSequence:
                 action = self.actor.actions[actioinCode]
                 state, reward, isDone, debug = self.env.step(action)
-                self.hippocampus(action, state, reward)
+                self.hippocampus.real(action, state, reward)
                 if isDone:
                     frame=self.frames
                     break
@@ -1236,7 +1240,6 @@ class Automata1(Automata):
 
         return filename
     
-    # @property
     def conscious(self, _signal):
         return _signal
 
