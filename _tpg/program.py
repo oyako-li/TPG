@@ -205,7 +205,6 @@ class Program1(_Program):
             cls._instance = True
         return super().__new__(cls, *args, **kwargs)
 
-
 class Program2(_Program):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:

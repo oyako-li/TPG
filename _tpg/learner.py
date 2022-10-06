@@ -217,7 +217,7 @@ class Learner1_1(Learner1):
         if cls._instance is None:
             cls._instance = True
             from _tpg.team import Team1_1
-            from _tpg.action_object import ActionObject1
+            from _tpg.memory_object import ActionObject1
             from _tpg.program import Program1
             cls.Team = Team1_1
             cls.ActionObject = ActionObject1
@@ -304,22 +304,6 @@ class Learner2(_Learner):
         self.registers = np.zeros(len(self.registers), dtype=float)
         self.memoryObj.zeroRegisters()
 
-    @property
-    def clone(self): 
-        _clone = self.__class__(
-            program = self.program,
-            memoryObj = self.memoryObj,
-            numRegisters=self.registers,
-            states=self.states,
-            inTeams=self.inTeams,
-            frameNum=self.frameNum,
-            initParams=self.genCreate
-        )
-        if not _clone.isMemoryAtomic(): 
-            _clone.getMemoryTeam().inLearners.append(str(_clone.id))
-
-        return _clone
-
     def mutate(self, mutateParams, parentTeam, teams, pMemAtom): 
         """
         Mutates either the program or the action or both. 
@@ -381,14 +365,30 @@ class Learner2(_Learner):
 
         return self.registers[0]
 
+    @property
+    def clone(self): 
+        _clone = self.__class__(
+            program = self.program,
+            memoryObj = self.memoryObj,
+            numRegisters=self.registers,
+            states=self.states,
+            inTeams=self.inTeams,
+            frameNum=self.frameNum,
+            initParams=self.genCreate
+        )
+        if not _clone.isMemoryAtomic(): 
+            _clone.getMemoryTeam().inLearners.append(str(_clone.id))
+
+        return _clone
+
 class Learner2_1(Learner2):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
-            from _tpg.team import Team2
+            from _tpg.team import Team2_1
             from _tpg.program import Program2
             from _tpg.memory_object import MemoryObject
-            cls.Team = Team2
+            cls.Team = Team2_1
             cls.Program = Program2
             cls.MemoryObject = MemoryObject
 

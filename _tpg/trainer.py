@@ -644,7 +644,7 @@ class Trainer1_1(Trainer1):
             from _tpg.team import Team1_1
             from _tpg.learner import Learner1_1
             from _tpg.program import Program1
-            from _tpg.action_object import ActionObject1
+            from _tpg.memory_object import ActionObject1
 
             cls._instance = True
             cls.Agent = Agent1
