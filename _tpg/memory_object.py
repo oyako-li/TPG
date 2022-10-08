@@ -164,7 +164,7 @@ class Fragment2(_Fragment): # sence memory
 
     def __truediv__(self, __o):
         assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-        
+
 
     # def __pow__(self, __o):
     #     assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
@@ -921,5 +921,5 @@ class Hippocampus:
         self.real = self.__class__.Memory()
         self.mind = self.__class__.Memory()
 
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
+    def __call__(self):
         pass
