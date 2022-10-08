@@ -349,6 +349,23 @@ class AutomataBiasTest(unittest.TestCase):
     def test_load(self):
         log_show2('log/test/CartPole-v1/2022-09-29_07-44-55')
 
+class Automata1PointTest(AutomataPointTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import Automata1
+        self.Automata = Automata1
+        self.task = "Centipede-v4"
+        self.env = gym.make(self.task)
+        self.action = self.env.action_space.n
+        self.state = self.env.observation_space.sample().flatten()
+
+class Automata1BiasTest(AutomataBiasTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import Automata1
+        self.Automata = Automata1
+        self.task = "CartPole-v1"
+        self.env = gym.make(self.task)
+        self.action = self.env.action_space.n
+        self.state = self.env.observation_space.sample().flatten()
 
 if __name__ == '__main__':
     unittest.main()

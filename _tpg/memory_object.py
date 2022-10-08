@@ -653,3 +653,13 @@ class ActionObject1(_ActionObject):
     @property
     def action(self):
         return self.__class__.actions[self.actionCode]
+
+class Hippocampus(_Memory):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls.Fragment = _Fragment
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self, actObj, memObjs, emotion):
+        fragment = self.__class__.Fragment()
+        super().__init__()

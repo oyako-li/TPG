@@ -564,19 +564,16 @@ class EmulatorTPG1(EmulatorTPG):
         return _scores, states, unexpectancies
 
 class Automata(_TPG):
-    Actor=None
-    Emulator=None
-    hippocampus=None
+    Actor=None      # 運動野
+    Emulator=None   # 感覚野
     _instance=None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             # from _tpg.action_object import _ActionObject
-            from _tpg.memory_object import _Memory
             cls._instance = True
             cls.Actor = MHTPG
             cls.Emulator = EmulatorTPG
-            cls.hippocampus = _Memory()
             # cls.ActionObject = _ActionObject
             # cls.MemoryObject = _MemoryObject
         return super().__new__(cls)
@@ -941,13 +938,14 @@ class Automata(_TPG):
         return self.state.flatten()
 
 class Automata1(Automata):
+    Hippocampus=None
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            from _tpg.memory_object import _Memory
+            from _tpg.memory_object import Hippocampus
             cls._instance = True
             cls.Actor = ActorTPG
             cls.Emulator = EmulatorTPG1
-            cls.hippocampus = _Memory()
+            cls.Hippocampus = Hippocampus
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, 
@@ -1061,20 +1059,24 @@ class Automata1(Automata):
         self.emulator.setMemories(state.flatten())
 
     def setAgents(self):
-        """set hippocampus"""
-        self.actor_scores = {}
-        self.emulator_scores = {}
-        self.memorySequence = []
-        self.unexpectancy = []
+        """
+        wake up
+        reset hippocampus
+        """
+        # self.actor_scores = {}
+        # self.emulator_scores = {}
+        # self.memorySequence = []
+        # self.unexpectancy = []
+        self.hippocampus = self.__class__.Hippocampus()
         self.actors = self.actor.getAgents()
         self.elite = self.actor.getEliteAgent()
         self.emulators = self.emulator.getAgents()
-        for actor in self.actors:
-            self.actor_scores[actor.id] = 0.
-            assert not self.actor_scores.get(actor.id), f'{actor.id} cant assaign {self.actor_scores}'
-        for emulator in self.emulators:
-            self.emulator_scores[emulator.id] = 0.
-            assert not self.emulator_scores.get(emulator.id)
+        # for actor in self.actors:
+        #     self.actor_scores[actor.id] = 0.
+        #     assert not self.actor_scores.get(actor.id), f'{actor.id} cant assaign {self.actor_scores}'
+        # for emulator in self.emulators:
+        #     self.emulator_scores[emulator.id] = 0.
+        #     assert not self.emulator_scores.get(emulator.id)
 
     def setEnv(self, _env):
         self.env = _env
