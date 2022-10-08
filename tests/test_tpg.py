@@ -55,7 +55,6 @@ class TPGTest(unittest.TestCase):
         self.assertIsNotNone(filename)
         log_show(f'log/{filename}')
 
-# @unittest.skip('before')
 class MHTPGTest(TPGTest):
 
     def setUp(self) -> None:
