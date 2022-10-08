@@ -401,6 +401,15 @@ class Team1_1(Team1):
 
         return super().__new__(cls, *args, **kwargs)
 
+class Team1_2(Team1_1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.learner import Learner1_2
+            cls._instance = True
+            cls.Learner = Learner1_2
+
+        return super().__new__(cls, *args, **kwargs)
+
 class Team2(_Team):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -633,4 +642,13 @@ class Team2_1(Team2):
             cls._instance = True
             cls.Learner = Learner2_1
 
+        return super().__new__(cls, *args, **kwargs)
+
+class Team2_2(Team2_1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.learner import Learner2_2
+            cls._instance = True
+            cls.Learner = Learner2_2
+            
         return super().__new__(cls, *args, **kwargs)

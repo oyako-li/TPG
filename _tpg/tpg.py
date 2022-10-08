@@ -367,6 +367,122 @@ class ActorTPG(MHTPG):
 
         return f'{task}/{filename}'
 
+class Actor(ActorTPG):
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            from _tpg.trainer import Trainer1_2
+            cls._instance = True
+            cls.Trainer = Trainer1_2
+
+        return super().__new__(cls, *args, **kwargs)
+
+    def __getitem__(self, __code):
+        return self.actions[__code]
+
+    def setAgents(self, task='task'):
+        self.agents = self.trainer.getAgents(task=task)
+        self.actionSequence = {}
+        self.actionReward = {}
+        for actor in self.agents:
+            self.actionSequence[actor.id]=[]
+            self.actionReward[actor.id]=0.
+        
+        return self.agents
+
+    def getEliteAgent(self, task='task'):
+        return self.trainer.getEliteAgent(task)
+
+    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _actionSequence=None, _actionReward=None):
+        self.trainer.evolve(tasks=tasks, _actionSequence=_actionSequence, _actionReward=_actionReward)
+
+    def episode(self):
+        assert self.trainer is not None and self.env is not None, 'You should set Actioins'
+        
+        for agent in self.agents: # to multi-proccess
+            state = self.env.reset() # get initial state and prep environment
+            score = 0
+            frame = 0
+            
+            while frame<self.frames: # run episodes that last 500 frames
+                acts = agent.act(state.flatten()).action
+                for action in acts:
+                    frame+=1
+                    if not action in range(self.env.action_space.n): continue
+                    state, reward, isDone, debug = self.env.step(action)
+                    score += reward # accumulate reward in score
+                    self.actionSequence[agent.id]+=[action]
+
+                    if isDone: break # end early if losing state
+                    if frame>self.frames: break
+                    if self.show:self.flush_render()
+
+
+            self.actionReward[agent.id] += score # store score
+
+    def generation(self):
+        _task = self.env.spec.id
+        self.setAgents(_task)
+        for _ in range(self.episodes):     
+            self.episode()
+        
+        actionSequence = []
+        actionReward   = []
+        for id in self.actionReward:               
+            self.actionReward[id]/=self.episodes
+            actionSequence+=[self.actionSequence[id]]
+            actionReward+=[self.actionReward[id]]
+        for agent in self.agents: 
+            agent.reward(self.actionReward[agent.id],task=_task)
+        
+        self.evolve([_task], _actionSequence=actionSequence, _actionReward=actionReward)
+    
+    def growing(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
+        if _trainer: 
+            self.instance_valid(_trainer)
+            self.trainer = _trainer
+        
+        if _task:
+            self.env = gym.make(_task)
+        
+        task = _dir+self.task
+
+        logger, filename = setup_logger(__name__, task, test=_test, load=_load)
+        self.logger = logger
+        self.generations = _generations
+        self.episodes = _episodes
+        self.frames = _frames
+        self.show = _show
+
+
+        action_space = self.env.action_space
+        action = 0
+        if isinstance(action_space, gym.spaces.Box):
+            action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
+        elif isinstance(action_space, gym.spaces.Discrete):
+            action = action_space.n
+        self.setActions(actions=action)
+
+        def outHandler(signum, frame):
+            if not _test: self.trainer.save(f'{task}/{filename}')
+            print('exit')
+            sys.exit()
+        
+        signal.signal(signal.SIGINT, outHandler)
+
+        for gen in range(_generations): # generation loop
+            self.generation()
+
+            self.logger.info(f'generation:{gen}, min:{min(self.actionReward.values())}, max:{max(self.actionReward.values())}, ave:{sum(self.actionReward.values())/len(self.actionReward)}', extra={'className': self.__class__.__name__})
+
+        map(self.logger.removeHandler, self.logger.handlers)
+        map(self.logger.removeFilter, self.logger.filters)
+
+        return f'{task}/{filename}'
+
+    @property
+    def NaN(self):
+        return self.trainer.ActionObject.NaN
+
 class EmulatorTPG(_TPG):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -528,6 +644,47 @@ class EmulatorTPG1(EmulatorTPG):
             from _tpg.trainer import Trainer2_1
             cls._instance = True
             cls.Trainer = Trainer2_1
+
+        return super().__new__(cls, *args, **kwargs)
+
+    def episode(self, _scores):
+        assert self.trainer is not None and self.env is not None, 'You should set Actioins'
+      
+        states = []
+        unexpectancies = []
+        print('agents loop')
+        for agent in tqdm(self.agents): # to multi-proccess
+            
+            state = self.env.reset() # get initial state and prep environment
+            score = 0
+            _id = str(agent.team.id)
+            for _ in range(self.frames): # run episodes that last 500 frames
+                act = self.env.action_space.sample()
+                img = agent.image(act, state.flatten()).memory
+                state, reward, isDone, debug = self.env.step(act)
+                diff, unex = img.compare(state.flatten(), reward)
+
+                # オーバーフロー防止のためアークタンジェントに二乗和誤差を入れている。
+                score += tanh(np.power(diff, 2).sum())
+                states+=[state.flatten()]
+                unexpectancies+=[unex]
+
+                if isDone: break # end early if losing state
+                if self.show: self.show_state(self.env, _)
+
+            if _scores.get(_id) is None : _scores[_id]=0
+            _scores[_id] += score # store score
+
+            # if self.logger is not None: self.logger.info(f'{_id},{score}')
+
+        return _scores, states, unexpectancies
+
+class Emulator(EmulatorTPG1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.trainer import Trainer2_2
+            cls._instance = True
+            cls.Trainer = Trainer2_2
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -943,8 +1100,8 @@ class Automata1(Automata):
         if cls._instance is None:
             from _tpg.memory_object import Hippocampus
             cls._instance = True
-            cls.Actor = ActorTPG
-            cls.Emulator = EmulatorTPG1
+            cls.Actor = Actor
+            cls.Emulator = Emulator
             cls.Hippocampus = Hippocampus
         return super().__new__(cls, *args, **kwargs)
 
@@ -1063,20 +1220,10 @@ class Automata1(Automata):
         wake up
         reset hippocampus
         """
-        # self.actor_scores = {}
-        # self.emulator_scores = {}
-        # self.memorySequence = []
-        # self.unexpectancy = []
-        self.hippocampus = self.__class__.Hippocampus()
+        self.hippocampus = self.Hippocampus()
         self.actors = self.actor.getAgents()
         self.elite = self.actor.getEliteAgent()
         self.emulators = self.emulator.getAgents()
-        # for actor in self.actors:
-        #     self.actor_scores[actor.id] = 0.
-        #     assert not self.actor_scores.get(actor.id), f'{actor.id} cant assaign {self.actor_scores}'
-        # for emulator in self.emulators:
-        #     self.emulator_scores[emulator.id] = 0.
-        #     assert not self.emulator_scores.get(emulator.id)
 
     def setEnv(self, _env):
         self.env = _env
@@ -1090,12 +1237,6 @@ class Automata1(Automata):
             assert isinstance(_actor, self.__class__.Actor.Trainer), f'this actor is not {self.__class__.Actor}'
         if _emulator:
             assert isinstance(_emulator, self.__class__.Emulator.Trainer), f'this emulator is not {self.__class__.Emulator}'
-
-    def initHippocampus(self):
-        self.hippocampus_actions    = {}
-        self.hippocampus_images   = {}
-        self.hippocampus_pairs      = {}
-        self.hippocampus_predicted_reward    = {}
 
     def think(self, cerebral_cortex, _actor, _emulator):
         self.__class__.Emulator.Trainer.MemoryObject.memories = cerebral_cortex['memories']
@@ -1112,12 +1253,14 @@ class Automata1(Automata):
         # while (time.time() - timeout_start) < self.thinkingTimeLimit:
         assumption = []
         actObj = _actor.act(state) # actionObject
+        reward = 0.
         for act in actObj.action:
-            memObj = _emulator.image(act, state) # fragment
+            memObj = _emulator.image(act, state) # memoryObject
             assumption += [memObj]
+            reward += memObj.reward
             state = memObj.recall(state)
         
-        return _actor.id, _emulator.id, act, assumption
+        return actObj, assumption, reward, _actor.id, _emulator.id
 
     def thinker(self):
         """
@@ -1130,7 +1273,7 @@ class Automata1(Automata):
         cerebral_cortex['actions']  = self.actions
         cerebral_cortex['memories'] = self.memories
         # determined actionによって制限された意識チャンネル範囲内のhippocampusの情報を皮質に流す。
-        cerebral_cortex['image'] = self.focus + self.hippocampus # new memoryObj
+        cerebral_cortex['image'] = self.focus & self.hippocampus() # new memoryObj
         
         # 認識・計画
         with mp.Pool(mp.cpu_count()-2) as pool:
@@ -1140,7 +1283,7 @@ class Automata1(Automata):
         # mind tuning reward differ with mind bias
         compare = []
         for plan in short_memory:
-            compare += [sum([memObj.reward for memObj in plan[3]])]
+            compare += [plan[2]]
 
         best=max(range(len(compare)), key=compare.__getitem__)
 
@@ -1155,13 +1298,12 @@ class Automata1(Automata):
         睡眠期と行動期を分ける？
         """
         frame=0
-        executor = ThreadPoolExecutor(max_workers=2)
-        self.thinking = executor.submit(self.thinker)
+        self.executor = ThreadPoolExecutor(max_workers=2)
+        self.thinking = self.executor.submit(self.thinker)
 
         total_reward = 0.
         while frame<self.frames:
-            actionPlan = self.unconsciousness + self.consciousness # return actionObj + actionObj = new actionObj
-            actionSequence = self.filter(actionPlan.action)
+            actionSequence = self.activator(self.unconsciousness ^ self.consciousness) # return actionObj + actionObj = new actionObj
             memorySequence = []
             rewardSequence = []
             for action in actionSequence:
@@ -1173,7 +1315,7 @@ class Automata1(Automata):
                     frame=self.frames
                     break
                 frame+=1
-            self.hippocampus.real(actionSequence, memorySequence, rewardSequence)
+            self.hippocampus.append(actionSequence, memorySequence, rewardSequence)
             self.state = state
             
         self.thinking.cancel()
@@ -1264,16 +1406,18 @@ class Automata1(Automata):
 
         return filename
     
-    def conscious(self, _actionobj):
-        return _actionobj
+    def activator(self, _actObj):
+        return [act for act in _actObj.action if act in range(self.env.action_space.n)]
 
     @property
     def consciousness(self): # return self.actor.ActionObject
         if self.thinking.done():
-            actObj = self.thinking.result()
-            return self.intention + actObj # filterd action object
+            actObj, memObjs, emotion, bestActor, pairEmulator = self.thinking.result()
+            self.hippocampus.mind.append(actObj, memObjs, emotion)
+            self.thinking = self.executor.submit(self.thinker)
+            return self.intention & actObj # filterd action object self.intention is NaN*int
         else:
-            return None
+            return self.actor.NaN
 
     @property
     def unconsciousness(self): # # return self.actor.ActionObject

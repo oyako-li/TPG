@@ -225,6 +225,19 @@ class Learner1_1(Learner1):
             
         return super().__new__(cls, *args, **kwargs)
 
+class Learner1_2(Learner1_1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            from _tpg.team import Team1_2
+            from _tpg.memory_object import ActionObject2
+            from _tpg.program import Program1
+            cls.Team = Team1_2
+            cls.ActionObject = ActionObject2
+            cls.Program = Program1
+            
+        return super().__new__(cls, *args, **kwargs)
+
 class Learner2(_Learner):
     MemoryObject = None
     
@@ -391,5 +404,18 @@ class Learner2_1(Learner2):
             cls.Team = Team2_1
             cls.Program = Program2
             cls.MemoryObject = MemoryObject
+
+        return super().__new__(cls, *args, **kwargs)
+
+class Learner2_2(Learner2_1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            from _tpg.team import Team2_2
+            from _tpg.program import Program2
+            from _tpg.memory_object import MemoryObject1
+            cls.Team = Team2_2
+            cls.Program = Program2
+            cls.MemoryObject = MemoryObject1
 
         return super().__new__(cls, *args, **kwargs)

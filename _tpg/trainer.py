@@ -840,6 +840,23 @@ class Trainer1_1(Trainer1):
         trainer.ActionObject.actions = trainer._actions
         return trainer
 
+class Trainer1_2(Trainer1_1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.agent import Agent1
+            from _tpg.team import Team1_2
+            from _tpg.learner import Learner1_2
+            from _tpg.program import Program1
+            from _tpg.memory_object import ActionObject2
+
+            cls._instance = True
+            cls.Agent = Agent1
+            cls.Team = Team1_2
+            cls.Learner = Learner1_2
+            cls.Program = Program1
+            cls.ActionObject = ActionObject2
+        return super().__new__(cls, *args, **kwargs)
+  
 class Trainer2(Trainer):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -1285,6 +1302,141 @@ class Trainer2_1(Trainer2):
             cls.Learner = Learner2_1
             cls.Program = Program2
             cls.MemoryObject = MemoryObject
+
+        return super().__new__(cls, *args, **kwargs)
+
+    def _select(self, extraTeams=None, task='task'):
+
+        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt[task])
+        numKeep = len(self.rootTeams) - int(len(self.rootTeams)*self.gap)
+        deleteTeams = rankedTeams[numKeep:]
+
+        for team in [t for t in deleteTeams if t not in self.elites]:
+            # remove learners from team and delete team from populations
+            if extraTeams is None or team not in extraTeams: team.removeLearners()
+            self.teams.remove(team)
+            self.rootTeams.remove(team)
+
+        orphans = [learner for learner in self.learners if learner.numTeamsReferencing() == 0]
+
+        for cursor in orphans:
+            if not cursor.isMemoryAtomic(): # If the orphan does NOT point to an atomic action
+                # Get the team the orphan is pointing to and remove the orphan's id from the team's in learner list
+                cursor.memoryObj.teamMemory.inLearners.remove(str(cursor.id))
+
+        # Finaly, purge the orphans
+        # AtomicActionのLearnerはどのように生成すれば良いのだろうか？ -> actionObj.mutate()による
+        self.learners = [learner for learner in self.learners if learner.numTeamsReferencing() > 0] 
+
+    def _generate(self, extraTeams=None, _states=None, _rewards=None, _unexpectancies=None):
+        # extras who are already part of the team population
+        protectedExtras = []
+        extrasAdded = 0
+
+        # add extras into the population
+        if extraTeams is not None:
+            for team in extraTeams:
+                if team not in self.teams:
+                    self.teams.append(team)
+                    extrasAdded += 1
+                else:
+                    protectedExtras.append(team)
+
+        oLearners = list(self.learners)
+        oTeams = list(self.teams)
+
+        # update generation in mutateParams
+        self.mutateParams["generation"] = self.generation
+
+        # get all the current root teams to be parents
+        # mutate or clone
+        while (len(self.teams) < self.teamPopSize + extrasAdded or
+                (self.rootBasedPop and self.countRootTeams() < self.teamPopSize)):
+            # get parent root team, and child to be based on that
+
+            # ここをランダムではなく、階層上あるいは、過去の経験よりセレクトする。
+            # rootTeamsを混ぜて、新しい、チームを作る。この時、そのチームは、プログラムへの１階層目のポインタを混ぜるだけである。
+            parent = random.choice(self.rootTeams)
+            child = parent.clone
+
+            # child starts just like parent
+            # for learner in parent.learners: child.addLearner(learner)
+
+            # then mutates
+            # child.mutate(self.mutateParams, oLearners, oTeams)
+            _, __, new_learners = child.mutate(self.mutateParams, oLearners, oTeams)
+
+            # then clone the referenced rootTeams
+            for new_learner in new_learners:
+                tm = new_learner.getMemoryTeam()
+                if tm in self.rootTeams:
+                    clone = tm.clone
+                    self.teams.append(clone)
+                    
+                    assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
+
+            if not _states is None and not _rewards is None and not _unexpectancies is None: 
+                states = np.array(_states)
+                unexpectancies = np.array(_unexpectancies)
+                unexpectancies = sigmoid(unexpectancies)*1000
+                # randome choice story by rewards
+                state = random.choices(range(len(states)), unexpectancies)[0]
+
+                child.addLearner(self.__class__.Learner(memoryObj=self.__class__.MemoryObject(state=states[state], reward=_rewards[state])))
+                # breakpoint(state)
+                # どういう時の状態をメモライズすれば良いか？
+                # 理想は予想外に報酬の高い状態を記憶する。
+                # 状態＋報酬　の　メモライズではどうだろうか？
+                # つまり、報酬値の予想値との差異に基づいて、記憶すべき状態を優先づける。
+                # この場合、
+                # 
+
+            self.teams.append(child)
+
+
+        # remove unused extras
+        if extraTeams is not None:
+            for team in extraTeams:
+                if team.numLearnersReferencing() == 0 and team not in protectedExtras:
+                    self.teams.remove(team)
+
+    def _nextEpoch(self):
+        # add in newly added learners, and decide root teams
+        memory_code_list = set()
+        self.rootTeams = []
+        for team in self.teams:
+            for learner in team.learners:
+                if learner not in self.learners:
+                    self.learners.append(learner)
+
+            # maybe make root team
+            if team.numLearnersReferencing() == 0 or team in self.elites:
+                self.rootTeams.append(team)
+
+        for lrnr in self.learners:
+            if lrnr.isMemoryAtomic():
+                memory_code_list.add(lrnr.memoryObj.memoryCode)
+
+        memory_code_list = list(memory_code_list)
+        self.__class__.MemoryObject.memories.oblivion(memory_code_list)
+
+        self.generation += 1
+
+class Trainer2_2(Trainer2_1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.agent import Agent2
+            from _tpg.team import Team2_2
+            from _tpg.learner import Learner2_2
+            from _tpg.program import Program2
+            from _tpg.memory_object import MemoryObject1
+
+            cls._instance = True
+            cls.Agent = Agent2
+            cls.Team = Team2_2
+            cls.Learner = Learner2_2
+            cls.Program = Program2
+            cls.MemoryObject = MemoryObject1
 
         return super().__new__(cls, *args, **kwargs)
 
