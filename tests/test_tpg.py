@@ -137,6 +137,30 @@ class ActorBiasTest(ActorPointTest):
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
 
+class Actor1PointTest(ActorPointTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import Actor
+        self.TPG = Actor
+        self.task = "Centipede-v4"
+        self.env = gym.make(self.task)
+        self.action = self.env.action_space.n
+
+    def test_init_(self):
+        '''test init'''
+        from _tpg.tpg import Actor
+        self.assertEqual(self.TPG, Actor)
+
+        from _tpg.trainer import Trainer1_2
+        tpg = self.TPG()
+        self.assertIsInstance(tpg.trainer, Trainer1_2)
+ 
+class Actor1BiasTest(ActorPointTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import Actor
+        self.TPG = Actor
+        self.task = "CartPole-v1"
+        self.env = gym.make(self.task)
+        self.action = self.env.action_space.n
 
 class EmulatorTPGTest(unittest.TestCase):
     def setUp(self) -> None:

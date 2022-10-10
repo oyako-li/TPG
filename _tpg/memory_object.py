@@ -985,13 +985,13 @@ class Fragment2_1(Fragment2):
 
     def __lshift__(self, __o):
         if isinstance(__o, self.__class__):
-            return self.__class__(list(self.fragment) + list(__o.fragment))
+            return self.__class__(list(self.fragment) + list(__o.fragment), self.reward+__o.reward)
         elif isinstance(__o, np.ndarray) or isinstance(__o, list):
-            return self.__class__(list(self.fragment)+list(__o))
+            return self.__class__(list(self.fragment)+list(__o), self.reward)
         elif isinstance(__o, int):
-            return self.__class__(list(self.fragment) + [np.nan]*__o)
+            return self.__class__(list(self.fragment) + [np.nan]*__o, self.reward)
         elif isinstance(__o, float):
-            return self.__class__(list(self.fragment) + [np.nan]*int(__o))
+            return self.__class__(list(self.fragment) + [np.nan]*int(__o), self.reward)
         else:
             return NotImplemented
     
@@ -1043,13 +1043,13 @@ class Fragment2_1(Fragment2):
     
     def __rshift__(self, __o):
         if isinstance(__o, self.__class__):
-            return self.__class__(list(__o.fragment) + list(self.fragment))
+            return self.__class__(list(__o.fragment) + list(self.fragment), __o.reward+self.reward)
         elif isinstance(__o, np.ndarray) or isinstance(__o, list):
-            return self.__class__(list(__o)+list(self.fragment))
+            return self.__class__(list(__o)+list(self.fragment), self.reward)
         elif isinstance(__o, int):
-            return self.__class__([np.nan]*__o+list(self.fragment))
+            return self.__class__([np.nan]*__o+list(self.fragment), self.reward)
         elif isinstance(__o, float):
-            return self.__class__([np.nan]*int(__o)+list(self.fragment))
+            return self.__class__([np.nan]*int(__o)+list(self.fragment), self.reward)
         else:
             return NotImplemented
     
@@ -1187,7 +1187,7 @@ class Fragment2_1(Fragment2):
         return np.argwhere(~np.isnan(self.fragment)).flatten()
 
     def values(self):
-        return self.fragment
+        return self.fragment[~np.isnan(self.fragment)]
 
     def update(self, key, value):
         if isinstance(value, list): value = np.array(value)
@@ -1357,6 +1357,10 @@ class Memory2(_Memory):
         self.memories:dict={fragment.id:fragment} # uuid:flagment
         self.weights:dict ={fragment.id:0.}
         self.nan = fragment.id
+
+    @property
+    def NaN(self):
+        return self.memories[self.nan]
 
 class Memory2_1(Memory2):
     """opelation implement"""
@@ -1861,7 +1865,7 @@ class MemoryObject2(MemoryObject1):
     
     @property
     def NaN(self):
-        return self.__class__(self.__class__.memorys.nan)
+        return self.__class__(self.__class__.memories.nan)
 
 class _ActionObject:
     """
@@ -2132,7 +2136,7 @@ class ActionObject2(ActionObject1):
             from _tpg.team import Team1_2
             cls._instance = True
             cls.Team = Team1_2
-            cls.actions=Memory1()
+            cls.actions=Memory1_1()
 
         return super().__new__(cls, *args, **kwargs)
 

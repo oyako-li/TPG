@@ -1429,14 +1429,14 @@ class Trainer2_2(Trainer2_1):
             from _tpg.team import Team2_2
             from _tpg.learner import Learner2_2
             from _tpg.program import Program2
-            from _tpg.memory_object import MemoryObject1
+            from _tpg.memory_object import MemoryObject2
 
             cls._instance = True
             cls.Agent = Agent2
             cls.Team = Team2_2
             cls.Learner = Learner2_2
             cls.Program = Program2
-            cls.MemoryObject = MemoryObject1
+            cls.MemoryObject = MemoryObject2
 
         return super().__new__(cls, *args, **kwargs)
 
