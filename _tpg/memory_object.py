@@ -157,19 +157,16 @@ class Fragment2(_Fragment): # sence memory
 
     def __mul__(self, __o):
         assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-        fragment = list(self.fragment)
+        fragment = np.array(self.fragment)
         for i in __o.fragment:
             fragment*=i
         return self.__class__(fragment)
 
     def __truediv__(self, __o):
         assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-
-
-    # def __pow__(self, __o):
-    #     assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-    #     fragment = list()
-    #     return self.__class__()
+        fragment = np.array(self.fragment)
+        fragment[:-__o.fragment.size]=np.nan
+        return self.__class__(fragment)
 
     def __and__(self, __o):
         assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
