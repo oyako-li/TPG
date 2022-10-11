@@ -30,8 +30,7 @@ class _Fragment:
 
     def values(self):
         return self.fragment
-    
-    # ここら辺をもっとRewardに沿った形で変更。
+
     def update(self, key, value):
         if isinstance(value, list): value = np.array(value)
         assert isinstance(value, np.ndarray)
@@ -68,7 +67,7 @@ class Fragment1(_Fragment): # action memory
             cls._instance=True
         return super().__new__(cls, *args, **kwargs)
 
-    def __init__(self, _actionSequence:list=[]):
+    def __init__(self, _actionSequence:list=[np.nan]):
         assert isinstance(_actionSequence, list) or isinstance(_actionSequence, np.ndarray), f'{_actionSequence} is not list'
 
         self.fragment = np.array(_actionSequence)
@@ -77,56 +76,11 @@ class Fragment1(_Fragment): # action memory
     def __getitem__(self, key):
         return self.fragment[key]
 
-    def __add__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-        return self.__class__(list(self.fragment)+list(__o.fragment))
-        
-    def __sub__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-        return self.__class__(self.fragment[:-__o.size])
-
-    # def __mul__(self, __o):
-    #     assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-    #     fragment = list(self.fragment)
-    #     for i in __o.fragment:
-    #         fragment*=i
-    #     return self.__class__(fragment)
-
-    # def __pow__(self, __o):
-    #     assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-    #     fragment = list()
-    #     return self.__class__()
-
-    def __and__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-        _size = self.fragment.size if self.fragment.size < __o.fragment.size else __o.fragment.size
-        return self.__class__(np.where(np.isnan(self.fragment[:_size]), __o.fragment[:_size], self.fragment[:_size]))
-
-    def __or__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-        if self.fragment.size > __o.fragment.size:
-            __o_fragment=list(__o.fragment)+list(self.fragment[__o.fragment.size:])
-            self_fragment = self.fragment
-        else:
-            self_fragment = list(self.fragment)+list(__o.fragment[self.fragment.size:])
-            __o_fragment = __o.fragment
-        return self.__class__(np.where(np.isnan(self_fragment), __o_fragment, self_fragment))
-
-    def __xor__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-        if self.fragment.size > __o.fragment.size:
-            __o_fragment=list(__o.fragment)+list(self.fragment[__o.fragment.size:])
-            self_fragment = self.fragment
-        else:
-            self_fragment = list(self.fragment)+list(__o.fragment[self.fragment.size:])
-            __o_fragment = __o.fragment
-        return self.__class__(np.where(np.isnan(__o_fragment), self_fragment, __o_fragment))
-
-    def __invert__(self):
-        return self.__class__(self.fragment[::-1])
+    def values(self):
+        return self.fragment
 
     def keys(self):
-        return range(len(self.fragment))
+        return range(self.fragment.size)
 
     def update(self, key, value):
         if isinstance(value, list): value = np.array(value)
@@ -136,9 +90,520 @@ class Fragment1(_Fragment): # action memory
 
         self.fragment[key] = value
 
+class Fragment1_1(Fragment1):
+    """operation implement"""
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance=True
+        return super().__new__(cls, *args, **kwargs)
+
+    def __add__(self, __o):
+        if isinstance(__o, self.__class__):
+            if self > __o:
+                _o = list(__o.fragment)+list(self.fragment[__o.size:])
+                return self.__class__(np.where(np.isnan(_o), self.fragment, _o))
+            else:
+                _self = list(self.fragment)+list(__o.fragment[self.size:])
+                return self.__class__(np.where(np.isnan(__o.fragment), _self, __o.fragment))
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                return self.__class__(np.where(np.isnan(_o), self.fragment, _o))
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                return self.__class__(np.where(np.isnan(__o), _self, __o))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isnan(self.fragment), self.fragment, __o))
+        else:
+            return NotImplemented
+    
+    def __radd__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                return self.__class__(np.where(np.isnan(self.fragment), _o, self.fragment))
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                return self.__class__(np.where(np.isnan(_self), __o, _self))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isnan(self.fragment), __o, self.fragment))
+        else:
+            return NotImplemented   
+    
+    def __sub__(self, __o):
+        if isinstance(__o, self.__class__):
+            if self > __o:
+                _o = list(__o.fragment)+list(self.fragment[__o.size:])
+                return self.__class__(np.where(np.isnan(_o), self.fragment, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o.fragment[self.size:])
+                return self.__class__(np.where(np.isnan(__o.fragment), _self, np.nan))
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                return self.__class__(np.where(np.isnan(_o), self.fragment, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                return self.__class__(np.where(np.isnan(__o), _self, np.nan))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isnan(self.fragment), self.fragment, np.nan))
+        else:
+            return NotImplemented
+    
+    def __rsub__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                return self.__class__(np.where(np.isnan(self.fragment), _o, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                return self.__class__(np.where(np.isnan(_self), __o, np.nan))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isnan(self.fragment), __o, np.nan))
+        else:
+            return NotImplemented
+    
+    def __mul__(self, __o):
+        if isinstance(__o, self.__class__):
+            fragment = []
+            for _o in __o.fragment:
+                if _o is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    fragment+=list(self.fragment)*int(_o)
+            return self.__class__(fragment)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = []
+            for _o in __o:
+                if _o is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    fragment+=list(self.fragment)*int(_o)
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(list(self.fragment) * int(__o))
+        else:
+            return NotImplemented
+    
+    def __rmul__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = []
+            for _self in self.fragment:
+                if _self is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    fragment+=list(__o)*int(_self)
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            fragment = []
+            for _self in self.fragment:
+                if _self is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    fragment+=list(__o)*int(_self)
+            return self.__class__(fragment)
+        else:
+            return NotImplemented
+    
+    def __pow__(self, __o):
+        if isinstance(__o, self.__class__):
+            fragment = list(self.fragment)
+            for _o in __o.fragment:
+                if _o is not np.nan:
+                    fragment*=int(_o)
+            return self.__class__(fragment)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = list(self.fragment)
+            for _o in __o:
+                if _o is not np.nan:
+                    fragment*=int(_o)
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            if int(__o) == 0 or __o is np.nan: return self.__class__(self.fragment)
+            return self.__class__(list(self.fragment) * int(__o))
+        else:
+            return NotImplemented
+    
+    def __rpow__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = list(__o)
+            for _self in self.fragment:
+                if _self is not np.nan:
+                    fragment*=int(_self)
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            fragment = list(__o)
+            for _self in self.fragment:
+                if _self is not np.nan:
+                    fragment*=int(_self)
+            return self.__class__(fragment)
+        else:
+            return NotImplemented
+    
+    def __truediv__(self, __o):
+        if isinstance(__o, self.__class__):
+            fragment = []
+            for _o in __o.fragment:
+                if _o is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    if int(_o) == 0: continue
+                    fragment+=list(self.fragment)[:int(self.size/_o)]
+            return self.__class__(fragment)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = []
+            for _o in __o:
+                if _o is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    if int(_o) == 0: continue
+                    fragment+=list(self.fragment)[:int(self.size/_o)]
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            if int(__o) == 0 or __o is np.nan: return self.__class__(self.fragment)
+            return self.__class__(list(self.fragment)[:int(self.size/__o)])
+        else:
+            return NotImplemented
+    
+    def __rtruediv__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = []
+            for _self in self.fragment:
+                if _self is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    if int(_self) == 0: continue
+                    fragment+=list(__o)[:int(len(__o)/_self)]
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            if int(__o) == 0: return self.__class__([])
+            fragment = []
+            for _self in self.fragment:
+                if _self is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    if int(_self) == 0: continue
+                    fragment+=list(__o)
+            return self.__class__(fragment)
+        else:
+            return NotImplemented
+    
+    def __floordiv__(self, __o):
+        if isinstance(__o, self.__class__):
+            fragment = list(self.fragment)
+            for _o in __o.fragment:
+                if _o is not np.nan:
+                    if int(_o) == 0: continue
+                    fragment=fragment[:int(len(fragment)/_o)]
+            return self.__class__(fragment)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = list(self.fragment)
+            for _o in __o:
+                if _o is not np.nan:
+                    if int(_o) == 0: continue
+                    fragment=fragment[:int(len(fragment)/_o)]
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            if int(__o) == 0 or __o is np.nan: return self.__class__(self.fragment)
+            return self.__class__(list(self.fragment)[:int(self.size/__o)])
+        else:
+            return NotImplemented
+    
+    def __rfloordiv__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = list(__o)
+            for _self in self.fragment:
+                if _self is not np.nan:
+                    if int(_self) == 0: continue
+                    fragment=fragment[:int(len(fragment)/_self)]
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            if int(__o) == 0 or __o is np.nan: return self.__class__([])
+            fragment = list(__o)
+            for _self in self.fragment:
+                if _self is not np.nan:
+                    if int(_self) == 0: continue
+                    fragment=fragment[:int(len(fragment)/_self)]
+            return self.__class__(fragment)
+        else:
+            return NotImplemented
+    
+    def __mod__(self, __o):
+        if isinstance(__o, self.__class__):
+            fragment = list(self.fragment)
+            for _o in __o.fragment:
+                if _o is not np.nan:
+                    if int(_o) == 0: continue
+                    fragment=fragment[-int(len(fragment)%_o):]
+            return self.__class__(fragment)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = list(self.fragment)
+            for _o in __o:
+                if _o is not np.nan:
+                    if int(_o) == 0: continue
+                    fragment=fragment[-int(len(fragment)%_o):]
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            if int(__o) == 0 or __o is np.nan: return self.__class__(self.fragment)
+            return self.__class__(list(self.fragment)[-int(self.size%__o):])
+        else:
+            return NotImplemented
+    
+    def __rmod__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = list(__o)
+            for _self in self.fragment:
+                if _self is not np.nan:
+                    if int(_self) == 0: continue
+                    fragment=fragment[-int(len(fragment)%_self):]
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            if int(__o) == 0 or __o is np.nan: return self.__class__([])
+            fragment = list(__o)
+            for _self in self.fragment:
+                if _self is not np.nan:
+                    if int(_self) == 0: continue
+                    fragment=fragment[-int(len(fragment)%_self):]
+            return self.__class__(fragment)
+        else:
+            return NotImplemented
+    
+    def __lt__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.size < __o.size
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.size < len(__o)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.size < __o
+        else:
+            return NotImplemented
+    
+    def __rlt__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return len(__o) < self.size
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return __o < self.size
+        else:
+            return NotImplemented
+    
+    def __le__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.size <= __o.size
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.size <= len(__o)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.size <= __o
+        else:
+            return NotImplemented
+    
+    def __rle__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return len(__o) <= self.size
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return __o <= self.size
+        else:
+            return NotImplemented
+
+    def __lshift__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(list(self.fragment) + list(__o.fragment))
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.__class__(list(self.fragment)+list(__o))
+        elif isinstance(__o, int):
+            return self.__class__(list(self.fragment) + [np.nan]*__o)
+        elif isinstance(__o, float):
+            return self.__class__(list(self.fragment) + [np.nan]*int(__o))
+        else:
+            return NotImplemented
+    
+    def __rlshift__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.__class__(list(__o) + list(self.fragment))
+        elif isinstance(__o, int):
+            return self.__class__([np.nan]*__o + list(self.fragment))
+        elif isinstance(__o, float):
+            return self.__class__([np.nan]*int(__o) + list(self.fragment))
+        else:
+            return NotImplemented
+    
+    def __gt__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.size > __o.size
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.size > len(__o)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.size > __o
+        else:
+            return NotImplemented
+    
+    def __rgt__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return len(__o) > self.size
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return __o > self.size
+        else:
+            return NotImplemented
+    
+    def __ge__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.size >= __o.size
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.size >= len(__o)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.size >= __o
+        else:
+            return NotImplemented
+    
+    def __rge__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return len(__o) >= self.size
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return __o >= self.size
+        else:
+            return NotImplemented
+    
+    def __rshift__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(list(__o.fragment) + list(self.fragment))
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.__class__(list(__o)+list(self.fragment))
+        elif isinstance(__o, int):
+            return self.__class__([np.nan]*__o+list(self.fragment))
+        elif isinstance(__o, float):
+            return self.__class__([np.nan]*int(__o)+list(self.fragment))
+        else:
+            return NotImplemented
+    
+    def __rrshift__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.__class__(list(self.fragment)+list(__o))
+        elif isinstance(__o, int):
+            return self.__class__(list(self.fragment)+[np.nan]*__o)
+        elif isinstance(__o, float):
+            return self.__class__(list(self.fragment)+[np.nan]*int(__o))
+        else:
+            return NotImplemented
+
+    def __and__(self, __o):
+        if isinstance(__o, self.__class__):
+            if self > __o:
+                _self = self.fragment[:__o.size]
+                _is = (~np.isnan(_self))&(~np.isnan(__o.fragment))
+                return self.__class__(np.where(_is, _self, np.nan))
+            else:
+                _is = (~np.isnan(self.fragment))&(~np.isnan(__o[:self.size]))
+                return self.__class__(np.where(_is, self.fragment, np.nan))
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _self = self.fragment[:len(__o)]
+                _is = (~np.isnan(_self))&(~np.isnan(__o))
+                return self.__class__(np.where(_is, _self, np.nan))
+            else:
+                _is = (~np.isnan(self.fragment))&(~np.isnan(__o[:self.size]))
+                return self.__class__(np.where(_is, self.fragment, np.nan))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isclose(self.fragment, [__o]*self.size), self.fragment, np.nan))
+        else:
+            return NotImplemented
+
+    def __rand__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _self = self.fragment[:len(__o)]
+                _is = (~np.isnan(_self))&(~np.isnan(__o))
+                return self.__class__(np.where(_is, _self, np.nan))
+            else:
+                _is = (~np.isnan(self.fragment))&(~np.isnan(__o[:self.size]))
+                return self.__class__(np.where(_is, self.fragment, np.nan))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isclose(self.fragment, [__o]*self.size), self.fragment, np.nan))
+        else:
+            return NotImplemented
+    
+    def __or__(self, __o):
+        if isinstance(__o, self.__class__):
+            if self > __o:
+                _o = list(__o.fragment)+list(self.fragment[__o.size:])
+                _is = (~np.isnan(self.fragment))|(~np.isnan(_o))
+                return self.__class__(np.where(_is, self.fragment, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o.fragment[self.size:])
+                _is = (~np.isnan(_self))|(~np.isnan(__o.fragment))
+                return self.__class__(np.where(_is, _self, np.nan))
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                _is = (~np.isnan(self.fragment))|(~np.isnan(_o))
+                return self.__class__(np.where(_is, self.fragment, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                _is = (~np.isnan(_self))|(~np.isnan(__o))
+                return self.__class__(np.where(_is, _self, np.nan))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isclose(self.fragment, [__o]*self.size), self.fragment, np.nan))
+        else:
+            return NotImplemented
+
+    def __ror__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                _is = (~np.isnan(self.fragment))|(~np.isnan(_o))
+                return self.__class__(np.where(_is, _o, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                _is = (~np.isnan(_self))|(~np.isnan(__o))
+                return self.__class__(np.where(_is, __o, np.nan))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isclose(self.fragment, [__o]*self.size), self.fragment, np.nan))
+        else:
+            return NotImplemented
+
+    def __xor__(self, __o):
+        if isinstance(__o, self.__class__):
+            if self > __o:
+                _o = list(__o.fragment)+list(self.fragment[__o.size:])
+                _is = (~np.isnan(self.fragment))^(~np.isnan(_o))
+                return self.__class__(np.where(_is, self.fragment, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o.fragment[self.size:])
+                _is = (~np.isnan(_self))^(~np.isnan(__o.fragment))
+                return self.__class__(np.where(_is, _self, np.nan))
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                _is = (~np.isnan(self.fragment))^(~np.isnan(_o))
+                return self.__class__(np.where(_is, self.fragment, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                _is = (~np.isnan(_self))^(~np.isnan(__o))
+                return self.__class__(np.where(_is, _self, np.nan))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isclose(self.fragment, [__o]*self.size), np.nan, self.fragment))
+        else:
+            return NotImplemented
+
+    def __rxor__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                _is = (~np.isnan(self.fragment))^(~np.isnan(_o))
+                return self.__class__(np.where(_is, _o, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                _is = (~np.isnan(_self))^(~np.isnan(__o))
+                return self.__class__(np.where(_is, __o, np.nan))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isclose(self.fragment, [__o]*self.size), np.nan, self.fragment))
+        else:
+            return NotImplemented
+
+    def __invert__(self):
+        return self.__class__(self.fragment[::-1])
+
     @property
-    def signal(self):
-        return self.fragment
+    def size(self):
+        return self.fragment.size
 
 class Fragment2(_Fragment): # sence memory
     """add compare"""
@@ -147,57 +612,14 @@ class Fragment2(_Fragment): # sence memory
             cls._instance=True
         return super().__new__(cls, *args, **kwargs)
 
-    def __add__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-        return self.__class__(list(self.fragment)+list(__o.fragment))
-        
-    def __sub__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-        return self.__class__(self.fragment[:-__o.size])
-
-    def __mul__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-        fragment = list(self.fragment)
-        for i in __o.fragment:
-            fragment*=i
-        return self.__class__(fragment)
-
-    def __truediv__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-
-
-    # def __pow__(self, __o):
-    #     assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-    #     fragment = list()
-    #     return self.__class__()
-
-    def __and__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-        _size = self.fragment.size if self.fragment.size < __o.fragment.size else __o.fragment.size
-        return self.__class__(np.where(np.isnan(self.fragment[:_size]), __o.fragment[:_size], self.fragment[:_size]))
-
-    def __or__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-        if self.fragment.size > __o.fragment.size:
-            __o_fragment=list(__o.fragment)+list(self.fragment[__o.fragment.size:])
-            self_fragment = self.fragment
-        else:
-            self_fragment = list(self.fragment)+list(__o.fragment[self.fragment.size:])
-            __o_fragment = __o.fragment
-        return self.__class__(np.where(np.isnan(self_fragment), __o_fragment, self_fragment))
-
-    def __xor__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} must be {self.__class__}'
-        if self.fragment.size > __o.fragment.size:
-            __o_fragment=list(__o.fragment)+list(self.fragment[__o.fragment.size:])
-            self_fragment = self.fragment
-        else:
-            self_fragment = list(self.fragment)+list(__o.fragment[self.fragment.size:])
-            __o_fragment = __o.fragment
-        return self.__class__(np.where(np.isnan(__o_fragment), self_fragment, __o_fragment))
-
-    def __invert__(self):
-        return self.__class__(self.fragment[::-1])
+    def __init__(self, _key=None, _state=np.array([[0.]]), _reward=0.):
+        state = np.array(_state)
+        if _key is None: _key = range(state.size)
+        key = np.array(_key)
+        self.reward = _reward
+        self.index = key
+        self.fragment = state[key]
+        self.id = str(uuid4())
 
     def compare(self, state, _reward):
         assert isinstance(state, np.ndarray), f'should be ndarray {state}'
@@ -217,6 +639,581 @@ class Fragment2(_Fragment): # sence memory
         _state = np.zeros(np.max(self.index))
         _state[self.index]=self.fragment
         return _state
+
+class Fragment2_1(Fragment2):
+    """operation implement"""
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance=True
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self, _state=[np.nan], _reward=0., _key=None):
+        state = np.array(_state)
+        if _key is None: _key = range(state.size)
+        key = np.array(_key)
+        self.fragment = np.full(state.size, np.nan)
+        self.fragment[key] = state[key]
+        self.reward = _reward
+        self.id = str(uuid4())
+    
+    def __add__(self, __o):
+        if isinstance(__o, self.__class__):
+            if self > __o:
+                _o = list(__o.fragment)+list(self.fragment[__o.size:])
+                return self.__class__(np.where(np.isnan(_o), self.fragment, _o), self.reward+__o.reward)
+            else:
+                _self = list(self.fragment)+list(__o.fragment[self.size:])
+                return self.__class__(np.where(np.isnan(__o.fragment), _self, __o.fragment), self.reward+__o.reward)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                return self.__class__(np.where(np.isnan(_o), self.fragment, _o), self.reward)
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                return self.__class__(np.where(np.isnan(__o), _self, __o), self.reward)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isnan(self.fragment), self.fragment, __o), self.reward)
+        else:
+            return NotImplemented
+    
+    def __radd__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                return self.__class__(np.where(np.isnan(self.fragment), _o, self.fragment), self.reward)
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                return self.__class__(np.where(np.isnan(_self), __o, _self), self.reward)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isnan(self.fragment), __o, self.fragment), self.reward)
+        else:
+            return NotImplemented   
+    
+    def __sub__(self, __o):
+        if isinstance(__o, self.__class__):
+            if self > __o:
+                _o = list(__o.fragment)+list(self.fragment[__o.size:])
+                return self.__class__(np.where(np.isnan(_o), self.fragment, np.nan), self.reward-__o.reward)
+            else:
+                _self = list(self.fragment)+list(__o.fragment[self.size:])
+                return self.__class__(np.where(np.isnan(__o.fragment), _self, np.nan), self.reward-__o.reward)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                return self.__class__(np.where(np.isnan(_o), self.fragment, np.nan), self.reward)
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                return self.__class__(np.where(np.isnan(__o), _self, np.nan), self.reward)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isnan(self.fragment), self.fragment, np.nan), self.reward)
+        else:
+            return NotImplemented
+    
+    def __rsub__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                return self.__class__(np.where(np.isnan(self.fragment), _o, np.nan), -self.reward)
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                return self.__class__(np.where(np.isnan(_self), __o, np.nan), -self.reward)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isnan(self.fragment), __o, np.nan), -self.reward)
+        else:
+            return NotImplemented
+    
+    def __mul__(self, __o):
+        if isinstance(__o, self.__class__):
+            fragment = []
+            reward = 0.
+            for _o in __o.fragment:
+                if _o is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    fragment+=list(self.fragment)*int(_o)
+                    reward +=self.reward*_o
+            return self.__class__(fragment, reward)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = []
+            reward = 0.
+            for _o in __o:
+                if _o is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    fragment+=list(self.fragment)*int(_o)
+                    reward +=self.reward*_o
+            return self.__class__(fragment, reward)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(list(self.fragment) * int(__o), self.reward*__o)
+        else:
+            return NotImplemented
+    
+    def __rmul__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = []
+            for _self in self.fragment:
+                if _self is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    fragment+=list(__o)*int(_self)
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            fragment = []
+            for _self in self.fragment:
+                if _self is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    fragment+=list(__o)*int(_self)
+            return self.__class__(fragment)
+        else:
+            return NotImplemented
+    
+    def __pow__(self, __o):
+        if isinstance(__o, self.__class__):
+            fragment = list(self.fragment)
+            reward = self.reward
+            for _o in __o.fragment:
+                if _o is not np.nan:
+                    fragment*=int(_o)
+                    reward*=_o
+            return self.__class__(fragment,reward)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = list(self.fragment)
+            reward = self.reward
+            for _o in __o:
+                if _o is not np.nan:
+                    fragment*=int(_o)
+                    reward *= _o
+            return self.__class__(fragment, reward)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            if int(__o) == 0 or __o is np.nan: return self.__class__(self.fragment, self.reward)
+            return self.__class__(list(self.fragment) * int(__o), self.reward*__o)
+        else:
+            return NotImplemented
+    
+    def __rpow__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = list(__o)
+            for _self in self.fragment:
+                if _self is not np.nan:
+                    fragment*=int(_self)
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            fragment = list(__o)
+            for _self in self.fragment:
+                if _self is not np.nan:
+                    fragment*=int(_self)
+            return self.__class__(fragment)
+        else:
+            return NotImplemented
+    
+    def __truediv__(self, __o):
+        if isinstance(__o, self.__class__):
+            fragment = []
+            reward = 0.
+            for _o in __o.fragment:
+                if _o is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    if int(_o) == 0: continue
+                    fragment+=list(self.fragment)[:int(self.size/_o)]
+                    reward += self.reward/_o
+            return self.__class__(fragment, reward)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = []
+            reward = 0.
+            for _o in __o:
+                if _o is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    if int(_o) == 0: continue
+                    fragment+=list(self.fragment)[:int(self.size/_o)]
+                    reward += self.reward/_o
+            return self.__class__(fragment, reward)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            if int(__o) == 0 or __o is np.nan: return self.__class__(self.fragment, self.reward)
+            return self.__class__(list(self.fragment)[:int(self.size/__o)], self.reward/__o)
+        else:
+            return NotImplemented
+    
+    def __rtruediv__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = []
+            for _self in self.fragment:
+                if _self is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    if int(_self) == 0: continue
+                    fragment+=list(__o)[:int(len(__o)/_self)]
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            if int(__o) == 0: return self.__class__([])
+            fragment = []
+            for _self in self.fragment:
+                if _self is np.nan:
+                    fragment+=[np.nan]
+                else:
+                    if int(_self) == 0: continue
+                    fragment+=list(__o)
+            return self.__class__(fragment)
+        else:
+            return NotImplemented
+    
+    def __floordiv__(self, __o):
+        if isinstance(__o, self.__class__):
+            fragment = list(self.fragment)
+            reward = self.reward
+            for _o in __o.fragment:
+                if _o is not np.nan:
+                    if int(_o) == 0: continue
+                    fragment=fragment[:int(len(fragment)/_o)]
+                    reward/=_o
+            return self.__class__(fragment,reward)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = list(self.fragment)
+            reward = self.reward
+            for _o in __o:
+                if _o is not np.nan:
+                    if int(_o) == 0: continue
+                    fragment=fragment[:int(len(fragment)/_o)]
+                    reward/=_o
+            return self.__class__(fragment,reward)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            if int(__o) == 0 or __o is np.nan: return self.__class__(self.fragment, self.reward)
+            return self.__class__(list(self.fragment)[:int(self.size/__o)], self.reward/__o)
+        else:
+            return NotImplemented
+    
+    def __rfloordiv__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = list(__o)
+            for _self in self.fragment:
+                if _self is not np.nan:
+                    if int(_self) == 0: continue
+                    fragment=fragment[:int(len(fragment)/_self)]
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            if int(__o) == 0 or __o is np.nan: return self.__class__([])
+            fragment = list(__o)
+            for _self in self.fragment:
+                if _self is not np.nan:
+                    if int(_self) == 0: continue
+                    fragment=fragment[:int(len(fragment)/_self)]
+            return self.__class__(fragment)
+        else:
+            return NotImplemented
+    
+    def __mod__(self, __o):
+        if isinstance(__o, self.__class__):
+            fragment = list(self.fragment)
+            reward = self.reward
+            for _o in __o.fragment:
+                if _o is not np.nan:
+                    if int(_o) == 0: continue
+                    fragment=fragment[-int(len(fragment)%_o):]
+                    reward%=_o
+            return self.__class__(fragment, reward)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = list(self.fragment)
+            reward = self.reward
+            for _o in __o:
+                if _o is not np.nan:
+                    if int(_o) == 0: continue
+                    fragment=fragment[-int(len(fragment)%_o):]
+                    reward%=_o
+            return self.__class__(fragment, reward)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            if int(__o) == 0 or __o is np.nan: return self.__class__(self.fragment, self.reward)
+            return self.__class__(list(self.fragment)[-int(self.size%__o):], self.reward%__o)
+        else:
+            return NotImplemented
+    
+    def __rmod__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            fragment = list(__o)
+            for _self in self.fragment:
+                if _self is not np.nan:
+                    if int(_self) == 0: continue
+                    fragment=fragment[-int(len(fragment)%_self):]
+            return self.__class__(fragment)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            if int(__o) == 0 or __o is np.nan: return self.__class__([])
+            fragment = list(__o)
+            for _self in self.fragment:
+                if _self is not np.nan:
+                    if int(_self) == 0: continue
+                    fragment=fragment[-int(len(fragment)%_self):]
+            return self.__class__(fragment)
+        else:
+            return NotImplemented
+    
+    def __lt__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.size < __o.size
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.size < len(__o)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.size < __o
+        else:
+            return NotImplemented
+    
+    def __rlt__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return len(__o) < self.size
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return __o < self.size
+        else:
+            return NotImplemented
+    
+    def __le__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.size <= __o.size
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.size <= len(__o)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.size <= __o
+        else:
+            return NotImplemented
+    
+    def __rle__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return len(__o) <= self.size
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return __o <= self.size
+        else:
+            return NotImplemented
+
+    def __lshift__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(list(self.fragment) + list(__o.fragment), self.reward+__o.reward)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.__class__(list(self.fragment)+list(__o), self.reward)
+        elif isinstance(__o, int):
+            return self.__class__(list(self.fragment) + [np.nan]*__o, self.reward)
+        elif isinstance(__o, float):
+            return self.__class__(list(self.fragment) + [np.nan]*int(__o), self.reward)
+        else:
+            return NotImplemented
+    
+    def __rlshift__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.__class__(list(__o) + list(self.fragment))
+        elif isinstance(__o, int):
+            return self.__class__([np.nan]*__o + list(self.fragment))
+        elif isinstance(__o, float):
+            return self.__class__([np.nan]*int(__o) + list(self.fragment))
+        else:
+            return NotImplemented
+    
+    def __gt__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.size > __o.size
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.size > len(__o)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.size > __o
+        else:
+            return NotImplemented
+    
+    def __rgt__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return len(__o) > self.size
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return __o > self.size
+        else:
+            return NotImplemented
+    
+    def __ge__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.size >= __o.size
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.size >= len(__o)
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.size >= __o
+        else:
+            return NotImplemented
+    
+    def __rge__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return len(__o) >= self.size
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return __o >= self.size
+        else:
+            return NotImplemented
+    
+    def __rshift__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(list(__o.fragment) + list(self.fragment), __o.reward+self.reward)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.__class__(list(__o)+list(self.fragment), self.reward)
+        elif isinstance(__o, int):
+            return self.__class__([np.nan]*__o+list(self.fragment), self.reward)
+        elif isinstance(__o, float):
+            return self.__class__([np.nan]*int(__o)+list(self.fragment), self.reward)
+        else:
+            return NotImplemented
+    
+    def __rrshift__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            return self.__class__(list(self.fragment)+list(__o))
+        elif isinstance(__o, int):
+            return self.__class__(list(self.fragment)+[np.nan]*__o)
+        elif isinstance(__o, float):
+            return self.__class__(list(self.fragment)+[np.nan]*int(__o))
+        else:
+            return NotImplemented
+
+    def __and__(self, __o):
+        if isinstance(__o, self.__class__):
+            if self > __o:
+                _self = self.fragment[:__o.size]
+                _is = (~np.isnan(_self))&(~np.isnan(__o.fragment))
+                return self.__class__(np.where(_is, _self, np.nan))
+            else:
+                _is = (~np.isnan(self.fragment))&(~np.isnan(__o[:self.size]))
+                return self.__class__(np.where(_is, self.fragment, np.nan))
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _self = self.fragment[:len(__o)]
+                _is = (~np.isnan(_self))&(~np.isnan(__o))
+                return self.__class__(np.where(_is, _self, np.nan))
+            else:
+                _is = (~np.isnan(self.fragment))&(~np.isnan(__o[:self.size]))
+                return self.__class__(np.where(_is, self.fragment, np.nan))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isclose(self.fragment, [__o]*self.size), self.fragment, np.nan))
+        else:
+            return NotImplemented
+
+    def __rand__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _self = self.fragment[:len(__o)]
+                _is = (~np.isnan(_self))&(~np.isnan(__o))
+                return self.__class__(np.where(_is, _self, np.nan))
+            else:
+                _is = (~np.isnan(self.fragment))&(~np.isnan(__o[:self.size]))
+                return self.__class__(np.where(_is, self.fragment, np.nan))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isclose(self.fragment, [__o]*self.size), self.fragment, np.nan))
+        else:
+            return NotImplemented
+    
+    def __or__(self, __o):
+        if isinstance(__o, self.__class__):
+            if self > __o:
+                _o = list(__o.fragment)+list(self.fragment[__o.size:])
+                _is = (~np.isnan(self.fragment))|(~np.isnan(_o))
+                return self.__class__(np.where(_is, self.fragment, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o.fragment[self.size:])
+                _is = (~np.isnan(_self))|(~np.isnan(__o.fragment))
+                return self.__class__(np.where(_is, _self, np.nan))
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                _is = (~np.isnan(self.fragment))|(~np.isnan(_o))
+                return self.__class__(np.where(_is, self.fragment, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                _is = (~np.isnan(_self))|(~np.isnan(__o))
+                return self.__class__(np.where(_is, _self, np.nan))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isclose(self.fragment, [__o]*self.size), self.fragment, np.nan))
+        else:
+            return NotImplemented
+
+    def __ror__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                _is = (~np.isnan(self.fragment))|(~np.isnan(_o))
+                return self.__class__(np.where(_is, _o, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                _is = (~np.isnan(_self))|(~np.isnan(__o))
+                return self.__class__(np.where(_is, __o, np.nan))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isclose(self.fragment, [__o]*self.size), self.fragment, np.nan))
+        else:
+            return NotImplemented
+
+    def __xor__(self, __o):
+        if isinstance(__o, self.__class__):
+            if self > __o:
+                _o = list(__o.fragment)+list(self.fragment[__o.size:])
+                _is = (~np.isnan(self.fragment))^(~np.isnan(_o))
+                return self.__class__(np.where(_is, self.fragment, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o.fragment[self.size:])
+                _is = (~np.isnan(_self))^(~np.isnan(__o.fragment))
+                return self.__class__(np.where(_is, _self, np.nan))
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                _is = (~np.isnan(self.fragment))^(~np.isnan(_o))
+                return self.__class__(np.where(_is, self.fragment, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                _is = (~np.isnan(_self))^(~np.isnan(__o))
+                return self.__class__(np.where(_is, _self, np.nan))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isclose(self.fragment, [__o]*self.size), np.nan, self.fragment))
+        else:
+            return NotImplemented
+
+    def __rxor__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list):
+            if self > __o:
+                _o = list(__o)+list(self.fragment[len(__o):])
+                _is = (~np.isnan(self.fragment))^(~np.isnan(_o))
+                return self.__class__(np.where(_is, _o, np.nan))
+            else:
+                _self = list(self.fragment)+list(__o[self.size:])
+                _is = (~np.isnan(_self))^(~np.isnan(__o))
+                return self.__class__(np.where(_is, __o, np.nan))
+        elif isinstance(__o, int) or isinstance(__o, float):
+            return self.__class__(np.where(np.isclose(self.fragment, [__o]*self.size), np.nan, self.fragment))
+        else:
+            return NotImplemented
+
+    def __invert__(self):
+        return self.__class__(self.fragment[::-1], -self.reward)
+    
+    def __getitem__(self, key):
+        return self.fragment[key]
+
+    def keys(self):
+        return np.argwhere(~np.isnan(self.fragment)).flatten()
+
+    def values(self):
+        return self.fragment[~np.isnan(self.fragment)]
+
+    def update(self, key, value):
+        if isinstance(value, list): value = np.array(value)
+        assert isinstance(value, np.ndarray)
+        assert len(value)==len(key)
+        self.fragment[key] = value
+
+    def memorize(self, state, _reward):
+        assert isinstance(state, np.ndarray), f'should be ndarray {state}'
+        assert len(np.shape(state))==1, f'should {np.shape(state)} flatten'
+
+        reward_unexpectancy = (self.reward-_reward)
+        self.reward -= reward_unexpectancy
+        unexpectancy = abs(tanh(reward_unexpectancy))
+        _this = self | state
+        diff = _this.fragment-state
+        self.fragment = self.fragment - diff*unexpectancy
+        return diff, unexpectancy
+
+    def recall(self, state):
+        assert isinstance(state, np.ndarray), f'should be ndarray {state}'
+        return state + self
+
+    @property
+    def size(self):
+        return self.fragment.size
 
 class Fragment3(_Fragment): # story memory
 
@@ -339,12 +1336,38 @@ class Memory1(_Memory):
     def NaN(self):
         return self.memories[self.nan]
 
+class Memory1_1(Memory1):
+    """operation implement"""
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            cls.Fragment = Fragment1_1
+        return super().__new__(cls, *args, **kwargs)
+
 class Memory2(_Memory):
     """deactivate memorize"""
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
             cls.Fragment = Fragment2
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self):
+        fragment = self.__class__.Fragment([np.nan])
+        self.memories:dict={fragment.id:fragment} # uuid:flagment
+        self.weights:dict ={fragment.id:0.}
+        self.nan = fragment.id
+
+    @property
+    def NaN(self):
+        return self.memories[self.nan]
+
+class Memory2_1(Memory2):
+    """opelation implement"""
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            cls.Fragment = Fragment2_1
         return super().__new__(cls, *args, **kwargs)
 
 class Memory3(_Memory):
@@ -417,7 +1440,10 @@ class _MemoryObject:
 
     def __ne__(self, __o: object) -> bool:
         return not self.__eq__(__o)
-    
+
+    def __str__(self):
+        return f"TeamMemory {self.teamMemory} MemoryCode: {self.memoryCode}"
+
     def __getitem__(self, _key):
         return self.__class__.memories[self.memoryCode][_key]
     
@@ -505,13 +1531,13 @@ class MemoryObject(_MemoryObject):
         return self.__class__.memories[self.memoryCode].state
 
 class MemoryObject1(MemoryObject):
+    """fragment2 implement"""
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.team import Team2_2
             cls._instance = True
             cls.Team = Team2_2
             cls.memories = Memory2()
-            # cls.hippocampus = Hippocampus()s
 
         return super().__new__(cls)
     
@@ -535,38 +1561,311 @@ class MemoryObject1(MemoryObject):
             self.teamMemory = None
             return
 
-    def __add__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} is not {self.__class__}'
-        return self.__class__(self.memory + __o.memory)
+class MemoryObject2(MemoryObject1):
+    """operator implement"""
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.team import Team2_2
+            cls._instance = True
+            cls.Team = Team2_2
+            cls.memories = Memory2_1()
+
+        return super().__new__(cls)
+
+    def __add__(self, __o):       
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory + __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory + __o)
+        else:
+            return NotImplemented
+    
+    def __radd__(self, __o):
+        if isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o + self.memory)
+        else:
+            return NotImplemented       
     
     def __sub__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} is not {self.__class__}'
-        return self.__class__(self.memory - __o.memory)
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory - __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory - __o)
+        else:
+            return NotImplemented
     
+    def __rsub__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o - self.memory)
+        else:
+            return NotImplemented
+    
+    def __mul__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory * __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory * __o)
+        else:
+            return NotImplemented
+    
+    def __rmul__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o * self.memory)
+        else:
+            return NotImplemented
+    
+    def __pow__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory ** __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory ** __o)
+        else:
+            return NotImplemented
+    
+    def __rpow__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o ** self.memory)
+        else:
+            return NotImplemented
+    
+    def __truediv__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory / __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory / __o)
+        else:
+            return NotImplemented
+    
+    def __rtruediv__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o / self.memory)
+        else:
+            return NotImplemented
+    
+    def __floordiv__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory // __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory // __o)
+        else:
+            return NotImplemented
+    
+    def __rfloordiv__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o // self.memory)
+        else:
+            return NotImplemented
+    
+    def __mod__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory % __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory % __o)
+        else:
+            return NotImplemented
+    
+    def __rmod__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o % self.memory)
+        else:
+            return NotImplemented
+    
+    def __lt__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.memory < __o.memory
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.memory < __o
+        else:
+            return NotImplemented
+    
+    def __rlt__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return __o < self.memory
+        else:
+            return NotImplemented
+    
+    def __le__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.memory <= __o.memory
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.memory <= __o
+        else:
+            return NotImplemented
+    
+    def __rle__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return __o <= self.memory
+        else:
+            return NotImplemented
+
+    def __lshift__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory << __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory << __o)
+        else:
+            return NotImplemented
+    
+    def __rlshift__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o << self.memory)
+        else:
+            return NotImplemented
+    
+    def __gt__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.memory > __o.memory
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.memory > __o
+        else:
+            return NotImplemented
+    
+    def __rgt__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return __o > self.memory
+        else:
+            return NotImplemented
+    
+    def __ge__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.memory >= __o.memory
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.memory >= __o
+        else:
+            return NotImplemented
+    
+    def __rge__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return __o >= self.memory
+        else:
+            return NotImplemented
+    
+    def __rshift__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory >> __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory >> __o)
+        else:
+            return NotImplemented
+    
+    def __rrshift__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o >> self.memory)
+        else:
+            return NotImplemented
+
     def __and__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} is not {self.__class__}'
-        return self.__class__(self.memory & __o.memory)
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory & __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory & __o)
+        else:
+            return NotImplemented
+
+    def __rand__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory & __o)
+        else:
+            return NotImplemented
     
     def __or__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} is not {self.__class__}'
-        return self.__class__(self.memory | __o.memory)
-    
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory | __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory | __o)
+        else:
+            return NotImplemented
+
+    def __ror__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o | self.memory)
+        else:
+            return NotImplemented
+            
     def __xor__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} is not {self.__class__}'
-        return self.__class__(self.memory ^ __o.memory)
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory ^ __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory ^ __o)
+        else:
+            return NotImplemented
+    
+    def __rxor__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o ^ self.memory)
+        else:
+            return NotImplemented
     
     def __invert__(self):
-        # assert isinstance(__o, self.__class__), f'{__o} is not {self.__class__}'
         return self.__class__(~self.memory)
     
-    def getImage(self, _act, _state, visited, memVars, path_trace=None):
-        if self.teamMemory is not None:
-            return self.teamMemory.image(_act, _state, visited, memVars=memVars, path_trace=path_trace)
-        else:
-            assert self.memoryCode in self.__class__.memories, f'{self.memoryCode} is not in {self.__class__.memories}'
-            self.__class__.memories.weights[self.memoryCode]*=0.9 # 忘却確立減算
-            self.__class__.memories.updateWeights()               # 忘却確立計上
-            return self
+    @property
+    def NaN(self):
+        return self.__class__(self.__class__.memories.nan)
 
 class _ActionObject:
     """
@@ -644,10 +1943,7 @@ class _ActionObject:
         return not self.__eq__(__o)
 
     def __str__(self):
-        return "TeamAction {} ActionCode: {}".format(
-            self.teamAction if self.teamAction is not None else 'None',
-            self.actionCode if self.actionCode is not None else 'None'
-        )
+        return f"TeamAction {self.teamAction} ActionCode: {self.actionCode}"
 
     def zeroRegisters(self):
         try:
@@ -833,13 +2129,14 @@ class ActionObject1(_ActionObject):
         return self.__class__.actions[self.actionCode]
 
 class ActionObject2(ActionObject1):
+    """operator implement"""
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.team import Team1_2
             cls._instance = True
             cls.Team = Team1_2
-            cls.actions=Memory1()
+            cls.actions=Memory1_1()
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -880,28 +2177,295 @@ class ActionObject2(ActionObject1):
             except:
                 print('諦めな・・・')
 
-    def __add__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} is not {self.__class__}'
-        return self.__class__(self.action + __o.action)
+    def __add__(self, __o):       
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.action + __o.action)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(self.action + __o)
+        else:
+            return NotImplemented
+    
+    def __radd__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(__o + self.action)
+        else:
+            return NotImplemented       
     
     def __sub__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} is not {self.__class__}'
-        return self.__class__(self.action - __o.action)
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.action - __o.action)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(self.action - __o)
+        else:
+            return NotImplemented
     
+    def __rsub__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(__o - self.action)
+        else:
+            return NotImplemented
+    
+    def __mul__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.action * __o.action)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(self.action * __o)
+        else:
+            return NotImplemented
+    
+    def __rmul__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(__o * self.action)
+        else:
+            return NotImplemented
+    
+    def __pow__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.action ** __o.action)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(self.action ** __o)
+        else:
+            return NotImplemented
+    
+    def __rpow__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(__o ** self.action)
+        else:
+            return NotImplemented
+    
+    def __truediv__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.action / __o.action)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(self.action / __o)
+        else:
+            return NotImplemented
+    
+    def __rtruediv__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(__o / self.action)
+        else:
+            return NotImplemented
+    
+    def __floordiv__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.action // __o.action)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(self.action // __o)
+        else:
+            return NotImplemented
+    
+    def __rfloordiv__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(__o // self.action)
+        else:
+            return NotImplemented
+    
+    def __mod__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.action % __o.action)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(self.action % __o)
+        else:
+            return NotImplemented
+    
+    def __rmod__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(__o % self.action)
+        else:
+            return NotImplemented
+    
+    def __lt__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.action < __o.action
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.action < __o
+        else:
+            return NotImplemented
+    
+    def __rlt__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return __o < self.action
+        else:
+            return NotImplemented
+    
+    def __le__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.action <= __o.action
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.action <= __o
+        else:
+            return NotImplemented
+    
+    def __rle__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return __o <= self.action
+        else:
+            return NotImplemented
+
+    def __lshift__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.action << __o.action)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(self.action << __o)
+        else:
+            return NotImplemented
+    
+    def __rlshift__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(__o << self.action)
+        else:
+            return NotImplemented
+    
+    def __gt__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.action > __o.action
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.action > __o
+        else:
+            return NotImplemented
+    
+    def __rgt__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return __o > self.action
+        else:
+            return NotImplemented
+    
+    def __ge__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.action >= __o.action
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.action >= __o
+        else:
+            return NotImplemented
+    
+    def __rge__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return __o >= self.action
+        else:
+            return NotImplemented
+    
+    def __rshift__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.action >> __o.action)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(self.action >> __o)
+        else:
+            return NotImplemented
+    
+    def __rrshift__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(__o >> self.action)
+        else:
+            return NotImplemented
+
     def __and__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} is not {self.__class__}'
-        return self.__class__(self.action & __o.action)
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.action & __o.action)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(self.action & __o)
+        else:
+            return NotImplemented
+
+    def __rand__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(self.action & __o)
+        else:
+            return NotImplemented
     
     def __or__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} is not {self.__class__}'
-        return self.__class__(self.action | __o.action)
-    
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.action | __o.action)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(self.action | __o)
+        else:
+            return NotImplemented
+
+    def __ror__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(__o | self.action)
+        else:
+            return NotImplemented
+            
     def __xor__(self, __o):
-        assert isinstance(__o, self.__class__), f'{__o} is not {self.__class__}'
-        return self.__class__(self.action ^ __o.action)
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.action ^ __o.action)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(self.action ^ __o)
+        else:
+            return NotImplemented
+    
+    def __rxor__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.actions.Fragment):
+            return self.__class__(__o ^ self.action)
+        else:
+            return NotImplemented
     
     def __invert__(self):
-        # assert isinstance(__o, self.__class__), f'{__o} is not {self.__class__}'
         return self.__class__(~self.action)
     
     @property
