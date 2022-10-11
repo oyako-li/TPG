@@ -101,8 +101,8 @@ class _TPG:
     def getAgents(self):
         return self.trainer.getAgents()
     
-    def setAgents(self, task='task'):
-        self.agents = self.trainer.getAgents(task=task)
+    def setAgents(self, task=None):
+        self.agents = self.trainer.getAgents(task=self.task if task is None else task)
 
     def flush_render(self, step=0, name='', info=''):
         self.ax1.imshow(self.env.render(mode='rgb_array'))
@@ -245,7 +245,7 @@ class _TPG:
 
 class MHTPG(_TPG):
     def __new__(cls, *args, **kwargs):
-        if not cls._instance:
+        if cls._instance is None:
             from _tpg.trainer import Trainer1
             cls._instance = True
             cls.Trainer = Trainer1
@@ -257,7 +257,7 @@ class MHTPG(_TPG):
 
 class ActorTPG(MHTPG):
     def __new__(cls, *args, **kwargs):
-        if not cls._instance:
+        if cls._instance is None:
             from _tpg.trainer import Trainer1_1
             cls._instance = True
             cls.Trainer = Trainer1_1
@@ -369,7 +369,7 @@ class ActorTPG(MHTPG):
 
 class Actor(ActorTPG):
     def __new__(cls, *args, **kwargs):
-        if not cls._instance:
+        if cls._instance is None:
             from _tpg.trainer import Trainer1_2
             cls._instance = True
             cls.Trainer = Trainer1_2
@@ -1201,13 +1201,13 @@ class Automata1(Automata):
     def _setupParams(self, actor_id, emulator_id, actions=None, images=None, rewards=None):
         self.actions[actor_id]=[]
         # self.predicted_reward[actor_id]=0.
-        if not self.predicted_reward.get(actor_id) : self.predicted_reward[actor_id]=0.
+        if not self.predicted_reward.get(actor_id): self.predicted_reward[actor_id]=0.
         if rewards is not None: self.predicted_reward[actor_id] = sum(rewards)
         if actions is not None: self.actions[actor_id] = actions
 
         self.pairs[actor_id] = emulator_id
-        if not self.memories.get(emulator_id) : self.memories[emulator_id]=[]
-        if images is not None: self.memories[emulator_id]   += images
+        if not self.memories.get(emulator_id): self.memories[emulator_id]=[]
+        if images is not None: self.memories[emulator_id] += images
 
     def setAction(self, action):
         self.actor.setActions(action)

@@ -612,7 +612,7 @@ class Fragment2(_Fragment): # sence memory
             cls._instance=True
         return super().__new__(cls, *args, **kwargs)
 
-    def __init__(self, _key=None, _state=np.array([[0.]]), _reward=0.):
+    def __init__(self, _key=[0], _state=np.array([[0.]]), _reward=0.):
         state = np.array(_state)
         if _key is None: _key = range(state.size)
         key = np.array(_key)
@@ -1353,7 +1353,7 @@ class Memory2(_Memory):
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self):
-        fragment = self.__class__.Fragment([np.nan])
+        fragment = self.__class__.Fragment()
         self.memories:dict={fragment.id:fragment} # uuid:flagment
         self.weights:dict ={fragment.id:0.}
         self.nan = fragment.id
@@ -1369,6 +1369,12 @@ class Memory2_1(Memory2):
             cls._instance = True
             cls.Fragment = Fragment2_1
         return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self):
+        fragment = self.__class__.Fragment(_state=[np.nan])
+        self.memories:dict={fragment.id:fragment} # uuid:flagment
+        self.weights:dict ={fragment.id:0.}
+        self.nan = fragment.id
 
 class Memory3(_Memory):
     ActionObject=None
@@ -1394,7 +1400,7 @@ class Memory3(_Memory):
         return fragment.id
 
 class _MemoryObject:
-    memories=_Memory()
+    # memories=_Memory()
     Team = None
     _instance = None
 
@@ -1404,6 +1410,7 @@ class _MemoryObject:
             from _tpg.team import Team2
             cls._instance = True
             cls.Team = Team2
+            cls.memories = _Memory()
 
         return super().__new__(cls)
     
@@ -1504,7 +1511,7 @@ class MemoryObject(_MemoryObject):
             cls._instance = True
             cls.Team = Team2_1
 
-        return super().__new__(cls)
+        return super().__new__(cls, *args, **kwargs)
     
     def getImage(self, _act, _state, visited, memVars, path_trace=None):
         if self.teamMemory is not None:
@@ -1537,9 +1544,8 @@ class MemoryObject1(MemoryObject):
             from _tpg.team import Team2_2
             cls._instance = True
             cls.Team = Team2_2
-            cls.memories = Memory2()
 
-        return super().__new__(cls)
+        return super().__new__(cls, *args, **kwargs)
     
     def __init__(self, state=None, reward=0.):
 
@@ -1563,14 +1569,15 @@ class MemoryObject1(MemoryObject):
 
 class MemoryObject2(MemoryObject1):
     """operator implement"""
+    # memories = Memory2_1()
+
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.team import Team2_2
             cls._instance = True
             cls.Team = Team2_2
             cls.memories = Memory2_1()
-
-        return super().__new__(cls)
+        return super().__new__(cls, *args, **kwargs)
 
     def __add__(self, __o):       
         if isinstance(__o, self.__class__):
@@ -1862,7 +1869,10 @@ class MemoryObject2(MemoryObject1):
     
     def __invert__(self):
         return self.__class__(~self.memory)
-    
+
+    def __len__(self):
+        return self.__class__.memories[self.memoryCode].size
+
     @property
     def NaN(self):
         return self.__class__(self.__class__.memories.nan)
@@ -2130,13 +2140,13 @@ class ActionObject1(_ActionObject):
 
 class ActionObject2(ActionObject1):
     """operator implement"""
+    actions=Memory1_1()
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.team import Team1_2
             cls._instance = True
             cls.Team = Team1_2
-            cls.actions=Memory1_1()
 
         return super().__new__(cls, *args, **kwargs)
 

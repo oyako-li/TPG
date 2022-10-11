@@ -308,7 +308,7 @@ class Program2_1(Program2):
             # get data for operation
             op = ops[i]
             x = regs[dsts[i]]
-            y = src
+            y = src if src is not np.nan else 1
             act = act if act is not np.nan else 0
             dest = (dsts[i]+act)%regSize
 

@@ -3,8 +3,6 @@ import random
 import pickle
 import numpy as np
 
-
-
 class _Trainer:
     Agent = None
     Team = None
@@ -1222,7 +1220,8 @@ class Trainer2(Trainer):
 
         self.generation += 1
 
-    def getAgents(self, sortTasks=[], multiTaskType='min', skipTasks=[]):
+    def getAgents(self, sortTasks=[], multiTaskType='min', skipTasks=[], task='task'):
+        self.memVars['task']=task
         # remove those that get skipped
         rTeams = [rt for rt in self.rootTeams
                 if len(skipTasks) == 0
@@ -1429,7 +1428,7 @@ class Trainer2_2(Trainer2_1):
             from _tpg.team import Team2_2
             from _tpg.learner import Learner2_2
             from _tpg.program import Program2
-            from _tpg.memory_object import MemoryObject2
+            from _tpg.memory_object import MemoryObject2, Memory2_1
 
             cls._instance = True
             cls.Agent = Agent2
@@ -1437,6 +1436,7 @@ class Trainer2_2(Trainer2_1):
             cls.Learner = Learner2_2
             cls.Program = Program2
             cls.MemoryObject = MemoryObject2
+            cls.MemoryObject.memories = Memory2_1()
 
         return super().__new__(cls, *args, **kwargs)
 
