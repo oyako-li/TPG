@@ -74,6 +74,15 @@ class MHTPGTest(TPGTest):
         tpg = self.TPG()
         self.assertIsInstance(tpg.trainer, Trainer1)
 
+class MHPointTest(MHTPGTest):
+
+    def setUp(self) -> None:
+        from _tpg.tpg import MHTPG
+        self.TPG = MHTPG
+        self.task = "Centipede-v4"
+        self.env = gym.make(self.task)
+        self.action = self.env.action_space.n
+
 class ActorPointTest(MHTPGTest):
     def setUp(self) -> None:
         from _tpg.tpg import ActorTPG
@@ -119,7 +128,7 @@ class ActorPointTest(MHTPGTest):
         
         tpg.evolve([_task], _actionSequence=actionSequence, _actionReward=actionReward)
 
-    @unittest.skip('next test case')
+    # @unittest.skip('next test case')
     def test_growing(self):
         '''test growing'''
         tpg = self.TPG()
@@ -199,12 +208,12 @@ class EmulatorTPGTest(unittest.TestCase):
     def test_generations(self):
         '''test generation'''
         tpg = self.TPG()
-        tpg.setMemories(self.state)
         tpg.setEnv(self.env)
+        tpg.setMemories(self.state)
         score = tpg.generation()
         self.assertIsNotNone(score)
 
-    @unittest.skip('next test case')
+    # @unittest.skip('next test case')
     def test_growing(self):
         '''test growing'''
         tpg = self.TPG()
@@ -236,8 +245,8 @@ class EmulatorPointTest(EmulatorTPG1Test):
         from _tpg.trainer import Trainer2_2
         tpg = self.TPG()
         self.assertEqual(tpg.Trainer, Trainer2_2)
-        tpg.setMemories(self.state)
         tpg.setEnv(self.env)
+        tpg.setMemories(self.state)
         tpg.setAgents()
         self.assertEqual(tpg.Trainer.MemoryObject.memories.Fragment, Fragment2_1)
 

@@ -650,6 +650,8 @@ class Trainer1_1(Trainer1):
             cls.Learner = Learner1_1
             cls.Program = Program1
             cls.ActionObject = ActionObject1
+            cls.ActionObject._nan = cls.ActionObject()
+
         return super().__new__(cls, *args, **kwargs)
 
     def _initialize(self):
@@ -853,6 +855,8 @@ class Trainer1_2(Trainer1_1):
             cls.Learner = Learner1_2
             cls.Program = Program1
             cls.ActionObject = ActionObject2
+            cls.ActionObject._nan = cls.ActionObject()
+
         return super().__new__(cls, *args, **kwargs)
   
 class Trainer2(Trainer):
@@ -872,6 +876,7 @@ class Trainer2(Trainer):
             cls.Program = Program2
             # cls.ActionObject = _ActionObject
             cls.MemoryObject = _MemoryObject
+            cls.MemoryObject.nan = cls.MemoryObject()
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -1301,6 +1306,8 @@ class Trainer2_1(Trainer2):
             cls.Learner = Learner2_1
             cls.Program = Program2
             cls.MemoryObject = MemoryObject
+            cls.MemoryObject._nan = cls.MemoryObject()
+
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -1427,18 +1434,19 @@ class Trainer2_2(Trainer2_1):
             from _tpg.agent import Agent2
             from _tpg.team import Team2_2
             from _tpg.learner import Learner2_2
-            from _tpg.program import Program2
-            from _tpg.memory_object import MemoryObject2, Memory2_1
+            from _tpg.program import Program2_1
+            from _tpg.memory_object import MemoryObject2
 
             cls._instance = True
             cls.Agent = Agent2
             cls.Team = Team2_2
             cls.Learner = Learner2_2
-            cls.Program = Program2
+            cls.Program = Program2_1
             cls.MemoryObject = MemoryObject2
-            cls.MemoryObject.memories = Memory2_1()
+            cls.MemoryObject._nan = cls.MemoryObject()
 
         return super().__new__(cls, *args, **kwargs)
+
 
     def _select(self, extraTeams=None, task='task'):
 
@@ -1556,3 +1564,12 @@ class Trainer2_2(Trainer2_1):
         self.__class__.MemoryObject.memories.oblivion(memory_code_list)
 
         self.generation += 1
+
+    def setMemories(self, state):
+        assert isinstance(state, np.ndarray)
+
+        for _ in range(self.initMaxTeamSize):
+            key = np.random.choice(range(state.size), random.randint(1, state.size-1))
+            self.__class__.MemoryObject.memories.append(_state=state, _key=key)
+        self._initialize(_state=state)
+        return self.__class__.MemoryObject.memories

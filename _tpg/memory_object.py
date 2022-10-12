@@ -650,7 +650,7 @@ class Fragment2_1(Fragment2):
     def __init__(self, _state=[np.nan], _reward=0., _key=None):
         state = np.array(_state)
         if _key is None: _key = range(state.size)
-        key = np.array(_key)
+        key = np.array(list(set(_key)))
         self.fragment = np.full(state.size, np.nan)
         self.fragment[key] = state[key]
         self.reward = _reward
@@ -1207,6 +1207,17 @@ class Fragment2_1(Fragment2):
         self.fragment = self.fragment - diff*unexpectancy
         return diff, unexpectancy
 
+    def compare(self, state, _reward):
+        assert isinstance(state, np.ndarray), f'should be ndarray {state}'
+        assert len(np.shape(state))==1, f'should {np.shape(state)} flatten'
+
+        reward_unexpectancy = (self.reward-_reward)
+        unexpectancy = abs(tanh(reward_unexpectancy))
+        dif = np.power(self.fragment-state, 2)
+        diff = dif[dif<np.inf].sum()
+        
+        return diff, unexpectancy
+
     def recall(self, state):
         assert isinstance(state, np.ndarray), f'should be ndarray {state}'
         return state + self
@@ -1215,7 +1226,11 @@ class Fragment2_1(Fragment2):
     def size(self):
         return self.fragment.size
 
-class Fragment3(_Fragment): # story memory
+    @property
+    def state(self):
+        return self.fragment
+
+class Fragment3(Fragment2_1): # story memory
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -1224,7 +1239,7 @@ class Fragment3(_Fragment): # story memory
 
     def __init__(self, _actObj, _memObjs=[]):
         self.actObj = _actObj
-        self.fragment = list(_memObjs)
+        self.fragment = np.array(_memObjs)
         self.id = str(uuid4())
     
     def __getitem__(self, __key):
@@ -1294,9 +1309,9 @@ class _Memory:
             self.__delattr__(key)
 
     def choice(self, _ignore:list=[])->list:
-        p = 0.9999-self.popus(_ignore)
+        p = 1-self.popus(_ignore)
         p=sigmoid(p)
-        return random.choices(self.codes(_ignore), p)[0]
+        return random.choices(self.codes(_ignore), p+0.0001)[0]
 
 class Memory1(_Memory):
     """actions memory"""
@@ -1338,14 +1353,20 @@ class Memory1(_Memory):
 
 class Memory1_1(Memory1):
     """operation implement"""
+    # _instance=None
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
             cls.Fragment = Fragment1_1
+
         return super().__new__(cls, *args, **kwargs)
+
+    def values(self):
+        return self.memories.values()
 
 class Memory2(_Memory):
     """deactivate memorize"""
+    # _instance=None
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
@@ -1356,14 +1377,10 @@ class Memory2(_Memory):
         fragment = self.__class__.Fragment()
         self.memories:dict={fragment.id:fragment} # uuid:flagment
         self.weights:dict ={fragment.id:0.}
-        self.nan = fragment.id
-
-    @property
-    def NaN(self):
-        return self.memories[self.nan]
 
 class Memory2_1(Memory2):
     """opelation implement"""
+    # _instance=None
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
@@ -1376,6 +1393,17 @@ class Memory2_1(Memory2):
         self.weights:dict ={fragment.id:0.}
         self.nan = fragment.id
 
+        
+    def append(self, _state, _reward=0., _key=None):
+        memory = self.__class__.Fragment(_state, _reward, _key)
+        self.memories[memory.id]    = memory
+        self.weights[memory.id]     = 1.
+        return memory.id
+
+    @property
+    def NaN(self):
+        return self.memories[self.nan]
+
 class Memory3(_Memory):
     ActionObject=None
     MemoryObject=None
@@ -1386,6 +1414,7 @@ class Memory3(_Memory):
             cls.ActionObject = ActionObject2
             cls.MemoryObject = MemoryObject1
         return super().__new__(cls, *args, **kwargs)
+
 
     def append(self, _actionSequence, _memorySequence, _rewardSequence):
         # assert isinstance(_actObj, self.__class__.ActionObject) and isinstance(_memObjs[0], self.__class__.MemoryObject), \
@@ -1399,10 +1428,14 @@ class Memory3(_Memory):
         self.weights[fragment.id] =1.-emotion
         return fragment.id
 
+    def score(self):
+        return np.sum(1-np.array(self.weights.values()))
+
 class _MemoryObject:
-    # memories=_Memory()
     Team = None
+    memories=None
     _instance = None
+    _nan=None
 
     # you should inherit
     def __new__(cls, *args, **kwargs):
@@ -1458,7 +1491,7 @@ class _MemoryObject:
         if self.teamMemory is not None:
             return self.teamMemory.image(_act, _state, visited, memVars=memVars, path_trace=path_trace)
         else:
-            assert self.memoryCode in self.__class__.memories, f'{self.memoryCode} is not in {self.__class__.memories}'
+            assert self.memoryCode in self.__class__.memories, f'{self.memoryCode} is not in {self.__class__.memories}, {self.__class__}'
             self.__class__.memories.weights[self.memoryCode]*=0.9 # 忘却確立減算
             self.__class__.memories.updateWeights()               # 忘却確立計上
             return self.memoryCode
@@ -1503,24 +1536,21 @@ class _MemoryObject:
         cls.memories = _memories
         return cls.__init__()
 
+    @classmethod
+    @property
+    def NaN(cls):
+        return cls._nan
+
 class MemoryObject(_MemoryObject):
-    memories=Memory2()
+    
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.team import Team2_1
             cls._instance = True
             cls.Team = Team2_1
+            cls.memories = Memory2()
 
         return super().__new__(cls, *args, **kwargs)
-    
-    def getImage(self, _act, _state, visited, memVars, path_trace=None):
-        if self.teamMemory is not None:
-            return self.teamMemory.image(_act, _state, visited, memVars=memVars, path_trace=path_trace)
-        else:
-            assert self.memoryCode in self.__class__.memories, f'{self.memoryCode} is not in {self.__class__.memories}'
-            self.__class__.memories.weights[self.memoryCode]*=0.9 # 忘却確立減算
-            self.__class__.memories.updateWeights()               # 忘却確立計上
-            return self
 
     def recall(self, state):
         return self.__class__.memories[self.memoryCode].recall(state)
@@ -1539,11 +1569,13 @@ class MemoryObject(_MemoryObject):
 
 class MemoryObject1(MemoryObject):
     """fragment2 implement"""
+    
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.team import Team2_2
             cls._instance = True
             cls.Team = Team2_2
+            cls.memories = Memory2_1()
 
         return super().__new__(cls, *args, **kwargs)
     
@@ -1559,7 +1591,7 @@ class MemoryObject1(MemoryObject):
             return
         elif isinstance(state, np.ndarray):
             key = np.random.choice(range(state.size), random.randint(1, state.size-1))
-            self.memoryCode = self.__class__.memories.append(key, state, reward)
+            self.memoryCode = self.__class__.memories.append(state, reward, key)
             self.teamMemory = None
             return
         else:
@@ -1569,7 +1601,6 @@ class MemoryObject1(MemoryObject):
 
 class MemoryObject2(MemoryObject1):
     """operator implement"""
-    # memories = Memory2_1()
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -1873,10 +1904,15 @@ class MemoryObject2(MemoryObject1):
     def __len__(self):
         return self.__class__.memories[self.memoryCode].size
 
-    @property
-    def NaN(self):
-        return self.__class__(self.__class__.memories.nan)
-
+    def getImage(self, _act, _state, visited, memVars, path_trace=None):
+        if self.teamMemory is not None:
+            return self.teamMemory.image(_act, _state, visited, memVars=memVars, path_trace=path_trace)
+        else:
+            assert self.memoryCode in self.__class__.memories, f'{self.memoryCode} is not in {self.__class__.memories}, {self.__class__}'
+            self.__class__.memories.weights[self.memoryCode]*=0.9 # 忘却確立減算
+            self.__class__.memories.updateWeights()               # 忘却確立計上
+            return self
+    
 class _ActionObject:
     """
     Action  Object has a program to produce a value for the action, program doesn't
@@ -2030,14 +2066,16 @@ class _ActionObject:
         return self
 
 class ActionObject1(_ActionObject):
-    actions=Memory1()
+    actions=None
+    _nan=None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.team import Team1_1
             cls._instance = True
             cls.Team = Team1_1
-
+            cls.actions = Memory1()
+            
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self,
@@ -2134,19 +2172,24 @@ class ActionObject1(_ActionObject):
         cls.actions = _actions
         return cls.__init__()
 
+    @classmethod
+    @property
+    def NaN(cls):
+        return cls._nan
+
     @property
     def action(self):
         return self.__class__.actions[self.actionCode]
 
 class ActionObject2(ActionObject1):
     """operator implement"""
-    actions=Memory1_1()
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.team import Team1_2
             cls._instance = True
             cls.Team = Team1_2
+            cls.actions = Memory1_1()
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -2497,3 +2540,7 @@ class Hippocampus:
 
     def __call__(self):
         pass
+
+    # def append(self,_actionSequence, _memorySequence, _rewardSequence):
+    #     # actObj = self.__class__.Memory.ActionObject
+    #     self.real.append()
