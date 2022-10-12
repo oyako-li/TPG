@@ -1145,6 +1145,7 @@ class Automata1(_Automata):
         act = _actor.act(state)
         # breakpoint(actions)
         actions = self.activator(act)
+        i = 0
         for action in actions:
             # assert action in self.__class__.Actor.Trainer.ActionObject.actions.values(), f'{action} , {act}'
             image  = _emulator.image(action, state)
@@ -1152,6 +1153,8 @@ class Automata1(_Automata):
             predict_rewards += [image.reward]
             state = state+image.state
             # breakpoint(self.thinkingTimeLimit)
+            i+=1
+            if i > cerebral_cortex['frames']: break
         return _actor.id, _emulator.id, actions, memories, predict_rewards
 
     def thinker(self):
