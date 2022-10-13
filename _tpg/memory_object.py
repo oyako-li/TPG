@@ -1991,6 +1991,9 @@ class _ActionObject:
     def __str__(self):
         return f"TeamAction {self.teamAction} ActionCode: {self.actionCode}"
 
+    def __repr__(self):
+        return f"TeamAction {self.teamAction} ActionCode: {self.actionCode}"
+
     def zeroRegisters(self):
         try:
             self.registers = np.zeros(len(self.registers), dtype=float)
@@ -2119,6 +2122,7 @@ class ActionObject1(_ActionObject):
         if self.teamAction is not None:
             return self.teamAction.act(_state, visited, actVars=actVars, path_trace=path_trace)
         else:
+            # breakpoint(self.__class__, __class__, self.__class__.NaN) # (Any, ActionObj1, property object)
             assert self.actionCode in self.__class__.actions, f'{self.actionCode} is not in {self.__class__.actions}'
             self.__class__.actions.weights[self.actionCode]*=0.9 # 忘却確立減算
             self.__class__.actions.updateWeights()               # 忘却確立計上
@@ -2540,7 +2544,3 @@ class Hippocampus:
 
     def __call__(self):
         pass
-
-    # def append(self,_actionSequence, _memorySequence, _rewardSequence):
-    #     # actObj = self.__class__.Memory.ActionObject
-    #     self.real.append()
