@@ -101,8 +101,8 @@ class _TPG:
     def getAgents(self):
         return self.trainer.getAgents()
     
-    def setAgents(self, task='task'):
-        self.agents = self.trainer.getAgents(task=task)
+    def setAgents(self, task=None):
+        self.agents = self.trainer.getAgents(task=self.task if task is None else task)
 
     def flush_render(self, step=0, name='', info=''):
         self.ax1.imshow(self.env.render(mode='rgb_array'))
@@ -245,7 +245,7 @@ class _TPG:
 
 class MHTPG(_TPG):
     def __new__(cls, *args, **kwargs):
-        if not cls._instance:
+        if cls._instance is None:
             from _tpg.trainer import Trainer1
             cls._instance = True
             cls.Trainer = Trainer1
@@ -257,7 +257,7 @@ class MHTPG(_TPG):
 
 class ActorTPG(MHTPG):
     def __new__(cls, *args, **kwargs):
-        if not cls._instance:
+        if cls._instance is None:
             from _tpg.trainer import Trainer1_1
             cls._instance = True
             cls.Trainer = Trainer1_1
@@ -266,6 +266,8 @@ class ActorTPG(MHTPG):
 
     def __getitem__(self, __code):
         return self.actions[__code]
+    def setActions(self, actions):
+        self.actions = self.trainer.setActions(actions)
 
     def setAgents(self, task='task'):
         self.agents = self.trainer.getAgents(task=task)
@@ -369,7 +371,7 @@ class ActorTPG(MHTPG):
 
 class Actor(ActorTPG):
     def __new__(cls, *args, **kwargs):
-        if not cls._instance:
+        if cls._instance is None:
             from _tpg.trainer import Trainer1_2
             cls._instance = True
             cls.Trainer = Trainer1_2
@@ -380,7 +382,7 @@ class Actor(ActorTPG):
         return self.actions[__code]
 
     def setAgents(self, task='task'):
-        self.agents = self.trainer.getAgents(task=task)
+        self.agents = self.trainer.getAgents(task=task if task is not None else self.task)
         self.actionSequence = {}
         self.actionReward = {}
         for actor in self.agents:
@@ -389,8 +391,8 @@ class Actor(ActorTPG):
         
         return self.agents
 
-    def getEliteAgent(self, task='task'):
-        return self.trainer.getEliteAgent(task)
+    def getEliteAgent(self, task=None):
+        return self.trainer.getEliteAgent(task if task is not None else self.task)
 
     def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _actionSequence=None, _actionReward=None):
         self.trainer.evolve(tasks=tasks, _actionSequence=_actionSequence, _actionReward=_actionReward)
@@ -693,8 +695,8 @@ class Emulator(EmulatorTPG1):
       
         states = []
         unexpectancies = []
-        print('agents loop')
-        for agent in tqdm(self.agents): # to multi-proccess
+        # print('agents loop')
+        for agent in self.agents: # to multi-proccess
             
             state = self.env.reset() # get initial state and prep environment
             score = 0
@@ -706,7 +708,7 @@ class Emulator(EmulatorTPG1):
                 diff, unex = img.compare(state.flatten(), reward)
 
                 # オーバーフロー防止のためアークタンジェントに二乗和誤差を入れている。
-                score += tanh(np.power(diff, 2).sum())
+                score += tanh(diff)
                 states+=[state.flatten()]
                 unexpectancies+=[unex]
 
@@ -720,7 +722,7 @@ class Emulator(EmulatorTPG1):
 
         return _scores, states, unexpectancies
 
-class Automata(_TPG):
+class _Automata(_TPG):
     Actor=None      # 運動野
     Emulator=None   # 感覚野
     _instance=None
@@ -896,7 +898,7 @@ class Automata(_TPG):
         memoryCodes = []
         predict_rewards     = []
         timeout_start = time.time()
-        print(self.thinkingTimeLimit, _actor.id)
+        # print(self.thinkingTimeLimit, _actor.id)
         for _ in range(cerebral_cortex['frames']):
             actionCode = _actor.act(state)
             imageCode  = _emulator.image(actionCode, state)
@@ -1094,7 +1096,196 @@ class Automata(_TPG):
         # return self.__class__.hippocampus(self.consciousness_channel_key)
         return self.state.flatten()
 
-class Automata1(Automata):
+class Automata1(_Automata):
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            # from _tpg.action_object import _ActionObject
+            cls._instance = True
+            cls.Actor = Actor
+            cls.Emulator = Emulator
+            # cls.ActionObject = _ActionObject
+            # cls.MemoryObject = _MemoryObject
+        return super().__new__(cls)
+
+    def setAgents(self):
+        """set hippocampus"""
+        self.actor_scores = {}
+        self.emulator_scores = {}
+        self.actual_states = []
+        self.actual_actions = []
+        self.actual_rewards = []
+        self.unexpectancy = []
+        self.actors = self.actor.getAgents()
+        self.emulators = self.emulator.getAgents()
+        for actor in self.actors:
+            self.actor_scores[actor.id] = 0.
+            assert not self.actor_scores.get(actor.id), f'{actor.id} cant assaign {self.actor_scores}'
+        for emulator in self.emulators:
+            self.emulator_scores[emulator.id] = 0.
+            assert not self.emulator_scores.get(emulator.id)
+
+    def think(self, cerebral_cortex, _actor, _emulator):
+        self.__class__.Emulator.Trainer.MemoryObject.memories = cerebral_cortex['memories']
+        self.__class__.Actor.Trainer.ActionObject.actions = cerebral_cortex['actions']
+        
+        assert isinstance(_actor, self.__class__.Actor.Trainer.Agent)
+        assert isinstance(_emulator, self.__class__.Emulator.Trainer.Agent)
+        assert self.__class__.Actor.Trainer.ActionObject.actions is not None
+        assert self.__class__.Emulator.Trainer.MemoryObject.memories is not None
+
+        state = np.array(cerebral_cortex['now'])
+        
+        # actions = []
+        memories = []
+        predict_rewards     = []
+        timeout_start = time.time()
+        # print(self.thinkingTimeLimit, _actor.id)
+        # for _ in range(cerebral_cortex['frames']):
+        act = _actor.act(state)
+        # breakpoint(actions)
+        actions = self.activator(act)
+        i = 0
+        for action in actions:
+            # assert action in self.__class__.Actor.Trainer.ActionObject.actions.values(), f'{action} , {act}'
+            image  = _emulator.image(action, state)
+            memories  += [image]
+            predict_rewards += [image.reward]
+            state = state+image.state
+            # breakpoint(self.thinkingTimeLimit)
+            i+=1
+            if i > cerebral_cortex['frames']: break
+        return _actor.id, _emulator.id, actions, memories, predict_rewards
+
+    def thinker(self):
+        """
+        意識にとって何が最善の行動となるかの選別
+        """
+        manager = mp.Manager()
+        cerebral_cortex = manager.dict()
+
+        # 脳皮質内の信号
+        cerebral_cortex['actions']  = self.actor.actions
+        cerebral_cortex['memories'] = self.emulator.memories
+        # determined actionによって制限された意識チャンネル範囲内のhippocampusの情報を皮質に流す。
+        cerebral_cortex['now'] = self.consciousness
+        cerebral_cortex['frames'] = self.frames
+        
+        # 認識・計画
+        with mp.Pool(mp.cpu_count()-2) as pool:
+            results = pool.starmap(self.think, [(cerebral_cortex, actor, emulator) for actor, emulator in zip(self.actors, self.emulators)])
+        for result in results:
+            actor_id, emulator_id, actions, images, rewards = result
+            self._setupParams(actor_id=actor_id, emulator_id=emulator_id, actions=actions, images=images, rewards=rewards)
+            assert self.pairs.get(actor_id), (self.pairs[actor_id], emulator_id)
+
+        # 行動の決定
+        bestActor=max(self.predicted_reward, key=lambda k: self.predicted_reward.get(k))
+
+        return bestActor, self.pairs[bestActor]
+    
+    def activator(self, _actObj):
+        return [act for act in _actObj.action if act in range(self.env.action_space.n)]
+
+    def episode(self):
+        """
+        記憶単位
+        行動と報酬のエピソードを生成。
+        エピソードはAutomata.hippocampusに電気的記憶として保存される。
+        睡眠期と行動期を分ける？
+        """
+        frame=0
+        executor = ThreadPoolExecutor(max_workers=2)
+        # state = _env.reset() # get initial state and prep environment
+        thinker = executor.submit(self.thinker)
+        # self.best = str(_elite_actor.team.id)
+        total_reward = 0.
+        # thinking_actor = []
+        while frame<self.frames:
+            if thinker.done(): # 意識的行動
+                # thinking_actor.append(self.best)
+                bestActor, pairEmulator = thinker.result()
+                assert bestActor in list(self.actions.keys()), f'dont has {bestActor} in {self.actions.keys()}'
+                assert pairEmulator in list(self.memories.keys()), f'dont has {pairEmulator} in {self.memories.keys()}'
+                
+
+                for action, image in zip(self.actions[bestActor], self.memories[pairEmulator]):
+                    frame+=1
+                    if not action in range(self.env.action_space.n): continue
+                    state, reward, isDone, debug = self.env.step(action) # state : np.ndarray.flatten
+                    if isDone: 
+                        frame=self.frames
+                        reward=0
+
+                    # assert self.actor_scores.get(bestActor), f'{bestActor} not in the {self.actor_scores}'
+                    if not self.actor_scores.get(bestActor): self.actor_scores[bestActor]=0.
+                    self.actor_scores[bestActor]+=reward
+
+                    # if not self.actor_scores.get(bestActor): self.actor_scores[bestActor]=0.
+
+                    # assert self.emulator_scores.get(pairEmulator), f'{pairEmulator} not in the {self.emulator_scores}'
+                    if not self.emulator_scores.get(pairEmulator): self.emulator_scores[pairEmulator]=0.
+                    diff, unex = image.memory.compare(state.flatten(), reward)
+                    self.emulator_scores[pairEmulator] += tanh(diff)
+                    self.actual_states += [state.flatten()]
+                    self.actual_actions += [self.actor.actions]
+                    self.actual_rewards += [reward]
+                    self.unexpectancy  += [unex]
+                    total_reward += reward
+ 
+                    if isDone:
+                        self.state=self.env.reset()
+                        break
+
+                    if self.show:  self.show_state(self.env, frame)
+                    self.state = state
+                    # print(frame)
+
+                thinker = executor.submit(self.thinker)
+            else: # 無意識的行動
+                """
+                Automata.hippocampusに明記
+                """
+                # actionCode = _elite_actor.act(EmulatorTPG.state.flatten())
+                # if not ActionObject3.actions[actionCode] in range(_env.action_space.n): continue
+
+                # EmulatorTPG.state, reward, isDone, debug = _env.step(ActionObject3.actions[actionCode])
+                # total_reward += reward
+
+                # if isDone: 
+                #     EmulatorTPG.state = _env.reset()
+                #     break
+                # if _show:  self.show_state(_env, frame)
+                pass
+
+        thinker.cancel()
+        return total_reward
+
+    def generation(self):
+
+        _task   = self.env.spec.id
+        self.setAgents()
+        # breakpoint(type(emulators))
+        print('start episode...')
+        for _ in range(self.episodes):
+            total_reward = self.episode()
+        print('... end episode')
+
+        # 報酬の贈与
+        for actor in self.actors:
+            actor.reward(score=self.actor_scores[actor.id], task=_task)
+
+        # ここらへんのエミュレータの報酬設計
+        for emulator in self.emulators:
+            emulator.reward(score=self.emulator_scores[emulator.id], task=_task)
+
+        self.actor.evolve([_task], _actionSequence=[self.actual_actions], _actionReward=[total_reward])
+        self.emulator.evolve([_task], _states=self.actual_states, _rewards=self.actual_rewards, _unexpectancies=self.unexpectancy)
+
+        self.initParams()
+        return total_reward
+ 
+class Automata(_Automata):
     Hippocampus=None
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -1201,13 +1392,13 @@ class Automata1(Automata):
     def _setupParams(self, actor_id, emulator_id, actions=None, images=None, rewards=None):
         self.actions[actor_id]=[]
         # self.predicted_reward[actor_id]=0.
-        if not self.predicted_reward.get(actor_id) : self.predicted_reward[actor_id]=0.
+        if not self.predicted_reward.get(actor_id): self.predicted_reward[actor_id]=0.
         if rewards is not None: self.predicted_reward[actor_id] = sum(rewards)
         if actions is not None: self.actions[actor_id] = actions
 
         self.pairs[actor_id] = emulator_id
-        if not self.memories.get(emulator_id) : self.memories[emulator_id]=[]
-        if images is not None: self.memories[emulator_id]   += images
+        if not self.memories.get(emulator_id): self.memories[emulator_id]=[]
+        if images is not None: self.memories[emulator_id] += images
 
     def setAction(self, action):
         self.actor.setActions(action)
@@ -1288,7 +1479,7 @@ class Automata1(Automata):
         best=max(range(len(compare)), key=compare.__getitem__)
 
         # 追認説的な思考プロセスの想起
-        return short_memory[best] # (actObj, [...memObj])
+        return short_memory[best] # (actObj, [...memObj], predicted_reward)
 
     def episode(self):
         """
@@ -1303,7 +1494,7 @@ class Automata1(Automata):
 
         total_reward = 0.
         while frame<self.frames:
-            actionSequence = self.activator(self.unconsciousness ^ self.consciousness) # return actionObj + actionObj = new actionObj
+            actionSequence = self.activator(self.consciousness+self.unconsciousness) # return actionObj + actionObj = new actionObj
             memorySequence = []
             rewardSequence = []
             for action in actionSequence:
@@ -1315,7 +1506,7 @@ class Automata1(Automata):
                     frame=self.frames
                     break
                 frame+=1
-            self.hippocampus.append(actionSequence, memorySequence, rewardSequence)
+            self.hippocampus.real.append(actionSequence, memorySequence, rewardSequence)
             self.state = state
             
         self.thinking.cancel()
@@ -1415,9 +1606,11 @@ class Automata1(Automata):
             actObj, memObjs, emotion, bestActor, pairEmulator = self.thinking.result()
             self.hippocampus.mind.append(actObj, memObjs, emotion)
             self.thinking = self.executor.submit(self.thinker)
-            return self.intention & actObj # filterd action object self.intention is NaN*int
-        else:
-            return self.actor.NaN
+            if actObj.action[0] is not np.nan:
+                return self.intention & actObj # filterd action object self.intention is NaN*int
+            self.focus = actObj.action.fragment 
+
+        return self.actor.NaN
 
     @property
     def unconsciousness(self): # # return self.actor.ActionObject

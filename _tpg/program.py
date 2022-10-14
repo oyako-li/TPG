@@ -308,9 +308,14 @@ class Program2_1(Program2):
             # get data for operation
             op = ops[i]
             x = regs[dsts[i]]
-            y = src
+            y = src if src is not np.nan else 1
             act = act if act is not np.nan else 0
-            dest = (dsts[i]+act)%regSize
+            try:
+                dest = (dsts[i]+act)%regSize
+            except Exception as e:
+                print(e, f'{act}, {act.__class__}')
+                dest = 0
+            # assert (dsts[i]+act)%regSize is not None, f'{act}, {act.__class__}'
 
             # do an operation
             try:
@@ -353,9 +358,8 @@ class Program2_1(Program2):
                             if rand(1)[0] < writeProb:
                                 row = halfRows + i
                                 memMatrix[row,col] = regs[col]
+
+                if isnan(regs[dest]):       regs[dest] = 0
+                elif regs[dest] == inf:     regs[dest] = finfo(float64).max
+                elif regs[dest] == NINF:    regs[dest] = finfo(float64).min
             except Exception:  pass
-
-
-            if isnan(regs[dest]):       regs[dest] = 0
-            elif regs[dest] == inf:     regs[dest] = finfo(float64).max
-            elif regs[dest] == NINF:    regs[dest] = finfo(float64).min

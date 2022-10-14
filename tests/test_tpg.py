@@ -74,6 +74,15 @@ class MHTPGTest(TPGTest):
         tpg = self.TPG()
         self.assertIsInstance(tpg.trainer, Trainer1)
 
+class MHPointTest(MHTPGTest):
+
+    def setUp(self) -> None:
+        from _tpg.tpg import MHTPG
+        self.TPG = MHTPG
+        self.task = "Centipede-v4"
+        self.env = gym.make(self.task)
+        self.action = self.env.action_space.n
+
 class ActorPointTest(MHTPGTest):
     def setUp(self) -> None:
         from _tpg.tpg import ActorTPG
@@ -151,8 +160,10 @@ class Actor1PointTest(ActorPointTest):
         self.assertEqual(self.TPG, Actor)
 
         from _tpg.trainer import Trainer1_2
+        from _tpg.memory_object import Fragment1_1
         tpg = self.TPG()
         self.assertIsInstance(tpg.trainer, Trainer1_2)
+        self.assertEqual(tpg.trainer.ActionObject.actions.Fragment, Fragment1_1)
  
 class Actor1BiasTest(ActorPointTest):
     def setUp(self) -> None:
@@ -197,8 +208,8 @@ class EmulatorTPGTest(unittest.TestCase):
     def test_generations(self):
         '''test generation'''
         tpg = self.TPG()
-        tpg.setMemories(self.state)
         tpg.setEnv(self.env)
+        tpg.setMemories(self.state)
         score = tpg.generation()
         self.assertIsNotNone(score)
 
@@ -216,6 +227,33 @@ class EmulatorTPG1Test(EmulatorTPGTest):
     def setUp(self) -> None:
         from _tpg.tpg import EmulatorTPG1
         self.TPG = EmulatorTPG1
+        self.task = "CartPole-v1"
+        self.env = gym.make(self.task)
+        self.state = self.env.observation_space.sample().flatten()
+
+class EmulatorPointTest(EmulatorTPG1Test):
+    def setUp(self) -> None:
+        from _tpg.tpg import Emulator
+        self.TPG = Emulator
+        self.task = "Centipede-v4"
+        self.env = gym.make(self.task)
+        self.state = self.env.observation_space.sample().flatten()
+
+    def test_init(self):
+        '''test initiation'''
+        from _tpg.memory_object import Fragment2_1
+        from _tpg.trainer import Trainer2_2
+        tpg = self.TPG()
+        self.assertEqual(tpg.Trainer, Trainer2_2)
+        tpg.setEnv(self.env)
+        tpg.setMemories(self.state)
+        tpg.setAgents()
+        self.assertEqual(tpg.Trainer.MemoryObject.memories.Fragment, Fragment2_1)
+
+class EmulatorBiasTest(EmulatorTPG1Test):
+    def setUp(self) -> None:
+        from _tpg.tpg import Emulator
+        self.TPG = Emulator
         self.task = "CartPole-v1"
         self.env = gym.make(self.task)
         self.state = self.env.observation_space.sample().flatten()

@@ -412,10 +412,10 @@ class Learner2_2(Learner2_1):
         if cls._instance is None:
             cls._instance = True
             from _tpg.team import Team2_2
-            from _tpg.program import Program2
-            from _tpg.memory_object import MemoryObject1
+            from _tpg.program import Program2_1
+            from _tpg.memory_object import MemoryObject2
             cls.Team = Team2_2
-            cls.Program = Program2
-            cls.MemoryObject = MemoryObject1
+            cls.Program = Program2_1
+            cls.MemoryObject = MemoryObject2
 
         return super().__new__(cls, *args, **kwargs)

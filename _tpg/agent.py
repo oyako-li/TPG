@@ -105,6 +105,8 @@ class Agent2(_Agent):
     def image(self, act, state, path_trace=None): 
         """
         Gets an action from the root team of this agent / this agent.
+        act = int or actionObject,
+        state = np.ndarray or memoryObject
         """
         start_execution_time = time.time()*1000.0
         self.memVars["frameNum"] = random()
