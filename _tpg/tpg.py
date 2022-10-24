@@ -381,8 +381,8 @@ class Actor(ActorTPG):
     def __getitem__(self, __code):
         return self.actions[__code]
 
-    def setAgents(self, task='task'):
-        self.agents = self.trainer.getAgents(task=task if task is not None else self.task)
+    def setAgents(self, task=None):
+        self.agents = self.trainer.getAgents(task=task if task else self.task)
         self.actionSequence = {}
         self.actionReward = {}
         for actor in self.agents:
@@ -390,9 +390,12 @@ class Actor(ActorTPG):
             self.actionReward[actor.id]=0.
         
         return self.agents
+    
+    def getAgents(self, task=None):
+        return self.trainer.getAgents(task=task if task else self.task)
 
     def getEliteAgent(self, task=None):
-        return self.trainer.getEliteAgent(task if task is not None else self.task)
+        return self.trainer.getEliteAgent(task if task else self.task)
 
     def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _actionSequence=None, _actionReward=None):
         self.trainer.evolve(tasks=tasks, _actionSequence=_actionSequence, _actionReward=_actionReward)
@@ -690,6 +693,9 @@ class Emulator(EmulatorTPG1):
 
         return super().__new__(cls, *args, **kwargs)
 
+    def getAgents(self, task=None):
+        return self.trainer.getAgents(task=task if task else self.task)
+        
     def episode(self, _scores):
         assert self.trainer is not None and self.env is not None, 'You should set Actioins'
       

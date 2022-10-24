@@ -94,6 +94,39 @@ class Agent1_1(Agent1):
         if cls._instance is None:
             cls._instance = True
         return super().__new__(cls, *args, **kwargs)
+
+    
+    def act(self, state, path_trace=None): 
+        """
+        Gets an action from the root team of this agent / this agent.
+        """
+        start_execution_time = time.time()*1000.0
+        self.actVars["frameNum"] = random()
+        visited = list() #Create a new list to track visited team/learners each time
+        if not self.team.outcomes.get(self.actVars['task']): self.team.outcomes[self.actVars['task']]=0.
+
+        
+        result = None
+        path = None
+        if path_trace != None:
+            path = list()
+            result = self.team.act(state, visited=visited, actVars=self.actVars, path_trace=path)
+        else:
+            result = self.team.act(state, visited=visited, actVars=self.actVars)
+
+        end_execution_time = time.time()*1000.0
+        execution_time = end_execution_time - start_execution_time
+        if path_trace != None:
+
+            path_trace['execution_time'] = execution_time
+            path_trace['execution_time_units'] = 'milliseconds'
+            path_trace['root_team_id'] = str(self.team.id)
+            path_trace['final_action'] = result
+            path_trace['path'] = path 
+            path_trace['depth'] = len(path)
+            
+        return result
+
     
     def reward(self, score=0, task='task'):
         self.team[task] += tanh(score)
@@ -149,6 +182,38 @@ class Agent2_1(Agent2):
         if cls._instance is None:
             cls._instance = True
         return super().__new__(cls, *args, **kwargs)
+
+    def image(self, act, state, path_trace=None): 
+        """
+        Gets an action from the root team of this agent / this agent.
+        act = int or actionObject,
+        state = np.ndarray or memoryObject
+        """
+        start_execution_time = time.time()*1000.0
+        self.memVars["frameNum"] = random()
+        visited = list() #Create a new list to track visited team/learners each time
+        if not self.team.outcomes.get(self.memVars['task']): self.team.outcomes[self.memVars['task']]=0.
+        
+        result = None
+        path = None
+        if path_trace != None:
+            path = list()
+            result = self.team.image(act, state, visited=visited, memVars=self.memVars, path_trace=path)
+        else:
+            result = self.team.image(act, state, visited=visited, memVars=self.memVars)
+
+        end_execution_time = time.time()*1000.0
+        execution_time = end_execution_time - start_execution_time
+        if path_trace != None:
+
+            path_trace['execution_time'] = execution_time
+            path_trace['execution_time_units'] = 'milliseconds'
+            path_trace['root_team_id'] = self.id
+            path_trace['final_image'] = result
+            path_trace['path'] = path 
+            path_trace['depth'] = len(path)
+            
+        return result
     
     def reward(self, score=0, task='task'):
         self.team[task] += tanh(score)

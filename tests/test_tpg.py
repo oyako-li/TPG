@@ -418,6 +418,24 @@ class Automata1PointTest(AutomataPointTest):
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
         self.state = self.env.observation_space.sample().flatten()
+    
+
+    def test_init(self):
+        '''test team object creation'''
+        from _tpg.trainer import Trainer1_2, Trainer2_2
+        from _tpg.agent import Agent1_1, Agent2_1
+        automata = self.Automata()
+
+        self.assertIsNotNone(automata.actor)
+        self.assertIsNotNone(automata.emulator)
+        self.assertNotEqual(automata.actor.Trainer, automata.emulator.Trainer)
+        self.assertIsInstance(automata.actor.trainer, Trainer1_2)
+        self.assertIsInstance(automata.emulator.trainer, Trainer2_2)
+        self.assertEqual(automata.actor.trainer.Agent, Agent1_1)
+        self.assertEqual(automata.emulator.trainer.Agent, Agent2_1)
+        self.assertIsNotNone(automata.actor.trainer.ActionObject.actions)
+        self.assertIsNotNone(automata.emulator.Trainer.MemoryObject.memories)
+
 
 class Automata1BiasTest(AutomataBiasTest):
     def setUp(self) -> None:
@@ -427,6 +445,24 @@ class Automata1BiasTest(AutomataBiasTest):
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
         self.state = self.env.observation_space.sample().flatten()
+
+    
+    def test_init(self):
+        '''test team object creation'''
+        from _tpg.trainer import Trainer1_2, Trainer2_2
+        from _tpg.agent import Agent1_1, Agent2_1
+        automata = self.Automata()
+
+        self.assertIsNotNone(automata.actor)
+        self.assertIsNotNone(automata.emulator)
+        self.assertNotEqual(automata.actor.Trainer, automata.emulator.Trainer)
+        self.assertIsInstance(automata.actor.trainer, Trainer1_2)
+        self.assertIsInstance(automata.emulator.trainer, Trainer2_2)
+        self.assertEqual(automata.actor.trainer.Agent, Agent1_1)
+        self.assertEqual(automata.emulator.trainer.Agent, Agent2_1)
+        self.assertIsNotNone(automata.actor.trainer.ActionObject.actions)
+        self.assertIsNotNone(automata.emulator.Trainer.MemoryObject.memories)
+
 
 if __name__ == '__main__':
     unittest.main()
