@@ -129,6 +129,8 @@ class Agent1_1(Agent1):
 
     
     def reward(self, score=0, task='task'):
+        if not self.team.outcomes.get(task):
+            self.team.outcomes[task]=0.
         self.team[task] += tanh(score)
         self.team[task] = tanh(self.team[task])
 
@@ -192,7 +194,6 @@ class Agent2_1(Agent2):
         start_execution_time = time.time()*1000.0
         self.memVars["frameNum"] = random()
         visited = list() #Create a new list to track visited team/learners each time
-        if not self.team.outcomes.get(self.memVars['task']): self.team.outcomes[self.memVars['task']]=0.
         
         result = None
         path = None
@@ -216,5 +217,8 @@ class Agent2_1(Agent2):
         return result
     
     def reward(self, score=0, task='task'):
+        if not self.team.outcomes.get(task):
+            self.team.outcomes[task]=0.
+
         self.team[task] += tanh(score)
         self.team[task] = tanh(self.team[task])
