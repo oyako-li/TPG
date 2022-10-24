@@ -843,14 +843,14 @@ class Trainer1_1(Trainer1):
 class Trainer1_2(Trainer1_1):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            from _tpg.agent import Agent1
+            from _tpg.agent import Agent1_1
             from _tpg.team import Team1_2
             from _tpg.learner import Learner1_2
             from _tpg.program import Program1
             from _tpg.memory_object import ActionObject2
 
             cls._instance = True
-            cls.Agent = Agent1
+            cls.Agent = Agent1_1
             cls.Team = Team1_2
             cls.Learner = Learner1_2
             cls.Program = Program1
@@ -1431,14 +1431,14 @@ class Trainer2_1(Trainer2):
 class Trainer2_2(Trainer2_1):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            from _tpg.agent import Agent2
+            from _tpg.agent import Agent2_1
             from _tpg.team import Team2_2
             from _tpg.learner import Learner2_2
             from _tpg.program import Program2_1
             from _tpg.memory_object import MemoryObject2
 
             cls._instance = True
-            cls.Agent = Agent2
+            cls.Agent = Agent2_1
             cls.Team = Team2_2
             cls.Learner = Learner2_2
             cls.Program = Program2_1
@@ -1450,7 +1450,7 @@ class Trainer2_2(Trainer2_1):
 
     def _select(self, extraTeams=None, task='task'):
 
-        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt[task])
+        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.fitness)
         numKeep = len(self.rootTeams) - int(len(self.rootTeams)*self.gap)
         deleteTeams = rankedTeams[numKeep:]
 

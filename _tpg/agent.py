@@ -1,4 +1,5 @@
 # from program import Program
+from math import tanh
 import pickle
 from random import random
 import time
@@ -88,6 +89,16 @@ class Agent1(_Agent):
             cls._instance = True
         return super().__new__(cls, *args, **kwargs)
 
+class Agent1_1(Agent1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+        return super().__new__(cls, *args, **kwargs)
+    
+    def reward(self, score=0, task='task'):
+        self.team[task] += tanh(score)
+        self.team[task] = tanh(self.team[task])
+
 class Agent2(_Agent):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -132,3 +143,13 @@ class Agent2(_Agent):
             path_trace['depth'] = len(path)
             
         return result
+
+class Agent2_1(Agent2):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+        return super().__new__(cls, *args, **kwargs)
+    
+    def reward(self, score=0, task='task'):
+        self.team[task] += tanh(score)
+        self.team[task] = tanh(self.team[task])
