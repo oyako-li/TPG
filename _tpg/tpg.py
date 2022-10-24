@@ -865,6 +865,7 @@ class _Automata(_TPG):
 
     def setEnv(self, _env):
         self.env = _env
+        self.task = self.env.spec.id
 
     def instance_valid(self, _actor=None, _emulator=None) -> None:
         assert self.__class__.Actor.Trainer is not self.__class__.Emulator.Trainer
