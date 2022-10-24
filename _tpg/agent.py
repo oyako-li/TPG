@@ -103,7 +103,6 @@ class Agent1_1(Agent1):
         start_execution_time = time.time()*1000.0
         self.actVars["frameNum"] = random()
         visited = list() #Create a new list to track visited team/learners each time
-        if not self.team.outcomes.get(self.actVars['task']): self.team.outcomes[self.actVars['task']]=0.
 
         
         result = None
