@@ -1116,8 +1116,8 @@ class Automata1(_Automata):
         self.actual_actions = []
         self.actual_rewards = []
         self.unexpectancy = []
-        self.actors = self.actor.getAgents()
-        self.emulators = self.emulator.getAgents()
+        self.actors = self.actor.getAgents(task=self.task)
+        self.emulators = self.emulator.getAgents(task=self.task)
         for actor in self.actors:
             self.actor_scores[actor.id] = 0.
             assert not self.actor_scores.get(actor.id), f'{actor.id} cant assaign {self.actor_scores}'
