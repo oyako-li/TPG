@@ -382,6 +382,10 @@ class Actor(ActorTPG):
     def __getitem__(self, __code):
         return self.actions[__code]
 
+    def __call__(self, actionSequence):
+        return self.__class__.Trainer.ActionObject(actionSequence)
+        # return super().__call__(*args, **kwds)
+
     def setAgents(self, task=None):
         self.agents = self.trainer.getAgents(task=task if task else self.task)
         self.actionSequence = {}
@@ -693,6 +697,9 @@ class Emulator(EmulatorTPG1):
             cls.Trainer = Trainer2_2
 
         return super().__new__(cls, *args, **kwargs)
+
+    def __call__(self, memorySequence):
+        return self.__class__.Trainer.MemoryObject(memorySequence)
 
     def getAgents(self, task=None):
         return self.trainer.getAgents(task=task if task else self.task)
@@ -1208,6 +1215,7 @@ class Automata1(_Automata):
         return bestActor, self.pairs[bestActor]
     
     def activator(self, _actObj):
+        if isinstance(_actObj, list): _actObj = self.actor(_actObj)
         actions = list(range(self.env.action_space.n))+[np.nan]
         return [act for act in _actObj.action if act in actions]
 
@@ -1261,7 +1269,11 @@ class Automata1(_Automata):
                     self.state = state
 
                 thinker = executor.submit(self.thinker)
-                if pre_frame==frame: breakpoint(self.actions[bestActor], self.memories[pairEmulator])
+                if pre_frame==frame: 
+                    print(f'frame is same',self.actions[bestActor], self.memories[pairEmulator])
+                    flag=False
+                    actual_action+=[np.nan]
+                    break
                 pre_frame=frame
                 
             else: # 無意識的行動
@@ -1293,8 +1305,8 @@ class Automata1(_Automata):
         actual_actions=[]
         for _ in tqdm(range(self.episodes)):
             total_reward, actual_action = self.episode()
-            total_rewards+=total_reward
-            actual_actions+=actual_action
+            total_rewards+=[total_reward]
+            actual_actions+=[actual_action]
         print('... end episode')
         self.logger.info(f'rewards:{self.actor_scores}', extra={'className': self.__class__.__name__})
 
