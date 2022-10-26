@@ -858,7 +858,31 @@ class Trainer1_2(Trainer1_1):
             cls.ActionObject._nan = cls.ActionObject()
 
         return super().__new__(cls, *args, **kwargs)
-  
+
+    def _select(self, extraTeams=None):
+        print('ac:',[rt.fitness for rt in self.rootTeams])
+
+        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.fitness, reverse=True)
+        numKeep = len(self.rootTeams) - int(len(self.rootTeams)*self.gap)
+        deleteTeams = rankedTeams[numKeep:]
+
+        for team in [t for t in deleteTeams if t not in self.elites]:
+            # remove learners from team and delete team from populations
+            if extraTeams is None or team not in extraTeams: team.removeLearners()
+            self.teams.remove(team)
+            self.rootTeams.remove(team)
+
+        orphans = [learner for learner in self.learners if learner.numTeamsReferencing() == 0]
+    
+        for cursor in orphans:
+            if not cursor.isActionAtomic(): # If the orphan does NOT point to an atomic action
+                # Get the team the orphan is pointing to and remove the orphan's id from the team's in learner list
+                cursor.actionObj.teamAction.inLearners.remove(str(cursor.id))
+
+        # Finaly, purge the orphans
+        # AtomicActionのLearnerはどのように生成すれば良いのだろうか？ -> actionObj.mutate()による
+        self.learners = [learner for learner in self.learners if learner.numTeamsReferencing() > 0]
+   
 class Trainer2(Trainer):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -1449,7 +1473,7 @@ class Trainer2_2(Trainer2_1):
 
 
     def _select(self, extraTeams=None, task='task'):
-
+        # print('em:',[rt.fitness for rt in self.rootTeams])
         rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.fitness)
         numKeep = len(self.rootTeams) - int(len(self.rootTeams)*self.gap)
         deleteTeams = rankedTeams[numKeep:]

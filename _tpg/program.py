@@ -309,7 +309,7 @@ class Program2_1(Program2):
             op = ops[i]
             x = regs[dsts[i]]
             y = src if src is not np.nan else 1
-            act = act if act is not np.nan else 0
+            act = act if act is not np.nan else -1
             try:
                 dest = (dsts[i]+act)%regSize
             except Exception as e:
@@ -358,8 +358,8 @@ class Program2_1(Program2):
                             if rand(1)[0] < writeProb:
                                 row = halfRows + i
                                 memMatrix[row,col] = regs[col]
-
-                if isnan(regs[dest]):       regs[dest] = 0
-                elif regs[dest] == inf:     regs[dest] = finfo(float64).max
-                elif regs[dest] == NINF:    regs[dest] = finfo(float64).min
             except Exception:  pass
+
+            if isnan(regs[dest]):       regs[dest] = 0
+            elif regs[dest] == inf:     regs[dest] = finfo(float64).max
+            elif regs[dest] == NINF:    regs[dest] = finfo(float64).min

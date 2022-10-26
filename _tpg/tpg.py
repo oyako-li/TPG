@@ -1,3 +1,4 @@
+from datetime import datetime
 from distutils.log import debug
 from math import tanh
 from _tpg.base_log import setup_logger
@@ -695,7 +696,10 @@ class Emulator(EmulatorTPG1):
 
     def getAgents(self, task=None):
         return self.trainer.getAgents(task=task if task else self.task)
-        
+
+    def getEliteAgent(self, task=None):
+        return self.trainer.getEliteAgent(task if task else self.task)
+
     def episode(self, _scores):
         assert self.trainer is not None and self.env is not None, 'You should set Actioins'
       
@@ -1125,12 +1129,24 @@ class Automata1(_Automata):
         self.unexpectancy = []
         self.actors = self.actor.getAgents(task=self.task)
         self.emulators = self.emulator.getAgents(task=self.task)
+        self.episodes = len(self.actors)
         for actor in self.actors:
             self.actor_scores[actor.id] = 0.
             assert not self.actor_scores.get(actor.id), f'{actor.id} cant assaign {self.actor_scores}'
         for emulator in self.emulators:
             self.emulator_scores[emulator.id] = 0.
             assert not self.emulator_scores.get(emulator.id)
+
+    def _setupParams(self, actor_id, emulator_id, actions=None, images=None, rewards=None):
+        self.actions[actor_id]=[]
+        # self.predicted_reward[actor_id]=0.
+        if not self.predicted_reward.get(actor_id) : self.predicted_reward[actor_id]=0.
+        if rewards is not None: self.predicted_reward[actor_id] = sum(rewards)
+        if actions is not None: self.actions[actor_id] = self.activator(actions)
+
+        self.pairs[actor_id] = emulator_id
+        if not self.memories.get(emulator_id) : self.memories[emulator_id]=[]
+        if images is not None: self.memories[emulator_id]   += images
 
     def think(self, cerebral_cortex, _actor, _emulator):
         self.__class__.Emulator.Trainer.MemoryObject.memories = cerebral_cortex['memories']
@@ -1192,14 +1208,187 @@ class Automata1(_Automata):
         return bestActor, self.pairs[bestActor]
     
     def activator(self, _actObj):
-        return [act for act in _actObj.action if act in range(self.env.action_space.n)]
+        actions = list(range(self.env.action_space.n))+[np.nan]
+        return [act for act in _actObj.action if act in actions]
 
     def episode(self):
         """
-        記憶単位
-        行動と報酬のエピソードを生成。
-        エピソードはAutomata.hippocampusに電気的記憶として保存される。
-        睡眠期と行動期を分ける？
+        Attribute:
+
+        Returns:
+            actors_reward: 各actorエージェントの獲得報酬
+            emulators_reward: 各emulatorエージェントの獲得報酬
+        """
+        frame=0
+        executor = ThreadPoolExecutor(max_workers=2)
+        # state = _env.reset() # get initial state and prep environment
+        thinker = executor.submit(self.thinker)
+        # self.best = str(_elite_actor.team.id)
+        total_reward = 0.
+        actual_action = []
+        flag = True
+        pre_frame=-1
+        while flag:
+            if thinker.done(): # 意識的行動
+                # thinking_actor.append(self.best)
+                bestActor, pairEmulator = thinker.result()
+                print(datetime.now(),frame, flag)
+                assert bestActor in list(self.actions.keys()), f'dont has {bestActor} in {self.actions.keys()}'
+                assert pairEmulator in list(self.memories.keys()), f'dont has {pairEmulator} in {self.memories.keys()}'
+                if self.actions[bestActor] is []: flag=False
+                
+
+                for action, image in zip(self.actions[bestActor], self.memories[pairEmulator]):
+                    frame+=1
+                    state, reward, isDone, debug = self.env.step(action) # state : np.ndarray.flatten
+                    if isDone: 
+                        frame=self.frames
+                        reward=0
+                        self.state = self.env.reset()
+                        flag=False
+
+                    if not self.actor_scores.get(bestActor): self.actor_scores[bestActor]=0.
+                    self.actor_scores[bestActor]+=reward
+
+                    if not self.emulator_scores.get(pairEmulator): self.emulator_scores[pairEmulator]=0.
+                    diff, unex = image.memory.compare(state.flatten(), reward)
+                    self.emulator_scores[pairEmulator] += tanh(diff)
+                    self.actual_states += [state.flatten()]
+                    actual_action += [self.actor.actions]
+                    self.actual_rewards += [reward]
+                    self.unexpectancy  += [unex]
+                    total_reward += reward
+                    self.state = state
+
+                thinker = executor.submit(self.thinker)
+                if pre_frame==frame: breakpoint(self.actions[bestActor], self.memories[pairEmulator])
+                pre_frame=frame
+                
+            else: # 無意識的行動
+                """
+                Automata.hippocampusに明記
+                """
+                # actionCode = _elite_actor.act(EmulatorTPG.state.flatten())
+                # if not ActionObject3.actions[actionCode] in range(_env.action_space.n): continue
+
+                # EmulatorTPG.state, reward, isDone, debug = _env.step(ActionObject3.actions[actionCode])
+                # total_reward += reward
+
+                # if isDone: 
+                #     EmulatorTPG.state = _env.reset()
+                #     break
+                # if _show:  self.show_state(_env, frame)
+                pass
+
+        thinker.cancel()
+        return total_reward, actual_action
+
+    def generation(self):
+
+        _task   = self.env.spec.id
+        self.setAgents()
+        # breakpoint(type(emulators))
+        print('start episode...')
+        total_rewards=[]
+        actual_actions=[]
+        for _ in tqdm(range(self.episodes)):
+            total_reward, actual_action = self.episode()
+            total_rewards+=total_reward
+            actual_actions+=actual_action
+        print('... end episode')
+        self.logger.info(f'rewards:{self.actor_scores}', extra={'className': self.__class__.__name__})
+
+        # 報酬の贈与
+        for actor in self.actors:
+            actor.reward(score=self.actor_scores[actor.id], task=_task)
+
+        # ここらへんのエミュレータの報酬設計
+        for emulator in self.emulators:
+            emulator.reward(score=self.emulator_scores[emulator.id], task=_task)
+
+        self.actor.evolve([_task], _actionSequence=self.actual_actions, _actionReward=total_rewards)
+        self.emulator.evolve([_task], _states=self.actual_states, _rewards=self.actual_rewards, _unexpectancies=self.unexpectancy)
+
+        self.initParams()
+        return total_rewards
+    
+    def growing(self, _actor=None, _emulator=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=False, _test=False, _load=True, _dir=''):
+        if _actor: 
+            self.instance_valid(_actor)
+            self.actor.trainer = _actor
+        if _emulator: 
+            self.instance_valid(_emulator)
+            self.emulator.trainer = _emulator
+        if _task:
+            self.env = gym.make(_task)
+        if _generations:
+            self.generations=_generations
+        if _episodes:
+            self.episodes = _episodes
+        if _frames:
+            self.frames = _frames
+        
+        task = _dir+self.env.spec.id
+
+        self.logger, filename = setup_logger(__name__, task, test=_test, load=_load)
+
+        action_space = self.env.action_space
+        observation_space = self.env.observation_space
+
+        
+        action = 2
+        if isinstance(action_space, gym.spaces.Box):
+            action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
+        elif isinstance(action_space, gym.spaces.Discrete):
+            action = action_space.n
+
+        state = observation_space.sample()
+        self.setAction(action=action)
+        self.setMemory(state=state.flatten())
+        self.state = self.env.reset()
+        def outHandler(signum, frame):
+            if not _test: 
+                self.actor.trainer.save(f'{task}/{filename}-act')
+                self.emulator.trainer.save(f'{task}/{filename}-emu')
+            print('exit')
+            sys.exit()
+        
+        signal.signal(signal.SIGINT, outHandler)
+
+        for gen in tqdm(range(self.generations)): # generation loop
+            # breakpoint(type(_emulator))
+            scores = self.generation()
+            # score = (min(scores.values()), max(scores.values()), sum(scores.values())/len(scores))
+
+            self.logger.info(f'generation:{gen}, min:{min(scores)}, max:{max(scores)}, ave:{sum(scores)/len(scores)}', extra={'className': self.__class__.__name__})
+
+        map(self.logger.removeHandler, self.logger.handlers)
+        map(self.logger.removeFilter, self.logger.filters)
+
+        return f'{task}/{filename}'
+
+class Automata2(Automata1):
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            # from _tpg.action_object import _ActionObject
+            cls._instance = True
+            cls.Actor = Actor
+            cls.Emulator = Emulator
+            # cls.ActionObject = _ActionObject
+            # cls.MemoryObject = _MemoryObject
+        return super().__new__(cls)
+    
+    def activator(self, _actObj):
+        return [act for act in _actObj.action if act in list(range(self.env.action_space.n))+[np.nan]]
+
+    def episode(self):
+        """
+        Attribute:
+
+        Returns:
+            actors_reward: 各actorエージェントの獲得報酬
+            emulators_reward: 各emulatorエージェントの獲得報酬
         """
         frame=0
         executor = ThreadPoolExecutor(max_workers=2)
@@ -1274,10 +1463,11 @@ class Automata1(_Automata):
         self.setAgents()
         # breakpoint(type(emulators))
         print('start episode...')
-        for _ in range(self.episodes):
-            total_reward = self.episode()
+        # for _ in range(self.episodes):
+        total_reward = self.episode()
         print('... end episode')
-
+        self.logger.info(self.actor_scores) 
+        
         # 報酬の贈与
         for actor in self.actors:
             actor.reward(score=self.actor_scores[actor.id], task=_task)
@@ -1291,6 +1481,65 @@ class Automata1(_Automata):
 
         self.initParams()
         return total_reward
+    
+    def growing(self, _actor=None, _emulator=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=False, _test=False, _load=True, _dir=''):
+        if _actor: 
+            self.instance_valid(_actor)
+            self.actor.trainer = _actor
+        if _emulator: 
+            self.instance_valid(_emulator)
+            self.emulator.trainer = _emulator
+        if _task:
+            self.env = gym.make(_task)
+        if _generations:
+            self.generations=_generations
+        if _episodes:
+            self.episodes = _episodes
+        if _frames:
+            self.frames = _frames
+        
+        task = _dir+self.env.spec.id
+
+        self.logger, filename = setup_logger(__name__, task, test=_test, load=_load)
+
+        action_space = self.env.action_space
+        observation_space = self.env.observation_space
+
+        
+        action = 2
+        if isinstance(action_space, gym.spaces.Box):
+            action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
+        elif isinstance(action_space, gym.spaces.Discrete):
+            action = action_space.n
+
+        state = observation_space.sample()
+        self.setAction(action=action)
+        self.setMemory(state=state.flatten())
+        self.state = self.env.reset()
+        def outHandler(signum, frame):
+            if not _test: 
+                self.actor.trainer.save(f'{task}/{filename}-act')
+                self.emulator.trainer.save(f'{task}/{filename}-emu')
+            print('exit')
+            sys.exit()
+        
+        signal.signal(signal.SIGINT, outHandler)
+
+        summaryScores = []
+
+        tStart = time.time()
+        for gen in tqdm(range(self.generations)): # generation loop
+            # breakpoint(type(_emulator))
+            total_score = self.generation()
+            # score = (min(scores.values()), max(scores.values()), sum(scores.values())/len(scores))
+
+            self.logger.info(f'generation:{gen}, score:{total_score}', extra={'className': self.__class__.__name__})
+            summaryScores.append(total_score)
+
+        map(self.logger.removeHandler, self.logger.handlers)
+        map(self.logger.removeFilter, self.logger.filters)
+
+        return f'{task}/{filename}'
  
 class Automata(_Automata):
     Hippocampus=None
@@ -1420,8 +1669,9 @@ class Automata(_Automata):
         """
         self.hippocampus = self.Hippocampus()
         self.actors = self.actor.getAgents()
-        self.elite = self.actor.getEliteAgent()
+        self.elite_act = self.actor.getEliteAgent()
         self.emulators = self.emulator.getAgents()
+        self.elite_emu = self.emulator.getEliteAgent()
 
     def setEnv(self, _env):
         self.env = _env
@@ -1461,8 +1711,11 @@ class Automata(_Automata):
         return actObj, assumption, reward, _actor.id, _emulator.id
 
     def thinker(self):
-        """
-        意識にとって何が最善の行動となるかの選別
+        """意識にとって何が最善の行動となるかの選別
+        Returns:
+            new_act:
+            act_filter:
+            cons_filter:
         """
         manager = mp.Manager()
         cerebral_cortex = manager.dict()
@@ -1520,16 +1773,7 @@ class Automata(_Automata):
 
         return total_reward
 
-    def generation(self):
-
-        _task   = self.env.spec.id
-        self.setAgents()
-        # breakpoint(type(emulators))
-        print('start episode...')
-        # for _ in range(self.episodes):
-        self.episode()
-        print('... end episode')
-
+    def sleep(self, _task=None):
         """
         TODO: treat hippocampus reward?
         TODO: treat actor and emulator evolve
@@ -1537,15 +1781,19 @@ class Automata(_Automata):
         """
         # 報酬の贈与
         for actor in self.actors:
-            actor.reward(score=self.actor_scores[actor.id], task=_task)
+            actor.reward(score=self.actor_scores[actor.id], task=_task if _task else self.task)
 
         # エミュレータの報酬設計
         for emulator in self.emulators:
-            emulator.reward(score=self.emulator_scores[emulator.id], task=_task)
+            emulator.reward(score=self.emulator_scores[emulator.id], task=_task if _task else self.task)
 
         self.actor.evolve([_task])
         self.emulator.evolve([_task])
 
+    def generation(self):
+        self.setAgents()
+        self.episode()
+        self.sleep()
         self.initParams()
     
     def growing(self, _actor=None, _emulator=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=False, _test=False, _load=True, _dir=''):

@@ -435,7 +435,16 @@ class Automata1PointTest(AutomataPointTest):
         self.assertEqual(automata.emulator.trainer.Agent, Agent2_1)
         self.assertIsNotNone(automata.actor.trainer.ActionObject.actions)
         self.assertIsNotNone(automata.emulator.Trainer.MemoryObject.memories)
-
+    
+    def test_growing(self):
+        '''test growing'''
+        automata = self.Automata()
+        automata.setEnv(self.env)
+        automata.setAction(self.action)
+        automata.setMemory(self.state)
+        filename = automata.growing(_dir='test/')
+        self.assertIsNotNone(filename)
+        log_show(f'log/{filename}')
 
 class Automata1BiasTest(AutomataBiasTest):
     def setUp(self) -> None:
@@ -463,6 +472,15 @@ class Automata1BiasTest(AutomataBiasTest):
         self.assertIsNotNone(automata.actor.trainer.ActionObject.actions)
         self.assertIsNotNone(automata.emulator.Trainer.MemoryObject.memories)
 
+    def test_growing(self):
+        '''test growing'''
+        automata = self.Automata()
+        automata.setEnv(self.env)
+        automata.setAction(self.action)
+        automata.setMemory(self.state)
+        filename = automata.growing(_dir='test/')
+        self.assertIsNotNone(filename)
+        log_show(f'log/{filename}')
 
 if __name__ == '__main__':
     unittest.main()

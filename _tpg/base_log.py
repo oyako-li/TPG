@@ -48,7 +48,8 @@ def log_load(_filename, _renge, _step=5):
         lines = file.readlines()
         for line in lines:
             results = line.replace('\n','').split(', ')[3:]
-            l.append([float(re.split(':')[1]) for re in results])
+            if 'generation:' in results[0]:
+                l.append([float(re.split(':')[1]) for re in results])
 
     __min = []
     __mi = 0.
