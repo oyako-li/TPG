@@ -1,15 +1,15 @@
 from datetime import datetime
-from distutils.log import debug
 from math import tanh
-from _tpg.base_log import setup_logger
-from _tpg.utils import breakpoint
+from _tpg.utils import breakpoint, setup_logger
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import tkinter as tk
+import cv2
 import numpy as np
+import logging
 import sys
 import gym
 import signal
@@ -18,6 +18,7 @@ import time
 class _TPG:
     Trainer=None
     _instance=None
+    _logger = None
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -243,6 +244,11 @@ class _TPG:
     
     def instance_valid(self, trainer) -> bool:
         if not isinstance(trainer, self.__class__.Trainer): raise Exception(f'this object is not {self.__class__.Trainer}')
+
+    @classmethod
+    def set_loggre(cls, _logger:logging.Logger):
+        cls.logger = _logger
+        return cls.logger
 
 class MHTPG(_TPG):
     def __new__(cls, *args, **kwargs):
@@ -560,7 +566,6 @@ class EmulatorTPG(_TPG):
         self.episodes=1
         self.frames = 500
         self.show = False
-        self.logger = None
 
     def __getitem__(self, __code):
         return self.memories[__code]
@@ -570,18 +575,18 @@ class EmulatorTPG(_TPG):
 
     def setMemories(self, states):
         self.memories = self.trainer.setMemories(states.flatten())
-    
+
     def episode(self, _scores):
         assert self.trainer is not None and self.env is not None, 'You should set Actioins'
       
         states = []
         unexpectancies = []
         print('agents loop')
-        for agent in tqdm(self.agents): # to multi-proccess
+        for agent in self.agents: # to multi-proccess
             
             state = self.env.reset() # get initial state and prep environment
             score = 0
-            _id = str(agent.team.id)
+            # _id = str(agent.team.id)
             for _ in range(self.frames): # run episodes that last 500 frames
                 act = self.env.action_space.sample()
                 imageCode = agent.image(act, state.flatten())
@@ -595,8 +600,9 @@ class EmulatorTPG(_TPG):
                 if isDone: break # end early if losing state
                 if self.show: self.show_state(self.env, _)
 
-            if _scores.get(_id) is None : _scores[_id]=0
-            _scores[_id] += score # store score
+            # if _scores.get(_id) is None : _scores[_id]=0
+            # _scores[_id] += score # store score
+            agent.score+=score
 
             # if self.logger is not None: self.logger.info(f'{_id},{score}')
 
@@ -604,12 +610,15 @@ class EmulatorTPG(_TPG):
 
     def generation(self):
         _scores = {}
-        self.agents = self.trainer.getAgents()
-        _task = self.env.spec.id
+        self.setAgents()
+        # _task = self.env.spec.id
         for _ in range(self.episodes):  _scores, states, unexpectancies = self.episode(_scores)
-        for i in _scores:               _scores[i]/=self.episodes
-        for agent in self.agents:       agent.reward(_scores[agent.id], task=_task)
-        self.trainer.evolve([_task], _states=states, _unexpectancies=unexpectancies)
+        # for i in _scores:               _scores[i]/=self.episodes
+        for agent in self.agents:
+            agent.score/=self.episodes
+            _scores[agent.id]=agent.score
+            agent.reward(task=self.task)
+        self.trainer.evolve([self.task], _states=states, _unexpectancies=unexpectancies)
 
         return _scores
    
@@ -620,20 +629,22 @@ class EmulatorTPG(_TPG):
         
         if _task:
             self.env = gym.make(_task)
-        
-        task = _dir+self.env.spec.id+'-em'
 
-        logger, filename = setup_logger(__name__, task, test=_test, load=_load)
-        self.logger = logger
+        self.test = _test
+        self.dir = _dir
+        task = _dir+self.env.spec.id
+
+        logger, self.filename = setup_logger(__name__, task, test=_test, load=_load)
+        self.__class__.logger = logger
         self.generations = _generations
         self.episodes = _episodes
         self.frames = _frames
         self.show = _show
 
-        self.trainer.setMemories(state=self.env.observation_space.sample().flatten())
+        self.setMemories(state=self.env.observation_space.sample().flatten())
 
         def outHandler(signum, frame):
-            if not _test: self.trainer.save(f'{task}/{filename}')
+            self.epilogue()
             print('exit')
             sys.exit()
         
@@ -641,12 +652,16 @@ class EmulatorTPG(_TPG):
 
         for gen in tqdm(range(_generations)): # generation loop
             scores = self.generation()
-            self.logger.info(f'generation:{gen}, min:{min(scores.values())}, max:{max(scores.values())}, ave:{sum(scores.values())/len(scores)}', extra={'className': self.__class__.__name__})
+            self.__class__.logger.info(f'generation:{gen}, min:{min(scores.values())}, max:{max(scores.values())}, ave:{sum(scores.values())/len(scores)}', extra={'className': self.__class__.__name__})
 
-        map(self.logger.removeHandler, self.logger.handlers)
-        map(self.logger.removeFilter, self.logger.filters)
+        self.epilogue()
 
-        return f'{task}/{filename}'
+        return f'{self.dir+self.task}/{self.filename}'
+
+    def epilogue(self):
+        if not self.test: self.trainer.save(f'{self.dir+self.task}/{self.filename}')
+        map(self.__class__.logger.removeHandler, self.__class__.logger.handlers)
+        map(self.__class__.logger.removeFilter, self.__class__.logger.filters)
 
 class EmulatorTPG1(EmulatorTPG):
     def __new__(cls, *args, **kwargs):
@@ -717,7 +732,7 @@ class Emulator(EmulatorTPG1):
             
             state = self.env.reset() # get initial state and prep environment
             score = 0
-            _id = str(agent.team.id)
+            _id = agent.id
             for _ in range(self.frames): # run episodes that last 500 frames
                 act = self.env.action_space.sample()
                 img = agent.image(act, state.flatten()).memory
@@ -739,6 +754,51 @@ class Emulator(EmulatorTPG1):
 
         return _scores, states, unexpectancies
 
+class EmulatorEye(Emulator):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.trainer import Trainer2_2
+            cls._instance = True
+            cls.Trainer = Trainer2_2
+
+        return super().__new__(cls, *args, **kwargs)
+    
+
+    def setMemories(self, state):
+        self.cap = cv2.VideoCapture(0)
+        if self.cap.isOpened():
+            _, state = self.cap.read()
+            self.memories = self.trainer.setMemories(state.flatten())
+        # cap.release()
+
+    def episode(self, _scores):
+        states = []
+        unexpectancies = []
+        # cap = cv2.VideoCapture(0)
+        if self.cap.isOpened():
+            score = 0
+
+            for agent in tqdm(self.agents):
+                for i in range(self.frames):
+                    _, state = self.cap.read()
+                    if not _: continue
+                    img = agent.image(np.nan, state.flatten()).memory
+                    diff, unex = img.compare(state.flatten(), 0.5)
+                    score += tanh(diff)
+                    states+=[state.flatten()]
+                    unexpectancies+=[unex]
+
+                if _scores.get(agent.id) is None : _scores[agent.id]=0
+                _scores[agent.id] += score # store score
+            
+        else: breakpoint('video is not open')
+        
+        return _scores, states, unexpectancies
+    def epilogue(self):
+        if not self.test: self.trainer.save(f'{self.dir+self.task}/{self.filename}')
+        map(self.__class__.logger.removeHandler, self.__class__.logger.handlers)
+        map(self.__class__.logger.removeFilter, self.__class__.logger.filters)
+        self.cap.release()
 class _Automata(_TPG):
     Actor=None      # 運動野
     Emulator=None   # 感覚野
@@ -858,6 +918,9 @@ class _Automata(_TPG):
         if not self.memories.get(emulator_id) : self.memories[emulator_id]=[]
         if images is not None: self.memories[emulator_id]   += images
 
+    def _set_env_action_space(self):
+        return list(range(self.env.action_space.n))+[np.nan]
+
     def setAction(self, action):
         self.actor.setActions(action)
 
@@ -883,6 +946,7 @@ class _Automata(_TPG):
     def setEnv(self, _env):
         self.env = _env
         self.task = self.env.spec.id
+        self.env_action_space = self._set_env_action_space()
 
     def instance_valid(self, _actor=None, _emulator=None) -> None:
         assert self.__class__.Actor.Trainer is not self.__class__.Emulator.Trainer
@@ -1026,7 +1090,6 @@ class _Automata(_TPG):
         return total_reward
 
     def generation(self):
-
         _task   = self.env.spec.id
         self.setAgents()
         # breakpoint(type(emulators))
@@ -1185,7 +1248,7 @@ class Automata1(_Automata):
             # breakpoint(self.thinkingTimeLimit)
             i+=1
             if i > cerebral_cortex['frames']: break
-        return _actor.id, _emulator.id, actions, memories, predict_rewards
+        return _actor.id, _emulator.id, act, memories, predict_rewards
 
     def thinker(self):
         """
@@ -1207,7 +1270,6 @@ class Automata1(_Automata):
         for result in results:
             actor_id, emulator_id, actions, images, rewards = result
             self._setupParams(actor_id=actor_id, emulator_id=emulator_id, actions=actions, images=images, rewards=rewards)
-            assert self.pairs.get(actor_id), (self.pairs[actor_id], emulator_id)
 
         # 行動の決定
         bestActor=max(self.predicted_reward, key=lambda k: self.predicted_reward.get(k))
@@ -1215,9 +1277,8 @@ class Automata1(_Automata):
         return bestActor, self.pairs[bestActor]
     
     def activator(self, _actObj):
-        if isinstance(_actObj, list): _actObj = self.actor(_actObj)
-        actions = list(range(self.env.action_space.n))+[np.nan]
-        return [act for act in _actObj.action if act in actions]
+        # if isinstance(_actObj, list): _actObj = self.actor(_actObj)
+        return [act for act in _actObj.action if act in self.env_action_space]
 
     def episode(self):
         """
@@ -1246,7 +1307,7 @@ class Automata1(_Automata):
                 if self.actions[bestActor] is []: flag=False
                 
 
-                for action, image in zip(self.actions[bestActor], self.memories[pairEmulator]):
+                for action, image in zip(self.actions[bestActor].action, self.memories[pairEmulator]):
                     frame+=1
                     state, reward, isDone, debug = self.env.step(action) # state : np.ndarray.flatten
                     if isDone: 
@@ -1308,7 +1369,7 @@ class Automata1(_Automata):
             total_rewards+=[total_reward]
             actual_actions+=[actual_action]
         print('... end episode')
-        self.logger.info(f'rewards:{self.actor_scores}', extra={'className': self.__class__.__name__})
+        self.__class__.logger.info(f'rewards:{self.actor_scores}', extra={'className': self.__class__.__name__})
 
         # 報酬の贈与
         for actor in self.actors:
@@ -1342,7 +1403,7 @@ class Automata1(_Automata):
         
         task = _dir+self.env.spec.id
 
-        self.logger, filename = setup_logger(__name__, task, test=_test, load=_load)
+        self.__class__.logger, filename = setup_logger(__name__, task, test=_test, load=_load)
 
         action_space = self.env.action_space
         observation_space = self.env.observation_space
@@ -1372,10 +1433,10 @@ class Automata1(_Automata):
             scores = self.generation()
             # score = (min(scores.values()), max(scores.values()), sum(scores.values())/len(scores))
 
-            self.logger.info(f'generation:{gen}, min:{min(scores)}, max:{max(scores)}, ave:{sum(scores)/len(scores)}', extra={'className': self.__class__.__name__})
+            self.__class__.logger.info(f'generation:{gen}, min:{min(scores)}, max:{max(scores)}, ave:{sum(scores)/len(scores)}', extra={'className': self.__class__.__name__})
 
-        map(self.logger.removeHandler, self.logger.handlers)
-        map(self.logger.removeFilter, self.logger.filters)
+        map(self.__class__.logger.removeHandler, self.__class__.logger.handlers)
+        map(self.__class__.logger.removeFilter, self.__class__.logger.filters)
 
         return f'{task}/{filename}'
 
@@ -1392,7 +1453,7 @@ class Automata2(Automata1):
         return super().__new__(cls)
     
     def activator(self, _actObj):
-        return [act for act in _actObj.action if act in list(range(self.env.action_space.n))+[np.nan]]
+        return [act for act in _actObj.action if act in self.env_action_space]
 
     def episode(self):
         """

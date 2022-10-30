@@ -3,9 +3,11 @@ from math import tanh
 import pickle
 from random import random
 import time
+import logging
 
 class _Agent:
     _instance = None
+    _logger = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -19,6 +21,7 @@ class _Agent:
         self.team = team
         self.agentNum = num
         self.actVars = actVars
+        self.score = 0.
 
     def __hash__(self):
         return int(self.team.id)
@@ -45,28 +48,25 @@ class _Agent:
 
             path_trace['execution_time'] = execution_time
             path_trace['execution_time_units'] = 'milliseconds'
-            path_trace['root_team_id'] = str(self.team.id)
+            path_trace['root_team_id'] = self.id
             path_trace['final_action'] = result
             path_trace['path'] = path 
             path_trace['depth'] = len(path)
             
         return result
 
-    def reward(self, score=0, task='task'):
+    def reward(self, score=None, task='task'):
         """
         Give this agent/root team a reward for the given task
         """
-        self.team[task] = score
+        self.team[task] = score if score else self.score
 
     def taskDone(self, task):
         """
         Check if agent completed this task already, to skip.
         """
         return task in self.team.outcomes
-    
-    @property
-    def id(self):
-        return str(self.team.id)
+
     
     def saveToFile_def(self, fileName):
         """
@@ -77,6 +77,13 @@ class _Agent:
     def zeroRegisters(self)->None:
         self.team.zeroRegisters()
 
+    def set_logger(self, _logger:logging.Logger):
+        self.logger = _logger
+
+    @property
+    def id(self):
+        return str(self.team.id)
+    
     @classmethod
     def loadAgent(cls, fileName):
         agent = pickle.load(open(fileName, 'rb'))
@@ -157,5 +164,20 @@ class Agent2_1(Agent2):
         if not self.team.outcomes.get(task):
             self.team.outcomes[task]=0.
 
+        score = score if score else self.score
         self.team[task] += tanh(score)
-        self.team[task] = tanh(self.team[task])
+        # self.team[task] = tanh(self.team[task])
+
+class Agent2_1_1(Agent2_1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+        return super().__new__(cls, *args, **kwargs)
+   
+    def reward(self, score=None, task='task'):
+        if not self.team.outcomes.get(task):
+            self.team.outcomes[task]=0.
+
+        score = score if score else self.score
+        self.team[task] += tanh(score)
+        # self.team[task] = tanh(self.team[task])

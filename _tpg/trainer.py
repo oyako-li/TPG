@@ -2,6 +2,7 @@ from _tpg.utils import breakpoint, sigmoid
 import random
 import pickle
 import numpy as np
+import logging
 
 class _Trainer:
     Agent = None
@@ -11,6 +12,7 @@ class _Trainer:
     ActionObject = None
     MemoryObject = None
     _instance = None
+    _logger = None
 
     # should inherit
     def __new__(cls, *args, **kwargs):
@@ -27,7 +29,11 @@ class _Trainer:
             cls.Learner = _Learner
             cls.Program = _Program
             cls.ActionObject = _ActionObject
-
+            cls.Agent._logger = cls._logger
+            cls.Team._logger = cls._logger
+            cls.Learner._logger = cls._logger
+            cls.Program._logger = cls._logger
+            cls.ActionObject._logger = cls._logger
         return super().__new__(cls)        
 
     def __init__(self, 
@@ -194,7 +200,7 @@ class _Trainer:
             "memMatrix": self.memMatrix,
         }
         self.nOperations = 18
-        # self.operations = ["ADD", "SUB", "MULT", "DIV", "POW", "NEG", "INV_NEG", "SIN", "COS", "TANH", "LN", "SQRT", "EXP", "POWY2", "POWY3", "ABS", "MEM_READ", "MEM_WRITE"]
+        self.logger=None
 
         if actions: self.setActions(actions)
 
@@ -536,6 +542,9 @@ class _Trainer:
         self._actions = self.__class__.ActionObject.actions
         pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
 
+    def set_loggre(self, _logger:logging.Logger):
+        self.logger = _logger
+
     @classmethod
     def load(cls, fileName:str):
         trainer = pickle.load(open(f'log/{fileName}.pickle', 'rb'))
@@ -559,6 +568,7 @@ class Trainer(_Trainer):
             cls.Learner = _Learner
             cls.Program = _Program
             cls.ActionObject = _ActionObject
+            cls.Agent._logger = cls.Team._logger = cls.Learner._logger = cls.Program._logger = cls.ActionObject._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
     
@@ -632,6 +642,11 @@ class Trainer1(Trainer):
             cls.Learner = Learner1
             cls.Program = Program1
             cls.ActionObject = _ActionObject
+            cls.Agent._logger = cls._logger
+            cls.Team._logger = cls._logger
+            cls.Learner._logger = cls._logger
+            cls.Program._logger = cls._logger
+            cls.ActionObject._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -651,7 +666,11 @@ class Trainer1_1(Trainer1):
             cls.Program = Program1
             cls.ActionObject = ActionObject1
             cls.ActionObject._nan = cls.ActionObject()
-
+            cls.Agent._logger = cls._logger
+            cls.Team._logger = cls._logger
+            cls.Learner._logger = cls._logger
+            cls.Program._logger = cls._logger
+            cls.ActionObject._logger = cls._logger
         return super().__new__(cls, *args, **kwargs)
 
     def _initialize(self):
@@ -856,6 +875,11 @@ class Trainer1_2(Trainer1_1):
             cls.Program = Program1
             cls.ActionObject = ActionObject2
             cls.ActionObject._nan = cls.ActionObject()
+            cls.Agent._logger = cls._logger
+            cls.Team._logger = cls._logger
+            cls.Learner._logger = cls._logger
+            cls.Program._logger = cls._logger
+            cls.ActionObject._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -882,7 +906,7 @@ class Trainer1_2(Trainer1_1):
         # Finaly, purge the orphans
         # AtomicActionのLearnerはどのように生成すれば良いのだろうか？ -> actionObj.mutate()による
         self.learners = [learner for learner in self.learners if learner.numTeamsReferencing() > 0]
-   
+
 class Trainer2(Trainer):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -901,7 +925,10 @@ class Trainer2(Trainer):
             # cls.ActionObject = _ActionObject
             cls.MemoryObject = _MemoryObject
             cls.MemoryObject.nan = cls.MemoryObject()
-
+            cls.Agent._logger = cls._logger
+            cls.Team._logger = cls._logger
+            cls.Learner._logger = cls._logger
+            cls.Program._logger = cls._logger
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, 
@@ -1331,7 +1358,11 @@ class Trainer2_1(Trainer2):
             cls.Program = Program2
             cls.MemoryObject = MemoryObject
             cls.MemoryObject._nan = cls.MemoryObject()
-
+            cls.Agent._logger = cls._logger
+            cls.Team._logger = cls._logger
+            cls.Learner._logger = cls._logger
+            cls.Program._logger = cls._logger
+            cls.ActionObject._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -1468,7 +1499,10 @@ class Trainer2_2(Trainer2_1):
             cls.Program = Program2_1
             cls.MemoryObject = MemoryObject2
             cls.MemoryObject._nan = cls.MemoryObject()
-
+            cls.Agent._logger = cls._logger
+            cls.Team._logger = cls._logger
+            cls.Learner._logger = cls._logger
+            cls.Program._logger = cls._logger
         return super().__new__(cls, *args, **kwargs)
 
 

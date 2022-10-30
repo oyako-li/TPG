@@ -3,12 +3,14 @@ import numpy as np
 import collections
 import uuid
 import copy
+import logging
 
 class _Learner:
     Team = None
     ActionObject = None
     Program = None
     _instance = None
+    _logger = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -26,7 +28,6 @@ class _Learner:
         program=None, 
         actionObj=None, 
         numRegisters:int or np.ndarray=8, 
-        # _ancestor=None,
         states:list=[],
         inTeams:list=[],
         frameNum:int=0,
@@ -182,6 +183,9 @@ class _Learner:
 
     def numTeamsReferencing(self):
         return len(self.inTeams)
+
+    def set_logger(self, _logger:logging.Logger):
+        self.logger = _logger
 
     @property
     def clone(self): 

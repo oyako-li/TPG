@@ -3,6 +3,7 @@ from _tpg.utils import flip, breakpoint
 import random
 import collections
 import copy
+import logging
 
 """
 The main building block of TPG. Each team has multiple learning which decide the
@@ -12,6 +13,7 @@ action to take in the graph.
 class _Team:
     Learner = None
     _instance = None
+    _logger = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -369,6 +371,9 @@ class _Team:
 
     def numLearnersReferencing(self):
         return len(self.inLearners)
+
+    def set_logger(self, _logger:logging.Logger):
+        self.logger = _logger
 
     @property
     def clone(self): 

@@ -3,8 +3,10 @@
 import numpy as np
 import random
 import pickle
+import logging
 from _tpg.utils import flip
 from _tpg.memory_object import Memory1
+
 
 
 """
@@ -15,6 +17,7 @@ class _ActionObject:
     actions=[0]
     Team = None
     _instance = None
+    _logger = None
 
     # you should inherit
     def __new__(cls, *args, **kwargs):
@@ -161,6 +164,9 @@ class _ActionObject:
                 #    print("Learner {} switched from Team {} to Team {}".format(learner_id, oldTeam.id, self.teamAction.id))
         
         return self
+
+    def set_logger(self, _logger:logging.Logger):
+        self.logger = _logger
 
 class ActionObject1(_ActionObject):
     actions=Memory1()

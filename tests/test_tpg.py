@@ -1,6 +1,6 @@
 import unittest
 import gym
-from _tpg.base_log import *
+from _tpg.utils import *
 
 class TPGTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -173,6 +173,17 @@ class Actor1BiasTest(ActorPointTest):
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
 
+    def test_init_(self):
+        '''test init'''
+        from _tpg.tpg import Actor
+        self.assertEqual(self.TPG, Actor)
+
+        from _tpg.trainer import Trainer1_2
+        from _tpg.memory_object import Fragment1_1
+        tpg = self.TPG()
+        self.assertIsInstance(tpg.trainer, Trainer1_2)
+        self.assertEqual(tpg.trainer.ActionObject.actions.Fragment, Fragment1_1)
+
 class EmulatorTPGTest(unittest.TestCase):
     def setUp(self) -> None:
         from _tpg.tpg import EmulatorTPG
@@ -204,7 +215,7 @@ class EmulatorTPGTest(unittest.TestCase):
         tpg.trainer.evolve([_task])
         # agents = tpg.getAgents()
 
-    # @unittest.skip('next test case')
+    @unittest.skip('next test case')
     def test_generations(self):
         '''test generation'''
         tpg = self.TPG()
@@ -222,6 +233,14 @@ class EmulatorTPGTest(unittest.TestCase):
         filename = tpg.growing(_dir='test/')
         self.assertIsNotNone(filename)
         log_show(f'log/{filename}')
+
+class EmulatorEyeTest(EmulatorTPGTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import EmulatorEye
+        self.TPG = EmulatorEye
+        self.task = "CartPole-v1"
+        self.env = gym.make(self.task)
+        self.state = self.env.observation_space.sample().flatten()
 
 class EmulatorTPG1Test(EmulatorTPGTest):
     def setUp(self) -> None:
@@ -481,6 +500,14 @@ class Automata1BiasTest(AutomataBiasTest):
         filename = automata.growing(_dir='test/')
         self.assertIsNotNone(filename)
         log_show(f'log/{filename}')
+
+class LoggingTest(unittest.TestCase):
+    def test_logshow(self):
+        min, max, ave = log_show('log/test/CartPole-v1/2022-10-30_13-31-37')
+        self.assertIsNotNone(min)
+        self.assertIsNotNone(max)
+        self.assertIsNotNone(ave)
+
 
 if __name__ == '__main__':
     unittest.main()

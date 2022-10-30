@@ -4,10 +4,14 @@ from uuid import uuid4
 import numpy as np
 import random
 from _tpg.utils import flip, breakpoint, sigmoid
+import logging
+
+GAMMA = [',','+','-','*','**','/','//','%','<','<=','<<','>','>=','>>','&','|','^','~']
 
 class _Fragment:
     """ state memory fragment """
     _instance = None
+    _logger = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -96,6 +100,12 @@ class Fragment1_1(Fragment1):
         if cls._instance is None:
             cls._instance=True
         return super().__new__(cls, *args, **kwargs)
+    
+    def __init__(self, _sequence:list=[], _reward=np.nan):
+        assert isinstance(_sequence, list) or isinstance(_sequence, np.ndarray), f'{_sequence} is not list'
+        sequence = [_reward]+list(_sequence)
+        self.fragment = np.array(sequence)
+        self.id = str(uuid4())
 
     def __add__(self, __o):
         if isinstance(__o, self.__class__):
@@ -647,7 +657,7 @@ class Fragment2_1(Fragment2):
             cls._instance=True
         return super().__new__(cls, *args, **kwargs)
 
-    def __init__(self, _state=[np.nan], _reward=0., _key=None):
+    def __init__(self, _state=[], _reward=0., _key=None):
         state = np.array(_state)
         if _key is None: _key = range(state.size)
         key = np.array(list(set(_key)))
@@ -1249,10 +1259,12 @@ class _Memory:
     """states memory"""
     Fragment = None
     _instance = None
+    _logger = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls.Fragment = _Fragment
+            cls.Fragment._logger = cls._logger
         return super().__new__(cls)
 
     def __init__(self):
@@ -1319,6 +1331,7 @@ class Memory1(_Memory):
         if cls._instance is None:
             cls._instance = True
             cls.Fragment = Fragment1
+            cls.Fragment._logger = cls._logger
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, actions=2):
@@ -1358,11 +1371,32 @@ class Memory1_1(Memory1):
         if cls._instance is None:
             cls._instance = True
             cls.Fragment = Fragment1_1
+            cls.Fragment._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
     def values(self):
         return self.memories.values()
+
+class Memory1_2(Memory1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            cls.Fragment = Fragment1_1
+            cls.Fragment._logger = cls._logger
+
+        return super().__new__(cls, *args, **kwargs)
+    
+
+    def __init__(self, actions=2):
+        fragment = self.__class__.Fragment([','])
+        self.memories:dict={fragment.id:fragment} # uuid:flagment
+        self.weights:dict ={fragment.id:0.}
+        self.nan = fragment.id
+        for i in range(actions):
+            fragment = self.__class__.Fragment([i])
+            self.memories[fragment.id]=fragment
+            self.weights[fragment.id]=1.
 
 class Memory2(_Memory):
     """deactivate memorize"""
@@ -1371,6 +1405,7 @@ class Memory2(_Memory):
         if cls._instance is None:
             cls._instance = True
             cls.Fragment = Fragment2
+            cls.Fragment._logger = cls._logger
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self):
@@ -1385,6 +1420,7 @@ class Memory2_1(Memory2):
         if cls._instance is None:
             cls._instance = True
             cls.Fragment = Fragment2_1
+            cls.Fragment._logger = cls._logger
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self):
@@ -1392,7 +1428,6 @@ class Memory2_1(Memory2):
         self.memories:dict={fragment.id:fragment} # uuid:flagment
         self.weights:dict ={fragment.id:0.}
         self.nan = fragment.id
-
         
     def append(self, _state, _reward=0., _key=None):
         memory = self.__class__.Fragment(_state, _reward, _key)
@@ -1413,6 +1448,7 @@ class Memory3(_Memory):
             cls.Fragment = Fragment3
             cls.ActionObject = ActionObject2
             cls.MemoryObject = MemoryObject1
+            cls.Fragment._logger = cls._logger
         return super().__new__(cls, *args, **kwargs)
 
 
@@ -1436,6 +1472,7 @@ class _MemoryObject:
     memories=None
     _instance = None
     _nan=None
+    _logger = None
 
     # you should inherit
     def __new__(cls, *args, **kwargs):
@@ -1444,6 +1481,7 @@ class _MemoryObject:
             cls._instance = True
             cls.Team = Team2
             cls.memories = _Memory()
+            cls.memories._logger=cls._logger
 
         return super().__new__(cls)
     
@@ -1549,6 +1587,7 @@ class MemoryObject(_MemoryObject):
             cls._instance = True
             cls.Team = Team2_1
             cls.memories = Memory2()
+            cls.memories._logger=cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -1576,6 +1615,7 @@ class MemoryObject1(MemoryObject):
             cls._instance = True
             cls.Team = Team2_2
             cls.memories = Memory2_1()
+            cls.memories._logger=cls._logger
 
         return super().__new__(cls, *args, **kwargs)
     
@@ -1608,6 +1648,7 @@ class MemoryObject2(MemoryObject1):
             cls._instance = True
             cls.Team = Team2_2
             cls.memories = Memory2_1()
+            cls.memories._logger=cls._logger
         return super().__new__(cls, *args, **kwargs)
 
     def __add__(self, __o):       
@@ -1921,6 +1962,7 @@ class _ActionObject:
     actions=[0]
     Team = None
     _instance = None
+    _logger  = None
 
     # you should inherit
     def __new__(cls, *args, **kwargs):
@@ -1963,13 +2005,13 @@ class _ActionObject:
                 self.teamAction=None
             except:
                 print('諦めな・・・')
-    '''
-    An ActionObject is equal to another object if that object:
-        - is an instance of the ActionObject class
-        - has the same action code
-        - has the same team action
-    '''
     def __eq__(self, __o:object)->bool:
+        '''
+        An ActionObject is equal to another object if that object:
+            - is an instance of the ActionObject class
+            - has the same action code
+            - has the same team action
+        '''
 
         # The other object must be an instance of the ActionObject class
         if not isinstance(__o, self.__class__):    return False
@@ -1982,10 +2024,10 @@ class _ActionObject:
 
         return True
 
-    '''
-    Negate __eq__
-    '''
     def __ne__(self, __o: object) -> bool:
+        '''
+        Negate __eq__
+        '''
         return not self.__eq__(__o)
 
     def __str__(self):
@@ -2068,6 +2110,9 @@ class _ActionObject:
         
         return self
 
+    def set_logger(self, _logger:logging.Logger):
+        self.logger = _logger
+
 class ActionObject1(_ActionObject):
     actions=None
     _nan=None
@@ -2078,6 +2123,7 @@ class ActionObject1(_ActionObject):
             cls._instance = True
             cls.Team = Team1_1
             cls.actions = Memory1()
+            cls.actions._logger=cls._logger
             
         return super().__new__(cls, *args, **kwargs)
 
@@ -2194,6 +2240,7 @@ class ActionObject2(ActionObject1):
             cls._instance = True
             cls.Team = Team1_2
             cls.actions = Memory1_1()
+            cls.actions._logger=cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
