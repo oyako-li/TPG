@@ -122,6 +122,7 @@ class Agent2(_Agent):
         self.team = team
         self.agentNum = num
         self.memVars = memVars
+        self.score = 0.
 
     def image(self, act, state, path_trace=None): 
         """
