@@ -3,12 +3,15 @@ import pickle
 from uuid import uuid4
 import numpy as np
 import random
-from _tpg.utils import flip, breakpoint, sigmoid
+from _tpg.utils import flip, breakpoint, sigmoid, _Logger
 import logging
 
 GAMMA = [',','+','-','*','**','/','//','%','<','<=','<<','>','>=','>>','&','|','^','~']
 
-class _Fragment:
+
+
+
+class _Fragment(_Logger):
     """ state memory fragment """
     _instance = None
     _logger = None
@@ -1255,17 +1258,17 @@ class Fragment3(Fragment2_1): # story memory
     def __getitem__(self, __key):
         return self.fragment[__key]
 
-class _Memory:
+class _Memory(_Logger):
     """states memory"""
     Fragment = None
-    _instance = None
-    _logger = None
+    # _instance = None
+    # _logger = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls.Fragment = _Fragment
             cls.Fragment._logger = cls._logger
-        return super().__new__(cls)
+        return super().__new__(cls, *args, **kwargs)
 
     def __init__(self):
         fragment = self.__class__.Fragment()
@@ -1331,7 +1334,7 @@ class Memory1(_Memory):
         if cls._instance is None:
             cls._instance = True
             cls.Fragment = Fragment1
-            cls.Fragment._logger = cls._logger
+            # cls.Fragment._logger = cls._logger
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, actions=2):
@@ -1371,7 +1374,7 @@ class Memory1_1(Memory1):
         if cls._instance is None:
             cls._instance = True
             cls.Fragment = Fragment1_1
-            cls.Fragment._logger = cls._logger
+            # cls.Fragment._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -1383,17 +1386,17 @@ class Memory1_2(Memory1):
         if cls._instance is None:
             cls._instance = True
             cls.Fragment = Fragment1_1
-            cls.Fragment._logger = cls._logger
+            # cls.Fragment._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
     
 
-    def __init__(self, actions=2):
+    def __init__(self, _range=2, actions=None):
         fragment = self.__class__.Fragment([','])
         self.memories:dict={fragment.id:fragment} # uuid:flagment
         self.weights:dict ={fragment.id:0.}
         self.nan = fragment.id
-        for i in range(actions):
+        for i in range(_range):
             fragment = self.__class__.Fragment([i])
             self.memories[fragment.id]=fragment
             self.weights[fragment.id]=1.
@@ -1405,7 +1408,7 @@ class Memory2(_Memory):
         if cls._instance is None:
             cls._instance = True
             cls.Fragment = Fragment2
-            cls.Fragment._logger = cls._logger
+            # cls.Fragment._logger = cls._logger
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self):
@@ -1420,7 +1423,7 @@ class Memory2_1(Memory2):
         if cls._instance is None:
             cls._instance = True
             cls.Fragment = Fragment2_1
-            cls.Fragment._logger = cls._logger
+            # cls.Fragment._logger = cls._logger
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self):
@@ -1467,12 +1470,12 @@ class Memory3(_Memory):
     def score(self):
         return np.sum(1-np.array(self.weights.values()))
 
-class _MemoryObject:
+class _MemoryObject(_Logger):
     Team = None
     memories=None
-    _instance = None
+    # _instance = None
+    # _logger = None
     _nan=None
-    _logger = None
 
     # you should inherit
     def __new__(cls, *args, **kwargs):
@@ -1483,14 +1486,14 @@ class _MemoryObject:
             cls.memories = _Memory()
             cls.memories._logger=cls._logger
 
-        return super().__new__(cls)
+        return super().__new__(cls, *args, **kwargs)
     
     def __init__(self, state=None, reward=0.):
 
         if isinstance(state, self.__class__.Team):
             self.teamMemory = state
             self.memoryCode = None
-            return
+            return 
         elif isinstance(state, self.__class__):
             self.memoryCode = state.memoryCode
             self.teamMemory = state.teamMemory
@@ -1953,16 +1956,331 @@ class MemoryObject2(MemoryObject1):
             self.__class__.memories.weights[self.memoryCode]*=0.9 # 忘却確立減算
             self.__class__.memories.updateWeights()               # 忘却確立計上
             return self
+
+class MemoryObject3(MemoryObject2):
+    """operator implement"""
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.team import Team2_2
+            cls._instance = True
+            cls.Team = Team2_2
+            cls.memories = Memory2_1()
+            cls.memories._logger=cls._logger
+        return super().__new__(cls, *args, **kwargs)
+
+    def __add__(self, __o):       
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory + __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory + __o)
+        else:
+            return NotImplemented
     
-class _ActionObject:
+    def __radd__(self, __o):
+        if isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o + self.memory)
+        else:
+            return NotImplemented       
+    
+    def __sub__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory - __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory - __o)
+        else:
+            return NotImplemented
+    
+    def __rsub__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o - self.memory)
+        else:
+            return NotImplemented
+    
+    def __mul__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory * __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory * __o)
+        else:
+            return NotImplemented
+    
+    def __rmul__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o * self.memory)
+        else:
+            return NotImplemented
+    
+    def __pow__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory ** __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory ** __o)
+        else:
+            return NotImplemented
+    
+    def __rpow__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o ** self.memory)
+        else:
+            return NotImplemented
+    
+    def __truediv__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory / __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory / __o)
+        else:
+            return NotImplemented
+    
+    def __rtruediv__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o / self.memory)
+        else:
+            return NotImplemented
+    
+    def __floordiv__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory // __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory // __o)
+        else:
+            return NotImplemented
+    
+    def __rfloordiv__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o // self.memory)
+        else:
+            return NotImplemented
+    
+    def __mod__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory % __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory % __o)
+        else:
+            return NotImplemented
+    
+    def __rmod__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o % self.memory)
+        else:
+            return NotImplemented
+    
+    def __lt__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.memory < __o.memory
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.memory < __o
+        else:
+            return NotImplemented
+    
+    def __rlt__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return __o < self.memory
+        else:
+            return NotImplemented
+    
+    def __le__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.memory <= __o.memory
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.memory <= __o
+        else:
+            return NotImplemented
+    
+    def __rle__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return __o <= self.memory
+        else:
+            return NotImplemented
+
+    def __lshift__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory << __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory << __o)
+        else:
+            return NotImplemented
+    
+    def __rlshift__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o << self.memory)
+        else:
+            return NotImplemented
+    
+    def __gt__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.memory > __o.memory
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.memory > __o
+        else:
+            return NotImplemented
+    
+    def __rgt__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return __o > self.memory
+        else:
+            return NotImplemented
+    
+    def __ge__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.memory >= __o.memory
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.memory >= __o
+        else:
+            return NotImplemented
+    
+    def __rge__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return __o >= self.memory
+        else:
+            return NotImplemented
+    
+    def __rshift__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory >> __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory >> __o)
+        else:
+            return NotImplemented
+    
+    def __rrshift__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o >> self.memory)
+        else:
+            return NotImplemented
+
+    def __and__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory & __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory & __o)
+        else:
+            return NotImplemented
+
+    def __rand__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory & __o)
+        else:
+            return NotImplemented
+    
+    def __or__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory | __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory | __o)
+        else:
+            return NotImplemented
+
+    def __ror__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o | self.memory)
+        else:
+            return NotImplemented
+            
+    def __xor__(self, __o):
+        if isinstance(__o, self.__class__):
+            return self.__class__(self.memory ^ __o.memory)
+        elif isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(self.memory ^ __o)
+        else:
+            return NotImplemented
+    
+    def __rxor__(self, __o):
+        if isinstance(__o, np.ndarray) or isinstance(__o, list) \
+            or isinstance(__o, int) or isinstance(__o, float) \
+            or isinstance(__o, self.__class__.memories.Fragment):
+            return self.__class__(__o ^ self.memory)
+        else:
+            return NotImplemented
+    
+    def __invert__(self):
+        return self.__class__(~self.memory)
+
+    def __len__(self):
+        return self.__class__.memories[self.memoryCode].size
+
+    def getImage(self, _act, _state, visited, memVars, path_trace=None):
+        if self.teamMemory is not None:
+            return self.teamMemory.image(_act, _state, visited, memVars=memVars, path_trace=path_trace)
+        else:
+            assert self.memoryCode in self.__class__.memories, f'{self.memoryCode} is not in {self.__class__.memories}, {self.__class__}'
+            self.__class__.memories.weights[self.memoryCode]*=0.9 # 忘却確立減算
+            self.__class__.memories.updateWeights()               # 忘却確立計上
+            return self
+    
+class _ActionObject(_Logger):
     """
     Action  Object has a program to produce a value for the action, program doesn't
     run if just a discrete action code.
     """
     actions=[0]
     Team = None
-    _instance = None
-    _logger  = None
+    # _instance = None
+    # _logger  = None
 
     # you should inherit
     def __new__(cls, *args, **kwargs):
@@ -1970,7 +2288,7 @@ class _ActionObject:
             from _tpg.team import _Team
             cls._instance = True
             cls.Team = _Team
-        return super().__new__(cls)
+        return super().__new__(cls, *args, **kwargs)
     '''
     An action object can be initalized by:
         - Copying another action object
@@ -2575,6 +2893,70 @@ class ActionObject2(ActionObject1):
     @property
     def NaN(self):
         return self.__class__(self.__class__.actions.nan)
+
+class Qualia(ActionObject2):
+    """Operations and Actions Graph
+    """
+    GAMMA
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.team import Team1_2
+            cls._instance = True
+            cls.Team = Team1_2
+            cls.actions = Memory1_1(GAMMA)
+            # cls.actions.set_logger(cls.logger)
+
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self,
+        action = None,
+        _task='task',
+        initParams:dict or int =None
+    ):
+        '''
+        Defer importing the Team class to avoid circular dependency.
+        This may require refactoring to fix properly
+        '''
+
+        # The action is a team
+        if isinstance(action, self.__class__.Team):
+            self.teamAction = action
+            self.actionCode = None
+            return
+        # The action is another action object
+        elif isinstance(action, self.__class__):
+            self.actionCode = action.actionCode
+            self.teamAction = action.teamAction
+            return
+        # An int means the action is an index into the action codes in initParams
+        elif isinstance(action, str):
+            assert action in self.__class__.actions, f'{action} not in {self.__class__.actions}'
+            self.actionCode = action
+            self.teamAction = None
+            return
+        elif isinstance(action, list):
+            self.actionCode = self.__class__.actions.append(action)
+            self.teamAction = None
+            return
+        else:
+            try:
+                self.actionCode=self.__class__.actions.choice()
+                self.teamAction=None
+            except:
+                print('諦めな・・・')
+
+    # TODO: Bidign calculation
+    @classmethod
+    def bid(cls, _obj):
+        obj = cls(_obj)
+        return obj.action[0]
+
+    # TODO: Memory object association calculate
+    @classmethod
+    def cognit(cls, _obj):
+        return
+
 
 class Hippocampus:
     _instance = None

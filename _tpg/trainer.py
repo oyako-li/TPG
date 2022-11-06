@@ -1,18 +1,20 @@
-from _tpg.utils import breakpoint, sigmoid
+from _tpg.utils import *
+from _tpg.utils import _Logger
 import random
 import pickle
 import numpy as np
 import logging
+import re
 
-class _Trainer:
+class _Trainer(_Logger):
     Agent = None
     Team = None
     Learner = None
     Program = None
     ActionObject = None
     MemoryObject = None
-    _instance = None
-    _logger = None
+    # _instance = None
+    # _logger = None
 
     # should inherit
     def __new__(cls, *args, **kwargs):
@@ -29,12 +31,14 @@ class _Trainer:
             cls.Learner = _Learner
             cls.Program = _Program
             cls.ActionObject = _ActionObject
-            cls.Agent._logger = cls._logger
-            cls.Team._logger = cls._logger
-            cls.Learner._logger = cls._logger
-            cls.Program._logger = cls._logger
-            cls.ActionObject._logger = cls._logger
-        return super().__new__(cls)        
+
+            # cls.Agent._logger=cls._logger
+            # cls.Team._logger=cls._logger
+            # cls.Learner._logger=cls._logger
+            # cls.Program._logger=cls._logger
+            # cls.ActionObject._logger=cls._logger
+
+        return super().__new__(cls, *args, **kwargs)        
 
     def __init__(self, 
         actions=None, 
@@ -200,7 +204,7 @@ class _Trainer:
             "memMatrix": self.memMatrix,
         }
         self.nOperations = 18
-        self.logger=None
+        # self.logger=None
 
         if actions: self.setActions(actions)
 
@@ -528,7 +532,7 @@ class _Trainer:
 
     def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None):
         assert len(self.rootTeams) != 0, 'root teams is null'
-
+        # self.info(f'evolving:{datetime.now()}')
         self._scoreIndividuals(
             tasks, 
             multiTaskType=multiTaskType,
@@ -542,8 +546,14 @@ class _Trainer:
         self._actions = self.__class__.ActionObject.actions
         pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
 
-    def set_loggre(self, _logger:logging.Logger):
-        self.logger = _logger
+    @classmethod
+    def set_loggre(cls, _logger:logging.Logger):
+        cls.logger = _logger
+        class_objects = [i for i in cls.__dict__.keys() if re.match(r'^[A-Z]', i)]
+        for class_object in class_objects:
+            if cls.__dict__[class_object]._logger is None:
+                cls.__dict__[class_object].set_logger(_logger)
+        return cls
 
     @classmethod
     def load(cls, fileName:str):
@@ -568,7 +578,12 @@ class Trainer(_Trainer):
             cls.Learner = _Learner
             cls.Program = _Program
             cls.ActionObject = _ActionObject
-            cls.Agent._logger = cls.Team._logger = cls.Learner._logger = cls.Program._logger = cls.ActionObject._logger = cls._logger
+
+            cls.Agent._logger = cls._logger
+            cls.Team._logger = cls._logger
+            cls.Learner._logger = cls._logger
+            cls.Program._logger = cls._logger
+            cls.ActionObject._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
     
@@ -641,7 +656,8 @@ class Trainer1(Trainer):
             cls.Team = Team1
             cls.Learner = Learner1
             cls.Program = Program1
-            cls.ActionObject = _ActionObject
+            cls.ActionObject= _ActionObject
+
             cls.Agent._logger = cls._logger
             cls.Team._logger = cls._logger
             cls.Learner._logger = cls._logger
@@ -666,11 +682,14 @@ class Trainer1_1(Trainer1):
             cls.Program = Program1
             cls.ActionObject = ActionObject1
             cls.ActionObject._nan = cls.ActionObject()
+
+
             cls.Agent._logger = cls._logger
             cls.Team._logger = cls._logger
             cls.Learner._logger = cls._logger
             cls.Program._logger = cls._logger
             cls.ActionObject._logger = cls._logger
+
         return super().__new__(cls, *args, **kwargs)
 
     def _initialize(self):
@@ -875,6 +894,8 @@ class Trainer1_2(Trainer1_1):
             cls.Program = Program1
             cls.ActionObject = ActionObject2
             cls.ActionObject._nan = cls.ActionObject()
+
+
             cls.Agent._logger = cls._logger
             cls.Team._logger = cls._logger
             cls.Learner._logger = cls._logger
@@ -925,10 +946,14 @@ class Trainer2(Trainer):
             # cls.ActionObject = _ActionObject
             cls.MemoryObject = _MemoryObject
             cls.MemoryObject.nan = cls.MemoryObject()
+
+
             cls.Agent._logger = cls._logger
             cls.Team._logger = cls._logger
             cls.Learner._logger = cls._logger
             cls.Program._logger = cls._logger
+            cls.MemoryObject._logger = cls._logger
+
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, 
@@ -1358,11 +1383,12 @@ class Trainer2_1(Trainer2):
             cls.Program = Program2
             cls.MemoryObject = MemoryObject
             cls.MemoryObject._nan = cls.MemoryObject()
+
             cls.Agent._logger = cls._logger
             cls.Team._logger = cls._logger
             cls.Learner._logger = cls._logger
             cls.Program._logger = cls._logger
-            cls.ActionObject._logger = cls._logger
+            cls.MemoryObject._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -1499,10 +1525,13 @@ class Trainer2_2(Trainer2_1):
             cls.Program = Program2_1
             cls.MemoryObject = MemoryObject2
             cls.MemoryObject._nan = cls.MemoryObject()
+
             cls.Agent._logger = cls._logger
             cls.Team._logger = cls._logger
             cls.Learner._logger = cls._logger
             cls.Program._logger = cls._logger
+            cls.MemoryObject._logger = cls._logger
+
         return super().__new__(cls, *args, **kwargs)
 
 

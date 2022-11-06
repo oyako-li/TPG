@@ -1,12 +1,69 @@
-import random
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.pyplot as plt
+from datetime import datetime
+import tkinter as tk
 import numpy as np
+import random
 import logging
+import inspect
 import time
 import os
-from datetime import datetime
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import tkinter as tk
+import re
+
+class _Logger:
+    _instance=None
+    _logger=[None]
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is not None:
+            cls._instance = True
+            # cls._logger= logging.getLogger(cls.__name__)
+        return super().__new__(cls)
+
+    @classmethod
+    def info(cls, *args, **kwargs):
+        if cls.logger: cls.logger.info(*args, extra={'className': cls.__name__}, **kwargs)
+
+    @classmethod
+    def debug(cls, *args, **kwargs):
+        if cls.logger: cls.logger.debug(*args, extra={'className': cls.__name__}, **kwargs)
+
+    @classmethod
+    def warning(cls, *args, **kwargs):
+        if cls.logger: cls.logger.warning(*args, extra={'className': cls.__name__}, **kwargs)
+
+    @classmethod
+    def error(cls, *args, **kwargs):
+        if cls.logger: cls.logger.error(*args, extra={'className': cls.__name__}, **kwargs)
+
+    @classmethod
+    def critical(cls, *args, **kwargs):
+        if cls.logger: cls.logger.critical(*args, extra={'className': cls.__name__}, **kwargs)
+    
+    @classmethod
+    def log(cls, *args, **kwargs):
+        if cls.logger: cls.logger.log(*args, extra={'className': cls.__name__}, **kwargs)
+
+    @classmethod
+    @property
+    def logger(cls):
+        return cls._logger[0]
+
+    @classmethod
+    def set_logger(cls, _logger):
+        if cls.logger is None :
+            # print(f'set logger {cls.__name__}')
+            cls._logger=[_logger]
+            for clsObj in [cls.__dict__[i] for i in cls.__dict__.keys() if inspect.isclass(cls.__dict__[i]) and re.match(r'^[A-Z]', i)]:
+                # print(f'set sub_logger',clsObj, _logger)
+                clsObj.set_logger(_logger)
+        
+        # return cls.logger
+        # class_objects = [self.__class__.__dict__[i] for i in self.__class__.__dict__.keys() if re.match(r'^[A-Z]', i) and self.__class__.__dict__[i] is not None]
+        # for class_object in class_objects:
+        #     if class_object._logger is None:
+        #         class_object._logger=_logger
+        # return _logger
 
 def setup_logger(_name, _logfile='LOGFILENAME', test=False, load=True):
     
@@ -45,11 +102,10 @@ def setup_logger(_name, _logfile='LOGFILENAME', test=False, load=True):
 def log_load(_filename, _renge, _step=5):
     l =[]
 
-    with open(f"{_filename}.log", "r") as file:
+    with open(f"log/{_filename}.log", "r") as file:
         lines = file.readlines()
         for line in lines:
             results = line.replace('\n','').split(', ')[2:]
-            print(results[0])
             if 'generation:' in results[0]:
                 l.append([float(re.split(':')[1]) for re in results[1:]])
 
@@ -107,7 +163,7 @@ def log_show(filename, renge=100, step=5):
     # When windows is closed.
 
     def _destroyWindow():
-        fig.savefig(f'{filename}.png')
+        fig.savefig(f'log/{filename}.png')
         root.quit()
         root.destroy()
 

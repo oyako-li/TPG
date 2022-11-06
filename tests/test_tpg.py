@@ -51,9 +51,16 @@ class TPGTest(unittest.TestCase):
         tpg = self.TPG()
         tpg.setActions(self.action)
         tpg.setEnv(self.env)
-        filename = tpg.growing(_dir='test/')
+        filename = tpg.growing(_dir='test/', _load=True)
         self.assertIsNotNone(filename)
-        log_show(f'log/{filename}')
+        # log_show(f'{filename}')
+    @unittest.skip('prevent logger reset')
+    def test_logger(self):
+        tpg = self.TPG()
+        tpg.setActions(self.action)
+        tpg.setEnv(self.env)
+        logger, filename = setup_logger(__name__,test=True)
+        tpg.set_logger(logger)
 
 class MHTPGTest(TPGTest):
 
@@ -232,7 +239,7 @@ class EmulatorTPGTest(unittest.TestCase):
         tpg.setEnv(self.env)
         filename = tpg.growing(_dir='test/')
         self.assertIsNotNone(filename)
-        log_show(f'log/{filename}')
+        # log_show(f'log/{filename}')
 
 class EmulatorEyeTest(EmulatorTPGTest):
     def setUp(self) -> None:

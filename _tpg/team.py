@@ -1,26 +1,28 @@
 import uuid
-from _tpg.utils import flip, breakpoint
+from _tpg.utils import flip, breakpoint, _Logger
 import random
 import collections
 import copy
 import logging
+import re
 
 """
 The main building block of TPG. Each team has multiple learning which decide the
 action to take in the graph.
 """
 
-class _Team:
+class _Team(_Logger):
     Learner = None
-    _instance = None
-    _logger = None
+    # _instance = None
+    # _logger = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.learner import _Learner
             cls._instance = True
             cls.Learner = _Learner
-        return super().__new__(cls)
+            # cls.Learner.set_logger(cls,cls.logger)
+        return super().__new__(cls, *args, **kwargs)
 
     def __init__(self,
             learners:list = [],
@@ -372,9 +374,6 @@ class _Team:
     def numLearnersReferencing(self):
         return len(self.inLearners)
 
-    def set_logger(self, _logger:logging.Logger):
-        self.logger = _logger
-
     @property
     def clone(self): 
         _clone = self.__class__(
@@ -394,6 +393,7 @@ class Team1(_Team):
 
             cls._instance = True
             cls.Learner = Learner1
+            cls.Learner._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -403,6 +403,7 @@ class Team1_1(Team1):
             from _tpg.learner import Learner1_1
             cls._instance = True
             cls.Learner = Learner1_1
+            cls.Learner._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -412,6 +413,7 @@ class Team1_2(Team1_1):
             from _tpg.learner import Learner1_2
             cls._instance = True
             cls.Learner = Learner1_2
+            cls.Learner._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -422,6 +424,7 @@ class Team2(_Team):
 
             cls._instance = True
             cls.Learner = Learner2
+            cls.Learner._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -646,6 +649,7 @@ class Team2_1(Team2):
             from _tpg.learner import Learner2_1
             cls._instance = True
             cls.Learner = Learner2_1
+            cls.Learner._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -655,5 +659,6 @@ class Team2_2(Team2_1):
             from _tpg.learner import Learner2_2
             cls._instance = True
             cls.Learner = Learner2_2
+            cls.Learner._logger = cls._logger
             
         return super().__new__(cls, *args, **kwargs)

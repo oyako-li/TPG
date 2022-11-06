@@ -1,23 +1,21 @@
-import random
-import numpy as np
 from numpy import pi, inf, NINF, float64, finfo
 from numpy.random import rand
 # from numba import njit
 from math import sin, cos, tanh, log, sqrt, exp, pow, isnan
-import copy
-from _tpg.utils import flip
+from _tpg.utils import flip, _Logger
+import numpy as np
+import random
 import uuid
-import logging
 
-class _Program:
-    _instance = None
-    _logger = None
+GAMMA = [',','+','-','*','**','/','//','%','<','<=','<<','>','>=','>>','&','|','^','~']
+
+class _Program(_Logger):
 
     # you should inherit
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
-        return super().__new__(cls)
+        return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, 
             instructions=None, 
@@ -41,80 +39,31 @@ class _Program:
 
         self.id = uuid.uuid4()
 
-    def execute(
-            inpt:np.ndarray,        # state
-            regs:np.ndarray,        # self.registers
-            modes:np.ndarray,       # self.program.instructions[:,0]
-            ops:np.ndarray,         # self.program.instructions[:,1]
-            dsts:np.ndarray,        # self.program.instructions[:,2]
-            srcs:np.ndarray,        # self.program.instructions[:,3]
-            memMatrix, memRows, memCols, memWriteProbFunc
-        ): 
+    def __eq__(self, __o:object) -> bool:
+        '''
+        A program is equal to another object if that object:
+            - is an instance of the program class
+            - has identical instructions
+        '''
+        # The other object must be an instance of the Program class
+        if not isinstance(__o, self.__class__): return False
+
+        # Compare instructions
+        return np.array_equal(self.instructions, __o.instructions)
+
+    def __ne__(self, __o: object) -> bool:
+        '''
+        Negation of __eq__
+        '''
+        return not self.__eq__(__o)
+
+    def memWriteProb(i):
         """
-        Executes the program which returns a single final value.
+        Returns probability of write at given index using cauchy distribution with
+        lambda = 1.
         """
-        regSize = len(regs)
-        inptLen = len(inpt)
-        for i in range(len(modes)):
-            # first get source
-            if modes[i] == 0:   src = regs[srcs[i]%regSize]
-            else:               src = inpt[srcs[i]%inptLen]
-
-            # get data for operation
-            op = ops[i]
-            x = regs[dsts[i]]
-            y = src
-            dest = dsts[i]%regSize
-
-            # do an operation
-            try:
-                if op == 0:             regs[dest] = x+y
-                elif op == 1:           regs[dest] = x-y
-                elif op == 2:           regs[dest] = x*y
-                elif op == 3 and y != 0:regs[dest] = x/y
-                elif op == 4:           pass#regs[dest] = x**y
-                elif op == 5 and x < y: regs[dest] = x*(-1)
-                elif op == 6 and x > y: regs[dest] = x*(-1)
-                elif op == 7:           regs[dest] = sin(y)
-                elif op == 8:           regs[dest] = cos(y)
-                elif op == 9:           regs[dest] = tanh(y)
-                elif op == 10 and y > 0:regs[dest] = log(y)
-                elif op == 11 and y > 0:regs[dest] = sqrt(y)
-                elif op == 12:          regs[dest] = exp(y)
-                elif op == 13:          regs[dest] = pow(y,2)
-                elif op == 14:          regs[dest] = pow(y,3)
-                elif op == 15:          regs[dest] = abs(y)
-                elif op == 16:
-                    index = srcs[i]
-                    index %= (memRows*memCols)
-                    row = int(index / memRows)
-                    col = index % memCols
-                    regs[dest] = memMatrix[row, col]
-                elif op == 17:
-                    # row offset (start from center, go to edges)
-                    halfRows = int(memRows/2) # halfRows
-                    for i in range(halfRows):
-                        # probability to write (gets smaller as i increases)
-                        # TODO: swap out write prob func by passing in an array of values for that row.
-                        writeProb = memWriteProbFunc(i)
-                        # column to maybe write corresponding value into
-                        for col in range(memCols):
-                            # try write to lower half
-                            if rand(1)[0] < writeProb:
-                                row = (halfRows - i) - 1
-                                memMatrix[row,col] = regs[col]
-                            # try write to upper half
-                            if rand(1)[0] < writeProb:
-                                row = halfRows + i
-                                memMatrix[row,col] = regs[col]
-            except Exception:  pass
-
-
-            if isnan(regs[dest]):       regs[dest] = 0
-            elif regs[dest] == inf:     regs[dest] = finfo(float64).max
-            elif regs[dest] == NINF:    regs[dest] = finfo(float64).min
-
-    
+        return 1/(pi*(i**2+1))
+  
     def mutate(self, mutateParams):
         """
         Potentially modifies the instructions in a few ways.
@@ -181,34 +130,82 @@ class _Program:
             
             return self
 
+    @classmethod
+    def execute(cls,
+        inpt,   # state: np.ndarray or MemoryObj
+        regs,   # self.registers: np.ndarray
+        modes,  # self.program.instructions[:,0]: [random.randint(0,1), ...]
+        ops,    # self.program.instructions[:,1]: [random.randint(0, oppelation.rang-1), ...]
+        dsts,   # self.program.instructions[:,2]: [random.randint(0, register.len-1), ...]
+        srcs,   # self.program.instructions[:,3]: [random.randint(0, state.size-1), ...]
+        memMatrix, memRows, memCols, memWriteProbFunc
+    ):
+        regSize = len(regs)
+        inptLen = len(inpt)
+        for i in range(len(modes)):
+            # first get source
+            if modes[i] == 0:   src = regs[srcs[i]%regSize]
+            else:               src = inpt[srcs[i]%inptLen]
 
-    def __eq__(self, __o:object) -> bool:
-        '''
-        A program is equal to another object if that object:
-            - is an instance of the program class
-            - has identical instructions
-        '''
-        # The other object must be an instance of the Program class
-        if not isinstance(__o, self.__class__): return False
+            # get data for operation
+            op = ops[i]
+            x = regs[dsts[i]]
+            y = src
+            dest = (dsts[i])%regSize
 
-        # Compare instructions
-        return np.array_equal(self.instructions, __o.instructions)
+            # do an operation
+            try:
+                if op == 0:             regs[dest] = x+y
+                elif op == 1:           regs[dest] = x-y
+                elif op == 2:           regs[dest] = x*y
+                elif op == 3 and y != 0:regs[dest] = x/y
+                elif op == 4:           pass#regs[dest] = x**y
+                elif op == 5 and x < y: regs[dest] = x*(-1)
+                elif op == 6 and x > y: regs[dest] = x*(-1)
+                elif op == 7:           regs[dest] = sin(y)
+                elif op == 8:           regs[dest] = cos(y)
+                elif op == 9:           regs[dest] = tanh(y)
+                elif op == 10 and y > 0:regs[dest] = log(y)
+                elif op == 11 and y > 0:regs[dest] = sqrt(y)
+                elif op == 12:          regs[dest] = exp(y)
+                elif op == 13:          regs[dest] = pow(y,2)
+                elif op == 14:          regs[dest] = pow(y,3)
+                elif op == 15:          regs[dest] = abs(y)
+                elif op == 16:
+                    index = srcs[i]
+                    index %= (memRows*memCols)
+                    row = int(index / memRows)
+                    col = index % memCols
+                    regs[dest] = memMatrix[row, col]
+                elif op == 17:
+                    # row offset (start from center, go to edges)
+                    halfRows = int(memRows/2) # halfRows
+                    for i in range(halfRows):
+                        # probability to write (gets smaller as i increases)
+                        # TODO: swap out write prob func by passing in an array of values for that row.
+                        writeProb = memWriteProbFunc(i)
+                        # column to maybe write corresponding value into
+                        for col in range(memCols):
+                            # try write to lower half
+                            if rand(1)[0] < writeProb:
+                                row = (halfRows - i) - 1
+                                memMatrix[row,col] = regs[col]
+                            # try write to upper half
+                            if rand(1)[0] < writeProb:
+                                row = halfRows + i
+                                memMatrix[row,col] = regs[col]
+            
+            except Warning as w:
+                cls.warning(f'{w} on {cls.__name__}')
+                regs[dest] = finfo(float64).min
 
-    def __ne__(self, __o: object) -> bool:
-        '''
-        Negation of __eq__
-        '''
-        return not self.__eq__(__o)
+            except Exception as e:
+                cls.warning(f'{e} on {cls.__name__}')
+                regs[dest] = finfo(float64).min
 
-    def memWriteProb(i):
-        """
-        Returns probability of write at given index using cauchy distribution with
-        lambda = 1.
-        """
-        return 1/(pi*(i**2+1))
-
-    def set_logger(self, _logger:logging.Logger):
-        self.logger = _logger
+            if isnan(regs[dest]):       regs[dest] = 0
+            elif regs[dest] == inf:     regs[dest] = finfo(float64).max
+            elif regs[dest] == NINF:    regs[dest] = finfo(float64).min
 
 class Program1(_Program):
     def __new__(cls, *args, **kwargs):
@@ -286,8 +283,14 @@ class Program2(_Program):
                             if rand(1)[0] < writeProb:
                                 row = halfRows + i
                                 memMatrix[row,col] = regs[col]
-            except Exception:  pass
+                        
+            except Warning as w:
+                print(w, ' on calculation')
+                regs[dest] = finfo(float64).min
 
+            except Exception as e:
+                print(f'{e} on program')
+                regs[dest] = finfo(float64).min
 
             if isnan(regs[dest]):       regs[dest] = 0
             elif regs[dest] == inf:     regs[dest] = finfo(float64).max
@@ -369,28 +372,42 @@ class Program2_1(Program2):
                             if rand(1)[0] < writeProb:
                                 row = halfRows + i
                                 memMatrix[row,col] = regs[col]
-            except Exception:  pass
+            
+            except Warning as w:
+                print(w, ' on calculation')
+                regs[dest] = finfo(float64).min
+
+            except Exception as e:
+                print(f'{e} on program')
+                regs[dest] = finfo(float64).min
 
             if isnan(regs[dest]):       regs[dest] = 0
             elif regs[dest] == inf:     regs[dest] = finfo(float64).max
             elif regs[dest] == NINF:    regs[dest] = finfo(float64).min
 
-class Program2_1_1(Program2_1):
+class Program3(_Program):
+    """Activate sequence create program
+    GAMMA = [',','+','-','*','**','/','//','%','<','<=','<<','>','>=','>>','&','|','^','~']
+    """
+    Qualia=None
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
+            from _tpg.memory_object import Qualia
             cls._instance = True
+            cls.Qualia=Qualia
         return super().__new__(cls, *args, **kwargs)
 
     @classmethod
     def execute(cls,
-        inpt,   # state -> np.ndarray or MemoryObj
-        regs,   # self.registers
-        modes,  # self.program.instructions[:,0]->[random.randint(0,1), ...]
-        ops,    # self.program.instructions[:,1]->[random.randint(0, oppelation.rang-1), ...]
-        dsts,   # self.program.instructions[:,2]->[random.randint(0, register.len-1), ...]
-        srcs,   # self.program.instructions[:,3]->[random.randint(0, state.size-1), ...]
+        inpt,   # state: np.ndarray, MemoryObj or ActionObj = Qualia
+        regs,   # self.registers: np.ndarray = sharing short memory or context
+        modes,  # self.program.instructions[:,0]: [random.randint(0,1), ...]
+        ops,    # self.program.instructions[:,1]: [random.randint(0, oppelation.rang-1), ...]
+        dsts,   # self.program.instructions[:,2]: [random.randint(0, register.len-1), ...] = チューリング完全の書き込み場所。
+        srcs,   # self.program.instructions[:,3]: [random.randint(0, state.size-1), ...]
         memMatrix, memRows, memCols, memWriteProbFunc
     ):
+        inpt = cls.Qualia(inpt)
         regSize = len(regs)
         inptLen = len(inpt)
         for i in range(len(modes)):
@@ -401,39 +418,35 @@ class Program2_1_1(Program2_1):
             # get data for operation
             op = ops[i]
             x = regs[dsts[i]]
-            y = src
+            y = cls.Qualia(src)
             dest = (dsts[i])%regSize
 
             # do an operation
             try:
-                if op == 0:             regs[dest] = x+y
-                elif op == 1:           regs[dest] = x-y
-                elif op == 2:           regs[dest] = x*y
-                elif op == 3 and y != 0:regs[dest] = x/y
-                elif op == 4:           pass#regs[dest] = x**y
-                elif op == 5 and x < y: regs[dest] = x*(-1)
-                elif op == 6 and x > y: regs[dest] = x*(-1)
-                elif op == 7:           regs[dest] = sin(y)
-                elif op == 8:           regs[dest] = cos(y)
-                elif op == 9:           regs[dest] = tanh(y)
-                elif op == 10 and y > 0:regs[dest] = log(y)
-                elif op == 11 and y > 0:regs[dest] = sqrt(y)
-                elif op == 12:          regs[dest] = exp(y)
-                elif op == 13:          regs[dest] = pow(y,2)
-                elif op == 14:          regs[dest] = pow(y,3)
-                elif op == 15:          regs[dest] = abs(y)
-                elif op == 16:
+                if op == 0    :           regs[dest] = x+y
+                elif op == 1  :           regs[dest] = x-y
+                elif op == 2  :           regs[dest] = x*y
+                elif op == 4  :           regs[dest] = x**y
+                elif op == 5  and y != 0: regs[dest] = x/y
+                elif op == 6  and y != 0: regs[dest] = x//y
+                elif op == 7  :           regs[dest] = x%y
+                elif op == 8  and x < y : regs[dest] = x*(-1)
+                elif op == 9  and x <= y: regs[dest] = x*(-1)
+                elif op == 10 :           regs[dest] = x<<y
+                elif op == 11 and x > y : regs[dest] = x*(-1)
+                elif op == 12 and x >= y: regs[dest] = x*(-1)
+                elif op == 13 :           regs[dest] = x>>y
+                elif op == 14 :           regs[dest] = cls.Qualia.cognit(y)
+                elif op == 15 :
                     index = srcs[i]
                     index %= (memRows*memCols)
                     row = int(index / memRows)
                     col = index % memCols
                     regs[dest] = memMatrix[row, col]
-                elif op == 17:
-                    # row offset (start from center, go to edges)
+                elif op == 16 :
                     halfRows = int(memRows/2) # halfRows
                     for i in range(halfRows):
                         # probability to write (gets smaller as i increases)
-                        # TODO: swap out write prob func by passing in an array of values for that row.
                         writeProb = memWriteProbFunc(i)
                         # column to maybe write corresponding value into
                         for col in range(memCols):
@@ -445,9 +458,14 @@ class Program2_1_1(Program2_1):
                             if rand(1)[0] < writeProb:
                                 row = halfRows + i
                                 memMatrix[row,col] = regs[col]
+
+            except Warning as w:
+                print(w, ' on calculation')
+                regs[dest] = finfo(float64).min
+
             except Exception as e:
-                print(f'{e}on program')
-                regs[dest] = inf
+                print(f'{e} on program')
+                regs[dest] = finfo(float64).min
 
             if isnan(regs[dest]):       regs[dest] = 0
             elif regs[dest] == inf:     regs[dest] = finfo(float64).max

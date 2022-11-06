@@ -1,18 +1,21 @@
 # from program import Program
 from math import tanh
+from datetime import datetime
+from _tpg.utils import _Logger
 import pickle
 from random import random
 import time
 import logging
 
-class _Agent:
-    _instance = None
-    _logger = None
+
+class _Agent(_Logger):
+    # _instance = None
+    # _logger = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
-        return super().__new__(cls)
+        return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, team, num:int=1, actVars:dict=None)->None:
         """
@@ -24,7 +27,7 @@ class _Agent:
         self.score = 0.
 
     def __hash__(self):
-        return int(self.team.id)
+        return int(self.id)
 
     def act(self, state, path_trace=None): 
         """
@@ -52,7 +55,8 @@ class _Agent:
             path_trace['final_action'] = result
             path_trace['path'] = path 
             path_trace['depth'] = len(path)
-            
+        # self.info(f'evolving:{datetime.now()}')
+        
         return result
 
     def reward(self, score=None, task='task'):
@@ -76,9 +80,6 @@ class _Agent:
 
     def zeroRegisters(self)->None:
         self.team.zeroRegisters()
-
-    def set_logger(self, _logger:logging.Logger):
-        self.logger = _logger
 
     @property
     def id(self):

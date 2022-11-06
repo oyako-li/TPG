@@ -4,7 +4,7 @@ import numpy as np
 import random
 import pickle
 import logging
-from _tpg.utils import flip
+from _tpg.utils import flip, _Logger
 from _tpg.memory_object import Memory1
 
 
@@ -13,11 +13,11 @@ from _tpg.memory_object import Memory1
 Action  Object has a program to produce a value for the action, program doesn't
 run if just a discrete action code.
 """
-class _ActionObject:
+class _ActionObject(_Logger):
     actions=[0]
     Team = None
-    _instance = None
-    _logger = None
+    # _instance = None
+    # _logger = None
 
     # you should inherit
     def __new__(cls, *args, **kwargs):
@@ -25,7 +25,9 @@ class _ActionObject:
             from _tpg.team import _Team
             cls._instance = True
             cls.Team = _Team
-        return super().__new__(cls)
+            # cls.Team.set_logger(cls,cls.logger)
+
+        return super().__new__(cls, *args, **kwargs)
     '''
     An action object can be initalized by:
         - Copying another action object
@@ -165,9 +167,6 @@ class _ActionObject:
         
         return self
 
-    def set_logger(self, _logger:logging.Logger):
-        self.logger = _logger
-
 class ActionObject1(_ActionObject):
     actions=Memory1()
 
@@ -176,6 +175,7 @@ class ActionObject1(_ActionObject):
             from _tpg.team import Team1_1
             cls._instance = True
             cls.Team = Team1_1
+            cls.Team._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 

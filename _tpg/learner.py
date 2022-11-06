@@ -1,28 +1,29 @@
-from _tpg.utils import flip
+from datetime import datetime
+from _tpg.utils import flip, _Logger
 import numpy as np
 import collections
 import uuid
 import copy
 import logging
 
-class _Learner:
+class _Learner(_Logger):
     Team = None
     ActionObject = None
     Program = None
-    _instance = None
-    _logger = None
+    # _instance = None
+    # _logger = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
             from _tpg.team import _Team
-            from _tpg.action_object import _ActionObject
             from _tpg.program import _Program
+            from _tpg.action_object import _ActionObject
             cls.Team = _Team
-            cls.ActionObject = _ActionObject
             cls.Program = _Program
-            
-        return super().__new__(cls)
+            cls.ActionObject = _ActionObject
+           
+        return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, 
         program=None, 
@@ -184,9 +185,6 @@ class _Learner:
     def numTeamsReferencing(self):
         return len(self.inTeams)
 
-    def set_logger(self, _logger:logging.Logger):
-        self.logger = _logger
-
     @property
     def clone(self): 
         _clone = self.__class__(
@@ -226,7 +224,7 @@ class Learner1_1(Learner1):
             cls.Team = Team1_1
             cls.ActionObject = ActionObject1
             cls.Program = Program1
-            
+           
         return super().__new__(cls, *args, **kwargs)
 
 class Learner1_2(Learner1_1):
@@ -234,12 +232,12 @@ class Learner1_2(Learner1_1):
         if cls._instance is None:
             cls._instance = True
             from _tpg.team import Team1_2
-            from _tpg.memory_object import ActionObject2
             from _tpg.program import Program1
+            from _tpg.memory_object import ActionObject2
             cls.Team = Team1_2
-            cls.ActionObject = ActionObject2
             cls.Program = Program1
-            
+            cls.ActionObject = ActionObject2
+
         return super().__new__(cls, *args, **kwargs)
 
 class Learner2(_Learner):
@@ -267,7 +265,7 @@ class Learner2(_Learner):
         initParams:int or dict=0
     ):
         self.program = self.__class__.Program() if program is None else self.__class__.Program(instructions=program.instructions)
-        self.memoryObj = self.__class__.MemoryObject(memoryObj) if memoryObj is None else self.__class__.MemoryObject(state=memoryObj)
+        self.memoryObj = self.__class__.MemoryObject() if memoryObj is None else self.__class__.MemoryObject(state=memoryObj)
         if isinstance(numRegisters, int): 
             self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
         else: 
@@ -331,7 +329,6 @@ class Learner2(_Learner):
         while not changed:
             # mutate the program
             if flip(mutateParams["pProgMut"]):
-
                 changed = True
               
                 self.program.mutate(mutateParams)
@@ -421,5 +418,37 @@ class Learner2_2(Learner2_1):
             cls.Team = Team2_2
             cls.Program = Program2_1
             cls.MemoryObject = MemoryObject2
-
+           
         return super().__new__(cls, *args, **kwargs)
+
+class Learner3(_Learner):
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            from _tpg.team import Team1_2
+            from _tpg.memory_object import Qualia
+            from _tpg.program import Program3
+            cls.Team = Team1_2
+            cls.ActionObject = Qualia
+            cls.Program = Program3
+        return super().__new__(cls, *args, **kwargs)
+    
+
+    def bid(self, state, actVars=None): 
+        """
+        Get the bid value, highest gets its action selected.
+        """
+        # exit early if we already got bidded this frame
+        if self.frameNum == actVars["frameNum"]:
+            return self.__class__.ActionObject.bid(self.registers[0])
+
+        self.frameNum = actVars["frameNum"]
+
+        self.__class__.Program.execute(state, self.registers,
+                        self.program.instructions[:,0], self.program.instructions[:,1],
+                        self.program.instructions[:,2], self.program.instructions[:,3],
+                        actVars["memMatrix"], actVars["memMatrix"].shape[0], actVars["memMatrix"].shape[1],
+                        self.__class__.Program.memWriteProb)
+
+        return self.__class__.ActionObject.bid(self.registers[0])

@@ -27,6 +27,8 @@ COPY . /usr/local/gym/
 WORKDIR /usr/local/gym/
 
 RUN if [ "python:${PYTHON_VERSION}" = "python:3.6.15" ] ; then pip install .[box2d,classic_control,toy_text,other] pytest=="7.0.1" --no-cache-dir; else pip install .[testing] --no-cache-dir; fi
-RUN pip install -r requirements.txt
+
+# COPY ./requirements.txt ./
+# RUN pip install -r requirements.txt
 RUN pip install -e .
 CMD ["/bin/bash"]
