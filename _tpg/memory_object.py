@@ -2902,9 +2902,12 @@ class Qualia(ActionObject2):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.team import Team1_2
+            # from _tpg.agent import Agent3
+            from _tpg.trainer import Trainer3
             cls._instance = True
             cls.Team = Team1_2
             cls.actions = Memory1_1(GAMMA)
+            cls.Trainer = Trainer3
             # cls.actions.set_logger(cls.logger)
 
         return super().__new__(cls, *args, **kwargs)
@@ -2947,6 +2950,7 @@ class Qualia(ActionObject2):
                 print('諦めな・・・')
 
     # TODO: Bidign calculation
+    # 類似度として返却するべき？
     @classmethod
     def bid(cls, _obj):
         obj = cls(_obj)
@@ -2954,8 +2958,8 @@ class Qualia(ActionObject2):
 
     # TODO: Memory object association calculate
     @classmethod
-    def cognit(cls, _obj):
-        return
+    def suggestion(cls, _obj):
+        return cls.Agent.elite.act(_obj)
 
 
 class Hippocampus:

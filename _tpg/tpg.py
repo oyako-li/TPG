@@ -94,13 +94,15 @@ class _TPG(_Logger):
         self.show = False
         self.test = False
         self.dir = ''
+        self.env = None
+        self.task = set()
 
     def setActions(self, actions):
         self.actions = self.trainer.setActions(actions)
 
     def setEnv(self, env):
         self.env = env
-        self.task = self.env.spec.id
+        self.task.add(self.env.spec.id)
         self.state = self.env.reset()
 
     def getAgents(self):
@@ -188,7 +190,8 @@ class _TPG(_Logger):
             agent.reward(task=_task)
             _scores[agent.id]=agent.score
         
-        self.trainer.evolve([_task])
+        # TODO: マルチタスク学習に対応できるように改良。
+        self.trainer.evolve(list(_task))
 
         return _scores
     
@@ -229,11 +232,9 @@ class _TPG(_Logger):
             self.dir = _dir
         if _load:
             self.load = _load
-        # task = _dir+self.env.spec.id
 
         logger, self.filename = setup_logger(__name__, f'{self.dir+self.task}', test=self.test, load=self.load)
         self.set_logger(logger)
-        # breakpoint('logger setting')
         self.generations = _generations
         self.episodes = _episodes
         self.frames = _frames

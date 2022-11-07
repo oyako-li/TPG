@@ -194,14 +194,16 @@ class _Program(_Logger):
                             if rand(1)[0] < writeProb:
                                 row = halfRows + i
                                 memMatrix[row,col] = regs[col]
+                else:
+                    regs[dest]=np.nan
             
             except Warning as w:
-                cls.warning(f'{w} on {cls.__name__}')
-                regs[dest] = finfo(float64).min
+                cls.warning(f'warning:"{w} on {cls.__name__}"')
+                regs[dest] = 0
 
             except Exception as e:
-                cls.warning(f'{e} on {cls.__name__}')
-                regs[dest] = finfo(float64).min
+                cls.warning(f'error:"{e} on {cls.__name__}"')
+                regs[dest] = 0
 
             if isnan(regs[dest]):       regs[dest] = 0
             elif regs[dest] == inf:     regs[dest] = finfo(float64).max
@@ -388,8 +390,11 @@ class Program2_1(Program2):
 class Program3(_Program):
     """Activate sequence create program
     GAMMA = [',','+','-','*','**','/','//','%','<','<=','<<','>','>=','>>','&','|','^','~']
+    TODO: 経過時間で、思考ブレイク。
+    TODO: Hippocampusの参照・リライト
     """
     Qualia=None
+    _thinking_time=0.5
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.memory_object import Qualia
@@ -399,14 +404,34 @@ class Program3(_Program):
 
     @classmethod
     def execute(cls,
-        inpt,   # state: np.ndarray, MemoryObj or ActionObj = Qualia
-        regs,   # self.registers: np.ndarray = sharing short memory or context
-        modes,  # self.program.instructions[:,0]: [random.randint(0,1), ...]
-        ops,    # self.program.instructions[:,1]: [random.randint(0, oppelation.rang-1), ...]
-        dsts,   # self.program.instructions[:,2]: [random.randint(0, register.len-1), ...] = チューリング完全の書き込み場所。
-        srcs,   # self.program.instructions[:,3]: [random.randint(0, state.size-1), ...]
-        memMatrix, memRows, memCols, memWriteProbFunc
-    ):
+            inpt,   
+            regs,   
+            modes,  
+            ops,    
+            dsts,   
+            srcs,   
+            hippocampus 
+        ):
+        """ calicutate
+        Attributes:
+            inpt:   np.ndarray, MemoryObj, ActionObj or Qualia \
+                = state
+            regs:   np.ndarray[Qualia, ...] \
+                = learner.registers  # signal context or Charge
+            modes:  np.ndarray[random.randint(0,1), ...] \
+                = learner.program.instructions[:,0]
+            ops:    np.ndarray[random.randint(0, oppelation.rang-1), ...] \
+                = learner.program.instructions[:,1] # 演算表現
+            dsts:   np.ndarray[random.randint(0, register.len-1), ...] \
+                = learner.program.instructions[:,2] # チューリング完全の書き込み場所。
+            srcs:   np.ndarray[random.randint(0, state.size-1), ...] \
+                = learner.program.instructions[:,3]
+            hippocampus:    actVars['memMatrix'] \
+                = agent.actVars # sharing short memory
+        
+        Return:
+            
+        """
         inpt = cls.Qualia(inpt)
         regSize = len(regs)
         inptLen = len(inpt)
@@ -423,7 +448,7 @@ class Program3(_Program):
 
             # do an operation
             try:
-                if op == 0    :           regs[dest] = x+y
+                if   op == 0  :           regs[dest] = x+y
                 elif op == 1  :           regs[dest] = x-y
                 elif op == 2  :           regs[dest] = x*y
                 elif op == 4  :           regs[dest] = x**y
@@ -436,14 +461,14 @@ class Program3(_Program):
                 elif op == 11 and x > y : regs[dest] = x*(-1)
                 elif op == 12 and x >= y: regs[dest] = x*(-1)
                 elif op == 13 :           regs[dest] = x>>y
-                elif op == 14 :           regs[dest] = cls.Qualia.cognit(y)
-                elif op == 15 :
+                elif op == 14 :           regs[dest] = cls.Qualia.suggestion(y) # 無限再帰の可能性あり。 経過時間でブレイク　|　減衰
+                elif op == 15 :           #TODO: regs[dest] = hippocampus.read(x)
                     index = srcs[i]
                     index %= (memRows*memCols)
                     row = int(index / memRows)
                     col = index % memCols
                     regs[dest] = memMatrix[row, col]
-                elif op == 16 :
+                elif op == 16 : # sharering memory access caliculation:= short memory write function TODO: hippocampus.write(y)
                     halfRows = int(memRows/2) # halfRows
                     for i in range(halfRows):
                         # probability to write (gets smaller as i increases)
@@ -458,13 +483,13 @@ class Program3(_Program):
                             if rand(1)[0] < writeProb:
                                 row = halfRows + i
                                 memMatrix[row,col] = regs[col]
+                else:
+                    regs[dest]=np.nan
 
             except Warning as w:
-                print(w, ' on calculation')
                 regs[dest] = finfo(float64).min
 
             except Exception as e:
-                print(f'{e} on program')
                 regs[dest] = finfo(float64).min
 
             if isnan(regs[dest]):       regs[dest] = 0

@@ -137,7 +137,7 @@ def log_load(_filename, _renge, _step=5):
 
 def log_show(filename, renge=100, step=5):
     mi, ma, av = log_load(filename, renge, step)
-    ge = np.linspace(step, renge, mi.size)
+    ge = np.arange(0, mi.size*step, step)
     # Figure instance
     fig = plt.Figure()
 

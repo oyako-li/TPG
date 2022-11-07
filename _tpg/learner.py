@@ -10,8 +10,6 @@ class _Learner(_Logger):
     Team = None
     ActionObject = None
     Program = None
-    # _instance = None
-    # _logger = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -436,8 +434,18 @@ class Learner3(_Learner):
     
 
     def bid(self, state, actVars=None): 
-        """
-        Get the bid value, highest gets its action selected.
+        """ Get the bid value, highest gets its action selected.
+
+        Attribute:
+            state: np.ndarray or Qualia
+            actVars: hippocampus
+                frameNum: randam timeout
+                task: now task
+                hippocampus: short term memory pool
+        
+        Return:
+            Qualia()[0]: number
+
         """
         # exit early if we already got bidded this frame
         if self.frameNum == actVars["frameNum"]:
@@ -448,7 +456,6 @@ class Learner3(_Learner):
         self.__class__.Program.execute(state, self.registers,
                         self.program.instructions[:,0], self.program.instructions[:,1],
                         self.program.instructions[:,2], self.program.instructions[:,3],
-                        actVars["memMatrix"], actVars["memMatrix"].shape[0], actVars["memMatrix"].shape[1],
-                        self.__class__.Program.memWriteProb)
+                        actVars)
 
         return self.__class__.ActionObject.bid(self.registers[0])

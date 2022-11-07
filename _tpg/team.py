@@ -2,9 +2,6 @@ import uuid
 from _tpg.utils import flip, breakpoint, _Logger
 import random
 import collections
-import copy
-import logging
-import re
 
 """
 The main building block of TPG. Each team has multiple learning which decide the
@@ -21,7 +18,6 @@ class _Team(_Logger):
             from _tpg.learner import _Learner
             cls._instance = True
             cls.Learner = _Learner
-            # cls.Learner.set_logger(cls,cls.logger)
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self,
@@ -224,9 +220,7 @@ class _Team(_Logger):
             self.addLearner(clone)
             valid_learners.append(clone)
 
-
         top_learner = max(valid_learners, key=lambda lrnr: lrnr.bid(state, actVars=actVars))
-
     
         # If we're tracing this path
         if path_trace != None:
@@ -393,7 +387,6 @@ class Team1(_Team):
 
             cls._instance = True
             cls.Learner = Learner1
-            cls.Learner._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -403,7 +396,6 @@ class Team1_1(Team1):
             from _tpg.learner import Learner1_1
             cls._instance = True
             cls.Learner = Learner1_1
-            cls.Learner._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -413,7 +405,6 @@ class Team1_2(Team1_1):
             from _tpg.learner import Learner1_2
             cls._instance = True
             cls.Learner = Learner1_2
-            cls.Learner._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -424,7 +415,6 @@ class Team2(_Team):
 
             cls._instance = True
             cls.Learner = Learner2
-            cls.Learner._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -649,7 +639,6 @@ class Team2_1(Team2):
             from _tpg.learner import Learner2_1
             cls._instance = True
             cls.Learner = Learner2_1
-            cls.Learner._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -659,6 +648,14 @@ class Team2_2(Team2_1):
             from _tpg.learner import Learner2_2
             cls._instance = True
             cls.Learner = Learner2_2
-            cls.Learner._logger = cls._logger
             
+        return super().__new__(cls, *args, **kwargs)
+
+class Team3(_Team):
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.learner import Learner3
+            cls._instance = True
+            cls.Learner = Learner3
         return super().__new__(cls, *args, **kwargs)

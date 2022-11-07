@@ -70,8 +70,7 @@ class _Agent(_Logger):
         Check if agent completed this task already, to skip.
         """
         return task in self.team.outcomes
-
-    
+  
     def saveToFile_def(self, fileName):
         """
         Save the agent to the file, saving any relevant class values to the instance.
@@ -88,7 +87,7 @@ class _Agent(_Logger):
     @classmethod
     def loadAgent(cls, fileName):
         agent = pickle.load(open(fileName, 'rb'))
-        assert(isinstance(agent, cls), 'this file is different Class type')
+        assert isinstance(agent, cls), 'this file is different Class type'
         return agent
 
 class Agent1(_Agent):
@@ -170,16 +169,17 @@ class Agent2_1(Agent2):
         self.team[task] += tanh(score)
         # self.team[task] = tanh(self.team[task])
 
-class Agent2_1_1(Agent2_1):
+class Agent3(_Agent):
+
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
         return super().__new__(cls, *args, **kwargs)
-   
+
     def reward(self, score=None, task='task'):
         if not self.team.outcomes.get(task):
             self.team.outcomes[task]=0.
 
         score = score if score else self.score
         self.team[task] += tanh(score)
-        # self.team[task] = tanh(self.team[task])
+        self.team[task] = tanh(self.team[task])

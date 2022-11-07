@@ -32,12 +32,6 @@ class _Trainer(_Logger):
             cls.Program = _Program
             cls.ActionObject = _ActionObject
 
-            # cls.Agent._logger=cls._logger
-            # cls.Team._logger=cls._logger
-            # cls.Learner._logger=cls._logger
-            # cls.Program._logger=cls._logger
-            # cls.ActionObject._logger=cls._logger
-
         return super().__new__(cls, *args, **kwargs)        
 
     def __init__(self, 
@@ -546,14 +540,14 @@ class _Trainer(_Logger):
         self._actions = self.__class__.ActionObject.actions
         pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
 
-    @classmethod
-    def set_loggre(cls, _logger:logging.Logger):
-        cls.logger = _logger
-        class_objects = [i for i in cls.__dict__.keys() if re.match(r'^[A-Z]', i)]
-        for class_object in class_objects:
-            if cls.__dict__[class_object]._logger is None:
-                cls.__dict__[class_object].set_logger(_logger)
-        return cls
+    # @classmethod
+    # def set_loggre(cls, _logger:logging.Logger):
+    #     cls.logger = _logger
+    #     class_objects = [i for i in cls.__dict__.keys() if re.match(r'^[A-Z]', i)]
+    #     for class_object in class_objects:
+    #         if cls.__dict__[class_object]._logger is None:
+    #             cls.__dict__[class_object].set_logger(_logger)
+    #     return cls
 
     @classmethod
     def load(cls, fileName:str):
@@ -578,12 +572,6 @@ class Trainer(_Trainer):
             cls.Learner = _Learner
             cls.Program = _Program
             cls.ActionObject = _ActionObject
-
-            cls.Agent._logger = cls._logger
-            cls.Team._logger = cls._logger
-            cls.Learner._logger = cls._logger
-            cls.Program._logger = cls._logger
-            cls.ActionObject._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
     
@@ -658,12 +646,6 @@ class Trainer1(Trainer):
             cls.Program = Program1
             cls.ActionObject= _ActionObject
 
-            cls.Agent._logger = cls._logger
-            cls.Team._logger = cls._logger
-            cls.Learner._logger = cls._logger
-            cls.Program._logger = cls._logger
-            cls.ActionObject._logger = cls._logger
-
         return super().__new__(cls, *args, **kwargs)
 
 class Trainer1_1(Trainer1):
@@ -682,13 +664,6 @@ class Trainer1_1(Trainer1):
             cls.Program = Program1
             cls.ActionObject = ActionObject1
             cls.ActionObject._nan = cls.ActionObject()
-
-
-            cls.Agent._logger = cls._logger
-            cls.Team._logger = cls._logger
-            cls.Learner._logger = cls._logger
-            cls.Program._logger = cls._logger
-            cls.ActionObject._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -895,13 +870,6 @@ class Trainer1_2(Trainer1_1):
             cls.ActionObject = ActionObject2
             cls.ActionObject._nan = cls.ActionObject()
 
-
-            cls.Agent._logger = cls._logger
-            cls.Team._logger = cls._logger
-            cls.Learner._logger = cls._logger
-            cls.Program._logger = cls._logger
-            cls.ActionObject._logger = cls._logger
-
         return super().__new__(cls, *args, **kwargs)
 
     def _select(self, extraTeams=None):
@@ -946,13 +914,6 @@ class Trainer2(Trainer):
             # cls.ActionObject = _ActionObject
             cls.MemoryObject = _MemoryObject
             cls.MemoryObject.nan = cls.MemoryObject()
-
-
-            cls.Agent._logger = cls._logger
-            cls.Team._logger = cls._logger
-            cls.Learner._logger = cls._logger
-            cls.Program._logger = cls._logger
-            cls.MemoryObject._logger = cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -1384,12 +1345,6 @@ class Trainer2_1(Trainer2):
             cls.MemoryObject = MemoryObject
             cls.MemoryObject._nan = cls.MemoryObject()
 
-            cls.Agent._logger = cls._logger
-            cls.Team._logger = cls._logger
-            cls.Learner._logger = cls._logger
-            cls.Program._logger = cls._logger
-            cls.MemoryObject._logger = cls._logger
-
         return super().__new__(cls, *args, **kwargs)
 
     def _select(self, extraTeams=None, task='task'):
@@ -1526,14 +1481,7 @@ class Trainer2_2(Trainer2_1):
             cls.MemoryObject = MemoryObject2
             cls.MemoryObject._nan = cls.MemoryObject()
 
-            cls.Agent._logger = cls._logger
-            cls.Team._logger = cls._logger
-            cls.Learner._logger = cls._logger
-            cls.Program._logger = cls._logger
-            cls.MemoryObject._logger = cls._logger
-
         return super().__new__(cls, *args, **kwargs)
-
 
     def _select(self, extraTeams=None, task='task'):
         # print('em:',[rt.fitness for rt in self.rootTeams])
@@ -1660,3 +1608,31 @@ class Trainer2_2(Trainer2_1):
             self.__class__.MemoryObject.memories.append(_state=state, _key=key)
         self._initialize(_state=state)
         return self.__class__.MemoryObject.memories
+
+class Trainer3(Trainer1_2):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.agent import Agent3
+            from _tpg.team import Team3
+            from _tpg.learner import Learner3
+            from _tpg.program import Program3
+            from _tpg.memory_object import Qualia
+
+            cls._instance = True
+            cls.Agent = Agent3
+            cls.Team = Team3
+            cls.Learner = Learner3
+            cls.Program = Program3
+            cls.ActionObject = Qualia
+            cls.ActionObject._nan = cls.ActionObject()
+
+        return super().__new__(cls, *args, **kwargs)
+
+    # @classmethod
+    @property
+    def elite(self):
+        teams = [t for t in self.teams if self.actVars['task'] in t.outcomes]
+
+        return self.__class__.Agent(max([tm for tm in teams],
+                        key=lambda t: t.outcomes[self.actVars['task']]),
+                        num=0, actVars=self.actVars)
