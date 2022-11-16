@@ -1,6 +1,6 @@
 from datetime import datetime
 from math import tanh
-from _tpg.utils import breakpoint, log_show, setup_logger, _Logger
+from _tpg.utils import breakpoint, log_show, _Logger
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -93,23 +93,29 @@ class _TPG(_Logger):
         self.frames = 500
         self.show = False
         self.test = False
-        self.dir = ''
+        self.load = True
+        self.dir = 'test/'
+
         self.env = None
-        self.task = set()
+        self.tasks = set()
+        self.scores = {}
+        self.gen=0
 
     def setActions(self, actions):
         self.actions = self.trainer.setActions(actions)
 
     def setEnv(self, env):
         self.env = env
-        self.task.add(self.env.spec.id)
+        self.tasks.add(self.task)
         self.state = self.env.reset()
+        self.setActions(self.env.action_space.n)
+
 
     def getAgents(self):
         return self.trainer.getAgents()
     
     def setAgents(self, task=None):
-        self.agents = self.trainer.getAgents(task=self.task if task is None else task)
+        self.agents = self.trainer.getAgents(task= task if task else self.task)
 
     def flush_render(self, step=0, name='', info=''):
         self.ax1.imshow(self.env.render(mode='rgb_array'))
@@ -157,74 +163,66 @@ class _TPG(_Logger):
         assert self.trainer is not None and self.env is not None, 'You should set Actioins'
         
         for agent in self.agents: # to multi-proccess
-            state = self.env.reset() # get initial state and prep environment
+            state = self.env.reset()
             score = 0
             for i in range(self.frames): # run episodes that last 500 frames
                 act = agent.act(state)
                 if not act in range(self.env.action_space.n): continue
-                state, reward, isDone, debug = self.env.step(act)
+                self.state, reward, isDone, debug = self.env.step(act)
                 score += reward # accumulate reward in score
 
                 if isDone: break # end early if losing state
-                if self.show:self.flush_render(i)
 
-            # if _scores.get(agent.id) is None : _scores[agent.id]=0
-            # _scores[agent.id] += score # store score
             agent.score+=score
 
-            # if self.logger is not None: self.logger.info(f'{_id},{score}')
-
-        # _summaryScores = (min(curScores), max(curScores), sum(curScores)/len(curScores)) # min, max, avg
-
-        return
-
     def generation(self):
-        _scores = {}
-        _task = self.env.spec.id
-        self.agents = self.trainer.getAgents()
+        """ section """
+        # _scores = {}
+        self.setAgents()
         for _ in range(self.episodes):     
             self.episode()
 
         for agent in self.agents:               
             agent.score/=self.episodes
-            agent.reward(task=_task)
-            _scores[agent.id]=agent.score
+            agent.reward(task=self.task)
+            self.scores[agent.id]=agent.score
         
         # TODO: マルチタスク学習に対応できるように改良。
-        self.trainer.evolve(list(_task))
+        self.trainer.evolve(list(self.tasks))
 
-        return _scores
+        self.info(f'generation:{self.gen}, min:{min(self.scores.values())}, max:{max(self.scores.values())}, ave:{sum(self.scores.values())/len(self.scores)}')
+        
+        self.gen+=1
     
-    def growing(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
-
+    
+    def story(self, _trainer=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=None, _test=None, _load=None, _dir=None):
         self.prologue(_trainer=_trainer, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load, _dir=_dir)
+        self.debug(f'story_task:{self.task}, gen:{self.gen}')
 
-        for gen in range(_generations): # generation loop
-            scores = self.generation()
-
-            self.info(f'generation:{gen}, min:{min(scores.values())}, max:{max(scores.values())}, ave:{sum(scores.values())/len(scores)}')
+        for _ in range(self.generations): # generation loop
+            self.generation()
 
         return self.epilogue()
 
-    def start(self, _task, _show, _test, _load, _trainer=None, _generations=1000, _episodes=1, _frames=500):
-        if _trainer is None : 
-            if not self.trainer : raise Exception('trainer is not defined')
-            _trainer = self.trainer
+    def multi(self, _tasks):
+        self.archive=[]
+        for task in _tasks:
+            title = self.story(_task=task)
+            self.archive+=[title]
 
-        _filename = self.growing(_trainer, _task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load)
-        if not _test: _trainer.saveToFile(f'{_task}/{_filename}')
-        return _filename
+        return self.archive
     
     def instance_valid(self, trainer) -> bool:
         if not isinstance(trainer, self.__class__.Trainer): raise Exception(f'this object is not {self.__class__.Trainer}')
 
-    def prologue(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
-        if _trainer: 
+    def prologue(self, _trainer=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=None, _test=None, _load=None, _dir=None):
+        if _trainer:
             self.instance_valid(_trainer)
             self.trainer = _trainer
         
         if _task:
-            self.env = gym.make(_task)
+            env = gym.make(_task)
+            self.setEnv(env)
         
         if _test:
             self.test = _test
@@ -232,22 +230,16 @@ class _TPG(_Logger):
             self.dir = _dir
         if _load:
             self.load = _load
+        if _generations:
+            self.generations=_generations
+        if _episodes:
+            self.episodes = _episodes
+        if _frames:
+            self.frames = _frames
+        if _show:
+            self.show = _show
 
-        logger, self.filename = setup_logger(__name__, f'{self.dir+self.task}', test=self.test, load=self.load)
-        self.set_logger(logger)
-        self.generations = _generations
-        self.episodes = _episodes
-        self.frames = _frames
-        self.show = _show
-
-        # self.setMemories(state=self.state.sample().flatten())
-        action_space = self.env.action_space
-        action = 0
-        if isinstance(action_space, gym.spaces.Box):
-            action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
-        elif isinstance(action_space, gym.spaces.Discrete):
-            action = action_space.n
-        self.setActions(actions=action)
+        self.setup_logger(__name__, f'{self.dir+self.task}', test=self.test, load=self.load)
 
         def interruption(signum, frame):
             self.epilogue()
@@ -258,12 +250,14 @@ class _TPG(_Logger):
 
     def epilogue(self):
         title = f'{self.dir+self.task}/{self.filename}'
-        if not self.test: self.trainer.save(title)
-        if self.logger:
-            map(self.logger.removeHandler, self.logger.handlers)
-            map(self.logger.removeFilter, self.logger.filters)
-            log_show(title)
+        self.env.close()
+        log_show(title)
+
         return title
+
+    @property
+    def task(self):
+        return self.env.spec.id
 
 class MHTPG(_TPG):
     def __new__(cls, *args, **kwargs):
@@ -284,7 +278,6 @@ class ActorTPG(MHTPG):
             from _tpg.trainer import Trainer1_1
             cls._instance = True
             cls.Trainer = Trainer1_1
-            cls.Trainer._logger=cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -332,35 +325,7 @@ class ActorTPG(MHTPG):
                     if self.show:self.flush_render()
 
 
-            self.actionReward[agent.id] += score # store score
-
-    def generation(self):
-        _task = self.env.spec.id
-        self.setAgents(_task)
-        for _ in range(self.episodes):     
-            self.episode()
-        
-        actionSequence = []
-        actionReward   = []
-        for id in self.actionReward:               
-            self.actionReward[id]/=self.episodes
-            actionSequence+=[self.actionSequence[id]]
-            actionReward+=[self.actionReward[id]]
-        for agent in self.agents: 
-            agent.reward(self.actionReward[agent.id],task=_task)
-        
-        self.evolve([_task], _actionSequence=actionSequence, _actionReward=actionReward)
-    
-    def growing(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
-        self.prologue(_trainer=_trainer, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load, _dir=_dir)
-
-
-        for gen in range(_generations): # generation loop
-            self.generation()
-
-            self.info(f'generation:{gen}, min:{min(self.actionReward.values())}, max:{max(self.actionReward.values())}, ave:{sum(self.actionReward.values())/len(self.actionReward)}')
-        
-        return self.epilogue()
+            agent.score += score # store score
 
 class Actor(ActorTPG):
     def __new__(cls, *args, **kwargs):
@@ -368,7 +333,6 @@ class Actor(ActorTPG):
             from _tpg.trainer import Trainer1_2
             cls._instance = True
             cls.Trainer = Trainer1_2
-            cls.Trainer._logger=cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -381,12 +345,7 @@ class Actor(ActorTPG):
 
     def setAgents(self, task=None):
         self.agents = self.trainer.getAgents(task=task if task else self.task)
-        self.actionSequence = {}
-        self.actionReward = {}
-        for actor in self.agents:
-            self.actionSequence[actor.id]=[]
-            self.actionReward[actor.id]=0.
-        
+        self.scores = {}  
         return self.agents
     
     def getAgents(self, task=None):
@@ -394,6 +353,9 @@ class Actor(ActorTPG):
 
     def getEliteAgent(self, task=None):
         return self.trainer.getEliteAgent(task if task else self.task)
+
+    def activator(self, acts):
+        return [ act for act in acts if act in [np.nan]+list(range(self.env.action_space.n))]
 
     def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _actionSequence=None, _actionReward=None):
         self.trainer.evolve(tasks=tasks, _actionSequence=_actionSequence, _actionReward=_actionReward)
@@ -405,87 +367,65 @@ class Actor(ActorTPG):
             state = self.env.reset() # get initial state and prep environment
             score = 0
             frame = 0
-            
+            actions = []
             while frame<self.frames: # run episodes that last 500 frames
                 acts = agent.act(state.flatten()).action
-                for action in acts:
+                for act in self.activator(acts):
                     frame+=1
-                    if not action in range(self.env.action_space.n): continue
-                    state, reward, isDone, debug = self.env.step(int(action))
+                    # if not action in range(self.env.action_space.n): continue
+                    state, reward, isDone, debug = self.env.step(act)
                     score += reward # accumulate reward in score
-                    self.actionSequence[agent.id]+=[action]
+                    # self.actionSequence[agent.id]+=[action]
+                    actions+=[act]
+
 
                     if isDone: break # end early if losing state
                     if frame>self.frames: break
-                    if self.show:self.flush_render()
+                    # if self.show:self.flush_render()
 
 
-            self.actionReward[agent.id] += score # store score
+            # self.actionReward[agent.id] += score # store score
+            agent.trace(actions)
+            agent.score+=score
 
     def generation(self):
-        _task = self.env.spec.id
-        self.setAgents(_task)
+        # _task = self.env.spec.id
+        self.setAgents()
         for _ in range(self.episodes):     
             self.episode()
+
+        for agent in self.agents:
+            agent.score/=self.episodes
+            self.scores[agent.id]=agent.score
+            agent.reward()
         
-        actionSequence = []
-        actionReward   = []
-        for id in self.actionReward:               
-            self.actionReward[id]/=self.episodes
-            actionSequence+=[self.actionSequence[id]]
-            actionReward+=[self.actionReward[id]]
-        for agent in self.agents: 
-            agent.reward(self.actionReward[agent.id],task=_task)
+        self.evolve(list(self.tasks))
+        self.info(f'generation:{self.gen}, min:{min(self.scores.values())}, max:{max(self.scores.values())}, ave:{sum(self.scores.values())/len(self.scores)}')
+
+
+
+    def story(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
+        self.prologue(_trainer=_trainer, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load, _dir=_dir)
+
+
+        for _ in range(_generations): # generation loop
+            self.generation()
+
         
-        self.evolve([_task], _actionSequence=actionSequence, _actionReward=actionReward)
-    
-    # def growing(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
-    #     # if _trainer: 
-    #     #     self.instance_valid(_trainer)
-    #     #     self.trainer = _trainer
-        
-    #     # if _task:
-    #     #     self.env = gym.make(_task)
-        
-    #     # task = _dir+self.task
-
-    #     # logger, filename = setup_logger(__name__, task, test=_test, load=_load)
-    #     # self.set_logger(logger)
-    #     # self.generations = _generations
-    #     # self.episodes = _episodes
-    #     # self.frames = _frames
-    #     # self.show = _show
-
-
-    #     # action_space = self.env.action_space
-    #     # action = 0
-    #     # if isinstance(action_space, gym.spaces.Box):
-    #     #     action = np.linspace(action_space.low[0], action_space.high[0], dtype=action_space.dtype)
-    #     # elif isinstance(action_space, gym.spaces.Discrete):
-    #     #     action = action_space.n
-    #     # self.setActions(actions=action)
-
-    #     # def outHandler(signum, frame):
-    #     #     if not _test: self.trainer.save(f'{task}/{filename}')
-    #     #     print('exit')
-    #     #     sys.exit()
-        
-    #     # signal.signal(signal.SIGINT, outHandler)
-    #     self.prologue(_trainer=_trainer, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load, _dir=_dir)
-
-    #     for gen in range(self.generations): # generation loop
-    #         self.generation()
-    #         self.info(f'generation:{gen}, min:{min(self.actionReward.values())}, max:{max(self.actionReward.values())}, ave:{sum(self.actionReward.values())/len(self.actionReward)}')
-
-    #     # map(self.logger.removeHandler, self.logger.handlers)
-    #     # map(self.logger.removeFilter, self.logger.filters)
-    #     self.epilogue()
-
-    #     return f'{self.dir+self.task}/{self.filename}'
+        return self.epilogue()
 
     @property
     def NaN(self):
         return self.trainer.ActionObject.NaN
+
+class Opelator(Actor):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.trainer import Trainer3
+            cls._instance = True
+            cls.Trainer = Trainer3
+
+        return super().__new__(cls, *args, **kwargs)
 
 class EmulatorTPG(_TPG):
     def __new__(cls, *args, **kwargs):
@@ -493,7 +433,6 @@ class EmulatorTPG(_TPG):
             from _tpg.trainer import Trainer2
             cls._instance = True
             cls.Trainer = Trainer2
-            # cls.Trainer._logger=cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -557,17 +496,20 @@ class EmulatorTPG(_TPG):
         self.show = False
         self.test = False
         self.dir = ''
-        # self.env = None
-
 
     def __getitem__(self, __code):
         return self.memories[__code]
 
     def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _states=None, _rewards=None, _unexpectancies=None):
         self.trainer.evolve(tasks, multiTaskType, extraTeams, _states, _rewards, _unexpectancies)
+    def setEnv(self, env):
+        self.env = env
+        self.tasks.add(self.env.spec.id)
+        self.state = self.env.reset()
+        self.setMemories(self.state)
 
-    def setMemories(self, states):
-        self.memories = self.trainer.setMemories(states.flatten())
+    def setMemories(self, state):
+        self.memories = self.trainer.setMemories(state.flatten())
 
     def episode(self, _scores):
         assert self.trainer is not None and self.env is not None, 'You should set Actioins'
@@ -578,7 +520,6 @@ class EmulatorTPG(_TPG):
             
             state = self.env.reset() # get initial state and prep environment
             score = 0
-            # _id = str(agent.team.id)
             for _ in range(self.frames): # run episodes that last 500 frames
                 act = self.env.action_space.sample()
                 imageCode = agent.image(act, state.flatten())
@@ -590,12 +531,12 @@ class EmulatorTPG(_TPG):
                 unexpectancies+=[unex]
 
                 if isDone: break # end early if losing state
-                if self.show: self.show_state(self.env, _)
+                # if self.show: self.show_state(self.env, _)
 
             # if _scores.get(_id) is None : _scores[_id]=0
             # _scores[_id] += score # store score
             agent.score+=score
-            if self.__class__.logger is not None: self.__class__.logger.debug(f'{agent.id}:{score}')
+            if self.__class__.logger is not None: self.debug(f'{agent.id}:{score}')
 
         return _scores, states, unexpectancies
 
@@ -613,12 +554,12 @@ class EmulatorTPG(_TPG):
 
         return _scores
    
-    def growing(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
+    def story(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
         self.prologue(_trainer=_trainer, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load, _dir=_dir)
 
         for gen in tqdm(range(self.generations)): # generation loop
             scores = self.generation()
-            self.__class__.logger.info(f'generation:{gen}, min:{min(scores.values())}, max:{max(scores.values())}, ave:{sum(scores.values())/len(scores)}', extra={'className': self.__class__.__name__})
+            self.info(f'generation:{gen}, min:{min(scores.values())}, max:{max(scores.values())}, ave:{sum(scores.values())/len(scores)}')
 
         self.epilogue()
 
@@ -645,7 +586,7 @@ class EmulatorTPG(_TPG):
         self.frames = _frames
         self.show = _show
 
-        self.setMemories(state=self.env.observation_space.sapmle().flatten())
+        self.setMemories(state=self.state.flatten())
 
         def interruption(signum, frame):
             self.epilogue()
@@ -656,9 +597,11 @@ class EmulatorTPG(_TPG):
 
 
     def epilogue(self):
-        if not self.test: self.trainer.save(f'{self.dir+self.task}/{self.filename}')
+        title = f'{self.dir+self.task}/{self.filename}'
         map(self.__class__.logger.removeHandler, self.__class__.logger.handlers)
         map(self.__class__.logger.removeFilter, self.__class__.logger.filters)
+        if not self.test: self.trainer.save(title)
+        log_show(title)
 
 class EmulatorTPG1(EmulatorTPG):
     def __new__(cls, *args, **kwargs):
@@ -708,7 +651,6 @@ class Emulator(EmulatorTPG1):
             from _tpg.trainer import Trainer2_2
             cls._instance = True
             cls.Trainer = Trainer2_2
-            cls.Trainer._logger=cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -753,6 +695,144 @@ class Emulator(EmulatorTPG1):
 
         return _scores, states, unexpectancies
 
+class Emulator1(Emulator):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.trainer import Trainer2_3
+            cls._instance = True
+            cls.Trainer = Trainer2_3
+
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self, 
+        primitive=None,
+        teamPopSize:int=10,                 # *
+        rootBasedPop:bool=True,             
+        gap:float=0.5,                      
+        inputSize:int=33600,                
+        nRegisters:int=8,                   # *
+        initMaxTeamSize:int=10,             # *
+        initMaxProgSize:int=10,             # *
+        maxTeamSize:int=-1,                 # *
+        pLrnDel:float=0.7,                  # *
+        pLrnAdd:float=0.6,                  # *
+        pLrnMut:float=0.2,                  # *
+        pProgMut:float=0.1,                 # *
+        pMemMut:float=0.1,                  # *
+        pMemAtom:float=0.95,                # *
+        pInstDel:float=0.5,                 # *
+        pInstAdd:float=0.4,                 # *
+        pInstSwp:float=0.2,                 # *
+        pInstMut:float=1.0,                 # *
+        doElites:bool=True, 
+        memMatrixShape:tuple=(100,8),       # *
+        rampancy:tuple=(0,0,0),
+        prevPops=None, mutatePrevs=True,
+        initMaxActProgSize:int=6,           # *
+        nMemRegisters:int=4,
+    ):
+        self.trainer = self.__class__.Trainer(
+            primitive=primitive, 
+            teamPopSize=teamPopSize,               # *
+            rootBasedPop=rootBasedPop,             
+            gap=gap,                      
+            inputSize=inputSize,                
+            nRegisters=nRegisters,                   # *
+            initMaxTeamSize=initMaxTeamSize,             # *
+            initMaxProgSize=initMaxProgSize,             # *
+            maxTeamSize=maxTeamSize,                 # *
+            pLrnDel=pLrnDel,                  # *
+            pLrnAdd=pLrnAdd,                  # *
+            pLrnMut=pLrnMut,                  # *
+            pProgMut=pProgMut,                 # *
+            pMemMut=pMemMut,                  # *
+            pMemAtom=pMemAtom,                # *
+            pInstDel=pInstDel,                 # *
+            pInstAdd=pInstAdd,                 # *
+            pInstSwp=pInstSwp,                 # *
+            pInstMut=pInstMut,                 # *
+            doElites=doElites, 
+            memMatrixShape=memMatrixShape,       # *
+            rampancy=rampancy,
+            prevPops=prevPops, mutatePrevs=mutatePrevs,
+            initMaxActProgSize=initMaxActProgSize,           # *
+            nMemRegisters=nMemRegisters)
+        
+        self.generations=10
+        self.episodes=1
+        self.frames = 500
+        self.show = False
+        self.test = False
+        self.dir = ''
+        self.tasks = set()
+
+    def evolve(self, multiTaskType='min', extraTeams=None):
+        self.trainer._scoreIndividuals(
+            list(self.tasks), 
+            multiTaskType=multiTaskType,
+        ) # assign scores to individuals
+        self.trainer._saveFitnessStats() # save fitness stats
+        self.trainer._select(extraTeams) # select individuals to keep
+        self.trainer._generate(extraTeams) # create new individuals from those kept
+        self.trainer._nextEpoch()
+
+    def episode(self):
+        assert self.trainer is not None and self.env is not None, 'You should set Actioins'
+      
+        states = []
+        for agent in self.agents: # to multi-proccess
+            
+            state = self.env.reset() # get initial state and prep environment
+            score = 0
+            for _ in range(self.frames): # run episodes that last 500 frames
+                act = self.env.action_space.sample()
+                image = np.array([act]+list(state.flatten()))
+                img = agent.image(image).memory
+                state, reward, isDone, debug = self.env.step(act)
+                diff = img.compare(image)
+
+                # オーバーフロー防止のためアークタンジェントに二乗和誤差を入れている。
+                score += tanh(diff)
+                states+=[image]
+
+                if isDone: break # end early if losing state
+                # if self.show: self.show_state(self.env, _)
+
+            # if _scores.get(_id) is None : _scores[_id]=0
+            # _scores[_id] += score # store score
+            agent.score+=score
+            agent.trace(states)
+
+            # if self.logger is not None: self.logger.info(f'{_id},{score}')
+
+        return 
+
+    def generation(self):
+        self.scores = {}
+        self.setAgents()
+        # _task = self.env.spec.id
+        for _ in range(self.episodes): self.episode()
+        # for i in _scores:               _scores[i]/=self.episodes
+        for agent in self.agents:
+            agent.score/=self.episodes
+            self.scores[agent.id]=agent.score
+            agent.reward(task=self.task)
+
+        self.evolve()
+
+        return self.scores
+   
+    def story(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
+        self.prologue(_trainer=_trainer, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load, _dir=_dir)
+
+        for gen in tqdm(range(self.generations)): # generation loop
+            scores = self.generation()
+            self.info(f'generation:{gen}, min:{min(scores.values())}, max:{max(scores.values())}, ave:{sum(scores.values())/len(scores)}')
+
+        self.epilogue()
+
+        return f'{self.dir+self.task}/{self.filename}'
+
 class EmulatorEye(Emulator):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -763,12 +843,10 @@ class EmulatorEye(Emulator):
 
         return super().__new__(cls, *args, **kwargs)
 
-
     def setEnv(self, env):
         self.env = env
         self.task = 'camera-memorize'
         self.state = self.env.reset()
-
 
     def setMemories(self, state):
         self.cap = cv2.VideoCapture(0)
@@ -806,6 +884,7 @@ class EmulatorEye(Emulator):
         map(self.__class__.logger.removeHandler, self.__class__.logger.handlers)
         map(self.__class__.logger.removeFilter, self.__class__.logger.filters)
         self.cap.release()
+
 class _Automata(_TPG):
     Actor=None      # 運動野
     Emulator=None   # 感覚野
@@ -817,10 +896,6 @@ class _Automata(_TPG):
             cls._instance = True
             cls.Actor = MHTPG
             cls.Emulator = EmulatorTPG
-            cls.Actor._logger=cls._logger
-            cls.Emulator._logger=cls._logger
-            # cls.ActionObject = _ActionObject
-            # cls.MemoryObject = _MemoryObject
         return super().__new__(cls)
 
     def __init__(self, 
@@ -1121,7 +1196,7 @@ class _Automata(_TPG):
         self.initParams()
         return total_reward
     
-    def growing(self, _actor=None, _emulator=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=False, _test=False, _load=True, _dir=''):
+    def story(self, _actor=None, _emulator=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=False, _test=False, _load=True, _dir=''):
         if _actor: 
             self.instance_valid(_actor)
             self.actor.trainer = _actor
@@ -1397,7 +1472,7 @@ class Automata1(_Automata):
         self.initParams()
         return total_rewards
     
-    def growing(self, _actor=None, _emulator=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=False, _test=False, _load=True, _dir=''):
+    def story(self, _actor=None, _emulator=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=False, _test=False, _load=True, _dir=''):
         if _actor: 
             self.instance_valid(_actor)
             self.actor.trainer = _actor
@@ -1570,7 +1645,7 @@ class Automata2(Automata1):
         self.initParams()
         return total_reward
     
-    def growing(self, _actor=None, _emulator=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=False, _test=False, _load=True, _dir=''):
+    def story(self, _actor=None, _emulator=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=False, _test=False, _load=True, _dir=''):
         if _actor: 
             self.instance_valid(_actor)
             self.actor.trainer = _actor
@@ -1628,7 +1703,57 @@ class Automata2(Automata1):
         map(self.logger.removeFilter, self.logger.filters)
 
         return f'{task}/{filename}'
- 
+
+class Automata3(Automata2):
+    """ type 3
+        conscious: operation to output channel
+            activator: manage output for environment
+            recollector: manage hippocampus operation
+    
+    """
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            # from _tpg.action_object import _ActionObject
+            from _tpg.trainer import Trainer2_3, Trainer1_3
+            cls._instance = True
+            cls.Cerebellum = Trainer1_3
+            cls.Cerebrum = Trainer1_3
+            cls.Hippocampus = Trainer2_3
+            
+        return super().__new__(cls)
+
+    def __init__(self):
+        
+        # setup trainers
+        self.hippocampus = self.__class__.Hippocampus()
+        self.cerebellum = self.__class__.Cerebellum(hippocampus=self.hippocampus)
+        self.cerebrum = self.__class__.Cerebrum(hippocampus=self.hippocampus)
+        self.tasks = set()
+        self.env = None
+        self.state = None
+
+    def setEnv(self, _env):
+        self.env = _env
+        self.state = _env.reset()
+        self.tasks.add(_env.spec.id)
+
+    def activator(self, _actObj):
+        return super().activator(_actObj)
+    
+    def recollector(self, _actObj):
+        return self.hippocampus.operator(_actObj)
+
+    def consciousness(self, willness):
+        if willness[-1].ch == 0: self.activator(willness[:-1])
+        else:
+            self.recollector(willness[:-1])
+
+    def sleep(self):
+        self.hippocampus.evolve(list(self.tasks))
+        self.cerebellum.evolve(list(self.tasks))
+        self.cerebrum.evolve(list(self.tasks))
+
 class Automata(_Automata):
     Hippocampus=None
     def __new__(cls, *args, **kwargs):
@@ -1639,8 +1764,6 @@ class Automata(_Automata):
             cls.Emulator = Emulator
             cls.Hippocampus = Hippocampus
 
-            cls.Actor._logger=cls._logger
-            cls.Emulator._logger=cls._logger
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, 
@@ -1887,7 +2010,7 @@ class Automata(_Automata):
         self.sleep()
         self.initParams()
     
-    def growing(self, _actor=None, _emulator=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=False, _test=False, _load=True, _dir=''):
+    def story(self, _actor=None, _emulator=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=False, _test=False, _load=True, _dir=''):
         if _actor: 
             self.instance_valid(_actor)
             self.actor.trainer = _actor

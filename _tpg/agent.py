@@ -1,11 +1,10 @@
 # from program import Program
 from math import tanh
 from datetime import datetime
-from _tpg.utils import _Logger
+from _tpg.utils import _Logger, sigmoid
 import pickle
 from random import random
 import time
-import logging
 
 
 class _Agent(_Logger):
@@ -80,6 +79,9 @@ class _Agent(_Logger):
     def zeroRegisters(self)->None:
         self.team.zeroRegisters()
 
+    def trace(self, _sequence):
+        self.team.sequence = _sequence
+
     @property
     def id(self):
         return str(self.team.id)
@@ -103,11 +105,24 @@ class Agent1_1(Agent1):
         return super().__new__(cls, *args, **kwargs)
 
     
-    def reward(self, score=0, task='task'):
+    def reward(self, score=None, task='task'):
         if not self.team.outcomes.get(task):
             self.team.outcomes[task]=0.
+
+        score = score if score else self.score
+        self.info(f'agent_id:{self.id}, reward:{self.score}')
         self.team[task] += tanh(score)
         self.team[task] = tanh(self.team[task])
+
+class Agent1_3(Agent1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+        return super().__new__(cls, *args, **kwargs)
+
+    @property
+    def id(self):
+        return self.team.id
 
 class Agent2(_Agent):
     def __new__(cls, *args, **kwargs):
@@ -169,17 +184,66 @@ class Agent2_1(Agent2):
         self.team[task] += tanh(score)
         # self.team[task] = tanh(self.team[task])
 
-class Agent3(_Agent):
+class Agent2_3(Agent2):
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
         return super().__new__(cls, *args, **kwargs)
 
+    def __init__(self, team, num:int=1, memVars:dict=None)->None:
+        """
+        Create an agent with a team.
+        """
+        self.team = team
+        self.agentNum = num
+        self.memVars = memVars
+        self.score = 0.
+
+    def image(self, state, path_trace=None): 
+        """
+        Gets an action from the root team of this agent / this agent.
+        act = int or actionObject,
+        state = np.ndarray or memoryObject
+        """
+        start_execution_time = time.time()*1000.0
+        self.memVars["frameNum"] = random()
+        visited = list() #Create a new list to track visited team/learners each time
+        
+
+        result = None
+        path = None
+        if path_trace != None:
+            path = list()
+            result = self.team.image(state, visited=visited, memVars=self.memVars, path_trace=path)
+        else:
+            result = self.team.image(state, visited=visited, memVars=self.memVars)
+
+        end_execution_time = time.time()*1000.0
+        execution_time = end_execution_time - start_execution_time
+        if path_trace != None:
+
+            path_trace['execution_time'] = execution_time
+            path_trace['execution_time_units'] = 'milliseconds'
+            path_trace['root_team_id'] = self.id
+            path_trace['final_image'] = result
+            path_trace['path'] = path 
+            path_trace['depth'] = len(path)
+            
+        return result
+
     def reward(self, score=None, task='task'):
         if not self.team.outcomes.get(task):
             self.team.outcomes[task]=0.
 
         score = score if score else self.score
-        self.team[task] += tanh(score)
-        self.team[task] = tanh(self.team[task])
+        # self.team[task] += tanh(score)
+        self.team[task] += sigmoid(score)
+        # self.team[task] = tanh(self.team[task])
+
+    def trace(self, _sequence):
+        self.team.sequence = list(_sequence)
+
+    @property
+    def id(self):
+        return self.team.id

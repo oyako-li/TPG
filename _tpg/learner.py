@@ -1,10 +1,8 @@
-from datetime import datetime
 from _tpg.utils import flip, _Logger
 import numpy as np
 import collections
 import uuid
 import copy
-import logging
 
 class _Learner(_Logger):
     Team = None
@@ -120,8 +118,7 @@ class _Learner(_Logger):
         Get the bid value, highest gets its action selected.
         """
         # exit early if we already got bidded this frame
-        if self.frameNum == actVars["frameNum"]:
-            return self.registers[0]
+        if self.frameNum == actVars["frameNum"]: return self.registers[0]
 
         self.frameNum = actVars["frameNum"]
 
@@ -225,7 +222,7 @@ class Learner1_1(Learner1):
            
         return super().__new__(cls, *args, **kwargs)
 
-class Learner1_2(Learner1_1):
+class Learner1_2(Learner1):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
@@ -236,6 +233,75 @@ class Learner1_2(Learner1_1):
             cls.Program = Program1
             cls.ActionObject = ActionObject2
 
+        return super().__new__(cls, *args, **kwargs)
+
+class Learner1_3(Learner1):
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.team import Team1_3
+            from _tpg.program import Program1_3
+            from _tpg.memory_object import Qualia
+            
+            cls._instance = True
+            cls.Team = Team1_3
+            cls.Program = Program1_3
+            cls.ActionObject = Qualia
+        return super().__new__(cls, *args, **kwargs)
+
+    def bid(self, state, actVars=None): 
+        """ Get the bid value, highest gets its action selected.
+
+        Attribute:
+            state: np.ndarray or Qualia
+            actVars: hippocampus
+                frameNum: randam timeout
+                task: now task
+                hippocampus: short term memory pool of Emulator
+        
+        Return:
+            Qualia()[0]: number
+
+        """
+        # exit early if we already got bidded this frame
+        if self.frameNum == actVars["frameNum"]:
+            return self.__class__.ActionObject(self.registers[0]).bid
+
+        self.frameNum = actVars["frameNum"]
+
+        self.__class__.Program.execute(state, self.registers,
+                        self.program.instructions[:,0], self.program.instructions[:,1],
+                        self.program.instructions[:,2], self.program.instructions[:,3],
+                        actVars)
+
+        return self.__class__.ActionObject(self.registers[0]).bid
+
+class Learner1_3_1(Learner1_3):
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.team import Team1_3_1
+            from _tpg.program import Program1_3
+            from _tpg.memory_object import Qualia
+            
+            cls._instance = True
+            cls.Team = Team1_3_1
+            cls.Program = Program1_3
+            cls.ActionObject = Qualia
+        return super().__new__(cls, *args, **kwargs)
+
+class Learner1_3_2(Learner1_3):
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.team import Team1_3_2
+            from _tpg.program import Program1_3
+            from _tpg.memory_object import Operation
+            
+            cls._instance = True
+            cls.Team = Team1_3_2
+            cls.Program = Program1_3
+            cls.ActionObject = Operation
         return super().__new__(cls, *args, **kwargs)
 
 class Learner2(_Learner):
@@ -406,7 +472,7 @@ class Learner2_1(Learner2):
 
         return super().__new__(cls, *args, **kwargs)
 
-class Learner2_2(Learner2_1):
+class Learner2_2(Learner2):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
@@ -419,43 +485,89 @@ class Learner2_2(Learner2_1):
            
         return super().__new__(cls, *args, **kwargs)
 
-class Learner3(_Learner):
-
+class Learner2_3(Learner2):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
-            from _tpg.team import Team1_2
-            from _tpg.memory_object import Qualia
-            from _tpg.program import Program3
-            cls.Team = Team1_2
-            cls.ActionObject = Qualia
-            cls.Program = Program3
+            from _tpg.team import Team2_3
+            from _tpg.program import Program2_3
+            from _tpg.memory_object import Hippocampus
+            cls.Team = Team2_3
+            cls.Program = Program2_3
+            cls.MemoryObject = Hippocampus
+           
         return super().__new__(cls, *args, **kwargs)
-    
 
-    def bid(self, state, actVars=None): 
-        """ Get the bid value, highest gets its action selected.
+    def __init__(self, 
+        program=None, 
+        memoryObj=None, 
+        numRegisters:int or np.ndarray=8, 
+        states:list=[],
+        inTeams:list=[],
+        frameNum:int=0,
+        initParams:int or dict=0
+    ):
+        self.program = self.__class__.Program() if program is None else self.__class__.Program(instructions=program.instructions)
+        self.memoryObj = self.__class__.MemoryObject() if memoryObj is None else self.__class__.MemoryObject(image=memoryObj)
+        if isinstance(numRegisters, int): 
+            self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
+        else: 
+            self.registers = copy.deepcopy(numRegisters)
+        if isinstance(initParams, int): 
+            self.genCreate = initParams # Store the generation that this learner was created on
+        elif isinstance(initParams, dict): 
+            self.genCreate = initParams["generation"] # Store the generation that this learner was created on
 
-        Attribute:
-            state: np.ndarray or Qualia
-            actVars: hippocampus
-                frameNum: randam timeout
-                task: now task
-                hippocampus: short term memory pool
-        
-        Return:
-            Qualia()[0]: number
+        # self.ancestor = _ancestor #By default no ancestor
+        self.states = list(states)
+        self.inTeams = list(inTeams) # Store a list of teams that reference this learner, incoming edges
+        # self.actionCodes = initParams["actionCodes"]
+        self.frameNum = frameNum # Last seen frame is 0
+        self._id = uuid.uuid4()
 
+        if not self.isMemoryAtomic(): self.memoryObj.teamMemory.inLearners.append(self.id)
+
+    def getImage(self, state, visited, memVars=None, path_trace=None): 
+        """
+        Returns the action of this learner, either atomic, or requests the action
+        from the action team.
+        """
+        return self.memoryObj.getImage(state, visited, memVars=memVars, path_trace=path_trace)
+
+    def bid(self, state, memVars=None): 
+        """
+        Get the bid value, highest gets its action selected.
         """
         # exit early if we already got bidded this frame
-        if self.frameNum == actVars["frameNum"]:
-            return self.__class__.ActionObject.bid(self.registers[0])
+        if self.frameNum == memVars["frameNum"]:
+            return self.registers[0]
 
-        self.frameNum = actVars["frameNum"]
+        self.frameNum = memVars["frameNum"]
 
         self.__class__.Program.execute(state, self.registers,
                         self.program.instructions[:,0], self.program.instructions[:,1],
                         self.program.instructions[:,2], self.program.instructions[:,3],
-                        actVars)
+                        memVars["memMatrix"], memVars["memMatrix"].shape[0], memVars["memMatrix"].shape[1],
+                        self.__class__.Program.memWriteProb)
 
-        return self.__class__.ActionObject.bid(self.registers[0])
+        return self.registers[0]
+
+    @property
+    def clone(self): 
+        _clone = self.__class__(
+            program = self.program,
+            memoryObj = self.memoryObj,
+            numRegisters=self.registers,
+            states=self.states,
+            inTeams=self.inTeams,
+            frameNum=self.frameNum,
+            initParams=self.genCreate
+        )
+        if not _clone.isMemoryAtomic(): 
+            _clone.getMemoryTeam().inLearners.append(_clone.id)
+
+        return _clone
+
+    @property
+    def id(self):
+        return str(self._id)

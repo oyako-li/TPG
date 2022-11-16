@@ -45,22 +45,31 @@ class TPGTest(unittest.TestCase):
         score = tpg.generation()
         self.assertIsNotNone(score)
 
-    # @unittest.skip('next test case')
-    def test_growing(self):
-        '''test growing'''
+    @unittest.skip('next test case')
+    def test_story(self):
+        '''test story'''
         tpg = self.TPG()
-        tpg.setActions(self.action)
         tpg.setEnv(self.env)
-        filename = tpg.growing(_dir='test/', _load=True)
-        self.assertIsNotNone(filename)
+        title = tpg.story(_dir='test/', _load=True)
+        self.assertIsNotNone(title)
         # log_show(f'{filename}')
+
     @unittest.skip('prevent logger reset')
     def test_logger(self):
         tpg = self.TPG()
-        tpg.setActions(self.action)
         tpg.setEnv(self.env)
-        logger, filename = setup_logger(__name__,test=True)
-        tpg.set_logger(logger)
+        tpg.setup_logger(__name__,test=True)
+
+    def test_muluti_task_learning(self):
+        """ TODO: マルチタスク学習に対応できるように、改良。
+        """
+        tasks = [
+            "CartPole-v1", 
+            "Centipede-v4",
+        ]
+        tpg = self.TPG()
+        tpg.multi(tasks)
+        self.assertEqual(tpg.tasks, set(tasks))
 
 class MHTPGTest(TPGTest):
 
@@ -111,9 +120,9 @@ class ActorPointTest(MHTPGTest):
         """tpg setup"""
         tpg = self.TPG()
         tpg.setEnv(self.env)
-        tpg.setActions(self.action)
         tpg.setAgents()
 
+    @unittest.skip('multi_task_test')
     def test_episode(self):
         '''test episode'''
         tpg = self.TPG()
@@ -135,15 +144,15 @@ class ActorPointTest(MHTPGTest):
         
         tpg.evolve([_task], _actionSequence=actionSequence, _actionReward=actionReward)
 
-    # @unittest.skip('next test case')
-    def test_growing(self):
-        '''test growing'''
+    @unittest.skip('next test case')
+    def test_story(self):
+        '''test story'''
         tpg = self.TPG()
         tpg.setActions(self.action)
         tpg.setEnv(self.env)
-        filename = tpg.growing(_dir='test/')
+        filename = tpg.story(_dir='test/')
         self.assertIsNotNone(filename)
-        log_show(f'log/{filename}')
+        log_show(f'{filename}')
 
 class ActorBiasTest(ActorPointTest):
     def setUp(self) -> None:
@@ -232,14 +241,13 @@ class EmulatorTPGTest(unittest.TestCase):
         self.assertIsNotNone(score)
 
     # @unittest.skip('next test case')
-    def test_growing(self):
-        '''test growing'''
+    def test_story(self):
+        '''test story'''
         tpg = self.TPG()
         tpg.setMemories(self.state)
         tpg.setEnv(self.env)
-        filename = tpg.growing(_dir='test/')
+        filename = tpg.story(_dir='test/')
         self.assertIsNotNone(filename)
-        # log_show(f'log/{filename}')
 
 class EmulatorEyeTest(EmulatorTPGTest):
     def setUp(self) -> None:
@@ -283,6 +291,41 @@ class EmulatorBiasTest(EmulatorTPG1Test):
         self.task = "CartPole-v1"
         self.env = gym.make(self.task)
         self.state = self.env.observation_space.sample().flatten()
+
+class Emulator1PointTest(EmulatorPointTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import Emulator1
+        self.TPG = Emulator1
+        self.task = "Centipede-v4"
+        self.env = gym.make(self.task)
+        self.state = self.env.observation_space.sample().flatten()
+
+    def test_init(self):
+        '''test initiation'''
+        from _tpg.trainer import Trainer2_3
+        tpg = self.TPG()
+        self.assertEqual(tpg.Trainer, Trainer2_3)
+        tpg.setEnv(self.env)
+        tpg.setMemories(self.state)
+        tpg.setAgents()
+        # self.assertEqual(tpg.Trainer.MemoryObject.memories.Fragment, Fragment2_1)
+
+class Emulator1BiasTest(EmulatorBiasTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import Emulator1
+        self.TPG = Emulator1
+        self.task = "CartPole-v1"
+        self.env = gym.make(self.task)
+        self.state = self.env.observation_space.sample().flatten()
+
+    def test_init(self):
+        '''test initiation'''
+        from _tpg.trainer import Trainer2_3
+        tpg = self.TPG()
+        self.assertEqual(tpg.Trainer, Trainer2_3)
+        tpg.setEnv(self.env)
+        tpg.setMemories(self.state)
+        tpg.setAgents()
 
 class AutomataPointTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -346,13 +389,13 @@ class AutomataPointTest(unittest.TestCase):
         # agents = tpg.getAgents()
 
     # @unittest.skip('next test case')
-    def test_growing(self):
-        '''test growing'''
+    def test_story(self):
+        '''test story'''
         automata = self.Automata()
         automata.setEnv(self.env)
         automata.setAction(self.action)
         automata.setMemory(self.state)
-        filename = automata.growing(_dir='test/')
+        filename = automata.story(_dir='test/')
         self.assertIsNotNone(filename)
         log_show2(f'log/{filename}')
 
@@ -422,13 +465,13 @@ class AutomataBiasTest(unittest.TestCase):
         # agents = tpg.getAgents()
 
     # @unittest.skip('next test case')
-    def test_growing(self):
-        '''test growing'''
+    def test_story(self):
+        '''test story'''
         automata = self.Automata()
         automata.setEnv(self.env)
         automata.setAction(self.action)
         automata.setMemory(self.state)
-        filename = automata.growing(_dir='test/')
+        filename = automata.story(_dir='test/')
         self.assertIsNotNone(filename)
         log_show2(f'log/{filename}')
 
@@ -462,13 +505,13 @@ class Automata1PointTest(AutomataPointTest):
         self.assertIsNotNone(automata.actor.trainer.ActionObject.actions)
         self.assertIsNotNone(automata.emulator.Trainer.MemoryObject.memories)
     
-    def test_growing(self):
-        '''test growing'''
+    def test_story(self):
+        '''test story'''
         automata = self.Automata()
         automata.setEnv(self.env)
         automata.setAction(self.action)
         automata.setMemory(self.state)
-        filename = automata.growing(_dir='test/')
+        filename = automata.story(_dir='test/')
         self.assertIsNotNone(filename)
         log_show(f'log/{filename}')
 
@@ -498,13 +541,13 @@ class Automata1BiasTest(AutomataBiasTest):
         self.assertIsNotNone(automata.actor.trainer.ActionObject.actions)
         self.assertIsNotNone(automata.emulator.Trainer.MemoryObject.memories)
 
-    def test_growing(self):
-        '''test growing'''
+    def test_story(self):
+        '''test story'''
         automata = self.Automata()
         automata.setEnv(self.env)
         automata.setAction(self.action)
         automata.setMemory(self.state)
-        filename = automata.growing(_dir='test/')
+        filename = automata.story(_dir='test/')
         self.assertIsNotNone(filename)
         log_show(f'log/{filename}')
 

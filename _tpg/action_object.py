@@ -35,8 +35,8 @@ class _ActionObject(_Logger):
         - Passing a team as the action
     '''
     def __init__(self,
-        initParams:dict or int =None,
         action = None,
+        initParams:dict or int =None,
         _task='task'
     ):
         '''
