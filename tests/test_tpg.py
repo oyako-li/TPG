@@ -148,11 +148,10 @@ class ActorPointTest(MHTPGTest):
     def test_story(self):
         '''test story'''
         tpg = self.TPG()
-        tpg.setActions(self.action)
         tpg.setEnv(self.env)
         filename = tpg.story(_dir='test/')
         self.assertIsNotNone(filename)
-        log_show(f'{filename}')
+        log_show(filename)
 
 class ActorBiasTest(ActorPointTest):
     def setUp(self) -> None:
@@ -161,6 +160,17 @@ class ActorBiasTest(ActorPointTest):
         self.task = "CartPole-v1"
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
+
+    def test_muluti_task_learning(self):
+        """ TODO: マルチタスク学習に対応できるように、改良。
+        """
+        tasks = [
+            "CartPole-v1", 
+            "Centipede-v4",
+        ]
+        tpg = self.TPG()
+        tpg.multi(tasks)
+        self.assertEqual(tpg.tasks, set(tasks))
 
 class Actor1PointTest(ActorPointTest):
     def setUp(self) -> None:
