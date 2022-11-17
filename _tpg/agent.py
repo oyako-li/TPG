@@ -111,8 +111,8 @@ class Agent1_1(Agent1):
 
         score = score if score else self.score
         self.info(f'agent_id:{self.id}, reward:{self.score}')
-        self.team[task] += tanh(score)
-        self.team[task] = tanh(self.team[task])
+        self.team[task] += sigmoid(score)
+        # self.team[task] = tanh(self.team[task])
 
 class Agent1_3(Agent1):
     def __new__(cls, *args, **kwargs):

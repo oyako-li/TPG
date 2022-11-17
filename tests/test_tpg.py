@@ -66,6 +66,7 @@ class TPGTest(unittest.TestCase):
         tasks = [
             "CartPole-v1", 
             "Centipede-v4",
+            
         ]
         tpg = self.TPG()
         tpg.multi(tasks)

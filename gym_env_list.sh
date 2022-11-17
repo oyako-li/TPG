@@ -1,0 +1,1 @@
+echo $(python -c 'import gym; print([f"{i.id} \n" for i in gym.envs.registry.all()]);') > enable_tasks.txt

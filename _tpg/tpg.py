@@ -32,32 +32,32 @@ class _TPG(_Logger):
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self, 
-        actions=None,
-        teamPopSize:int=10,               # *
-        rootBasedPop:bool=True,             
-        gap:float=0.5,                      
-        inputSize:int=33600,                
-        nRegisters:int=8,                   # *
-        initMaxTeamSize:int=10,             # *
-        initMaxProgSize:int=10,             # *
-        maxTeamSize:int=-1,                 # *
-        pLrnDel:float=0.7,                  # *
-        pLrnAdd:float=0.6,                  # *
-        pLrnMut:float=0.2,                  # *
-        pProgMut:float=0.1,                 # *
-        pActMut:float=0.1,                  # *
-        pActAtom:float=0.95,                # *
-        pInstDel:float=0.5,                 # *
-        pInstAdd:float=0.4,                 # *
-        pInstSwp:float=0.2,                 # *
-        pInstMut:float=1.0,                 # *
-        doElites:bool=True, 
-        memMatrixShape:tuple=(100,8),       # *
-        rampancy:tuple=(0,0,0),
-        prevPops=None, mutatePrevs=True,
-        initMaxActProgSize:int=6,           # *
-        nActRegisters:int=4,
-    ):
+            actions=None,
+            teamPopSize:int=10,               # *
+            rootBasedPop:bool=True,             
+            gap:float=0.5,                      
+            inputSize:int=33600,                
+            nRegisters:int=8,                   # *
+            initMaxTeamSize:int=10,             # *
+            initMaxProgSize:int=10,             # *
+            maxTeamSize:int=-1,                 # *
+            pLrnDel:float=0.7,                  # *
+            pLrnAdd:float=0.6,                  # *
+            pLrnMut:float=0.2,                  # *
+            pProgMut:float=0.1,                 # *
+            pActMut:float=0.1,                  # *
+            pActAtom:float=0.95,                # *
+            pInstDel:float=0.5,                 # *
+            pInstAdd:float=0.4,                 # *
+            pInstSwp:float=0.2,                 # *
+            pInstMut:float=1.0,                 # *
+            doElites:bool=True, 
+            memMatrixShape:tuple=(100,8),       # *
+            rampancy:tuple=(0,0,0),
+            prevPops=None, mutatePrevs=True,
+            initMaxActProgSize:int=6,           # *
+            nActRegisters:int=4,
+        ):
         self.trainer = self.__class__.Trainer(
             actions=actions, 
             teamPopSize=teamPopSize,               # *
@@ -79,11 +79,8 @@ class _TPG(_Logger):
             pInstSwp=pInstSwp,                 # *
             pInstMut=pInstMut,                 # *
             doElites=doElites, 
-            # memType=memType, 
             memMatrixShape=memMatrixShape,       # *
             rampancy=rampancy,
-            # operationSet=operationSet, 
-            # traversal=traversal, 
             prevPops=prevPops, mutatePrevs=mutatePrevs,
             initMaxActProgSize=initMaxActProgSize,           # *
             nActRegisters=nActRegisters)
@@ -179,7 +176,7 @@ class _TPG(_Logger):
         """ section """
         # _scores = {}
         self.setAgents()
-        for _ in range(self.episodes):     
+        for _ in range(self.episodes):
             self.episode()
 
         for agent in self.agents:               
@@ -836,9 +833,10 @@ class Emulator1(Emulator):
 class EmulatorEye(Emulator):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            from _tpg.trainer import Trainer2_2
+            from _tpg.trainer import Trainer2_3
             cls._instance = True
-            cls.Trainer = Trainer2_2
+            cls.Trainer = Trainer2_3
+
             cls.Trainer._logger=cls._logger
 
         return super().__new__(cls, *args, **kwargs)
@@ -867,14 +865,13 @@ class EmulatorEye(Emulator):
                     _, state = self.cap.read()
                     if not _: continue
                     img = agent.image(np.nan, state.flatten()).memory
-                    diff, unex = img.compare(state.flatten(), 0.5)
+                    diff = img.compare(state.flatten())
                     score += tanh(diff)
                     states+=[state.flatten()]
-                    unexpectancies+=[unex]
 
-                if _scores.get(agent.id) is None : _scores[agent.id]=0
-                _scores[agent.id] += score # store score
-            
+                agent.score+=score
+                agent.trace(states)
+                            
         else: breakpoint('video is not open')
         
         return _scores, states, unexpectancies
@@ -984,11 +981,18 @@ class _Automata(_TPG):
         )
         self.thinkingTimeLimit=thinkingTime
 
-        self.generations=100
+        self.generations=10
         self.episodes=1
         self.frames = 500
         self.show = False
-        self.logger = None
+        self.test = False
+        self.load = True
+        self.dir = 'test/'
+
+        self.env = None
+        self.tasks = set()
+        self.scores = {}
+        self.gen=0
         self.initParams()
 
     def _setupParams(self, actor_id, emulator_id, actions=None, images=None, rewards=None):
@@ -1026,11 +1030,6 @@ class _Automata(_TPG):
         for emulator in self.emulators:
             self.emulator_scores[emulator.id] = 0.
             assert not self.emulator_scores.get(emulator.id)
-
-    def setEnv(self, _env):
-        self.env = _env
-        self.task = self.env.spec.id
-        self.env_action_space = self._set_env_action_space()
 
     def instance_valid(self, _actor=None, _emulator=None) -> None:
         assert self.__class__.Actor.Trainer is not self.__class__.Emulator.Trainer
@@ -1663,7 +1662,7 @@ class Automata2(Automata1):
         
         task = _dir+self.env.spec.id
 
-        self.logger, filename = setup_logger(__name__, task, test=_test, load=_load)
+        self.setup_logger(__name__, task, test=_test, load=_load)
 
         action_space = self.env.action_space
         observation_space = self.env.observation_space
@@ -1681,8 +1680,8 @@ class Automata2(Automata1):
         self.state = self.env.reset()
         def outHandler(signum, frame):
             if not _test: 
-                self.actor.trainer.save(f'{task}/{filename}-act')
-                self.emulator.trainer.save(f'{task}/{filename}-emu')
+                self.actor.trainer.save(f'{task}/{self.filename}-act')
+                self.emulator.trainer.save(f'{task}/{self.filename}-emu')
             print('exit')
             sys.exit()
         
@@ -1702,7 +1701,7 @@ class Automata2(Automata1):
         map(self.logger.removeHandler, self.logger.handlers)
         map(self.logger.removeFilter, self.logger.filters)
 
-        return f'{task}/{filename}'
+        return f'{task}/{self.filename}'
 
 class Automata3(Automata2):
     """ type 3
@@ -1745,7 +1744,8 @@ class Automata3(Automata2):
         return self.hippocampus.operator(_actObj)
 
     def consciousness(self, willness):
-        if willness[-1].ch == 0: self.activator(willness[:-1])
+        if willness[-1].ch == 0:
+            self.activator(willness[:-1])
         else:
             self.recollector(willness[:-1])
 

@@ -419,6 +419,64 @@ class Team1_2(Team1):
 
         return super().__new__(cls, *args, **kwargs)
 
+    def act(self, state, visited, actVars=None, path_trace=None): 
+        # If we've already visited me, throw an exception
+        assert not self.id in visited, f"Already visited team {self.id}"
+        
+
+        # Add this team's id to the list of visited ids
+        visited.append(self.id) 
+        if len(self.learners)==0:
+            print('0 valid')
+            self.addLearner(self.__class__.Learner())
+
+        '''
+        Valid learners are ones which:
+            * Are action atomic
+            * Whose team we have not yet visited
+        '''
+        valid_learners = [lrnr for lrnr in self.learners if lrnr.isActionAtomic() or lrnr.getActionTeam().id not in visited]
+        
+        if len(valid_learners)==0: 
+
+            mutate_learner = random.choice(self.learners)
+            clone = mutate_learner.clone
+            if not clone.isActionAtomic(): clone.actionObj.teamAction.inLearner.remove(clone.id)
+            clone.actionObj.mutate()
+
+            self.addLearner(clone)
+            valid_learners.append(clone)
+
+        top_learner = max(valid_learners, key=lambda lrnr: lrnr.bid(state, actVars=actVars))
+    
+        # If we're tracing this path
+        if path_trace != None:
+            
+            last_segment = path_trace[-1] if len(path_trace) != 0 else None
+
+            # Create our path segment
+            path_segment =  {
+                'team_id': self.id,
+                'top_learner': top_learner.id,
+                'top_bid': top_learner.bid(state, actVars=actVars),
+                'top_action': top_learner.actionObj.actionCode if top_learner.isActionAtomic() else top_learner.actionObj.teamAction.id,
+                'depth': last_segment['depth'] + 1 if last_segment != None else 0,# Record path depth
+                'bids': []
+            }
+
+            # Populate bid values
+            for cursor in valid_learners:
+                path_segment['bids'].append({
+                    'learner_id': cursor.id,
+                    'bid': cursor.bid(state, actVars=actVars),
+                    'action': cursor.actionObj.actionCode if cursor.isActionAtomic() else cursor.actionObj.teamAction.id
+                })
+
+            # Append our path segment to the trace
+            path_trace.append(path_segment)
+
+        return top_learner.getAction(state, visited=visited, actVars=actVars, path_trace=path_trace)
+
 class Team1_3(Team1):
     """ birth child to rootteam with preference
     
