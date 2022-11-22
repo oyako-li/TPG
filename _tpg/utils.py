@@ -120,6 +120,11 @@ class _Logger:
 
         return self.__class__._logger, self.filename
 
+    def set_level(self, _level):
+        if self.__class__._logger:
+            for handler in self.__class__._logger.handlers:
+                handler.setLevel(_level)
+
 def log_load(_filename, _renge, _step=5):
     l =[]
 
@@ -205,7 +210,7 @@ def log_show(filename, renge=100, step=5):
     # root
     root.update()
     root.deiconify()
-    root.mainloop()
+    # root.mainloop()
     return mi, ma, av
 
 def log_load2(_filename, _renge, _step=5):
@@ -509,7 +514,8 @@ def sigmoid(x):
 
 def abstract(_sequence):
     assert isinstance(_sequence, np.ndarray), f'{_sequence} should be ndarray'
-    state = np.array([np.nan]*_sequence.size)
-    key = np.random.choice(range(_sequence.size), random.randint(1, _sequence.size-1))
+    state = np.array(_sequence)
+    state.fill(np.nan)
+    key = np.random.choice(range(state.size), random.randint(1, state.size-1))
     state[key] = _sequence[key]
     return state

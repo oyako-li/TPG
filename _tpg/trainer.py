@@ -859,6 +859,16 @@ class Trainer1_2(Trainer1_1):
 
         return super().__new__(cls, *args, **kwargs)
 
+    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None):
+        self._scoreIndividuals(
+            tasks, 
+            multiTaskType=multiTaskType,
+        ) # assign scores to individuals
+        self._saveFitnessStats() # save fitness stats
+        self._select(extraTeams) # select individuals to keep
+        self._generate(extraTeams) # create new individuals from those kept
+        self._nextEpoch()
+
     def _select(self, extraTeams=None):
 
         rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.fitness, reverse=True)
@@ -882,9 +892,59 @@ class Trainer1_2(Trainer1_1):
         # AtomicActionのLearnerはどのように生成すれば良いのだろうか？ -> actionObj.mutate()による
         self.learners = [learner for learner in self.learners if learner.numTeamsReferencing() > 0]
 
+    def _generate(self, extraTeams=None):
+        # extras who are already part of the team population
+        protectedExtras = []
+        extrasAdded = 0
+
+        # add extras into the population
+        if extraTeams is not None:
+            for team in extraTeams:
+                if team not in self.teams:
+                    self.teams.append(team)
+                    extrasAdded += 1
+                else:
+                    protectedExtras.append(team)
+
+        oLearners = list(self.learners)
+        oTeams = list(self.teams)
+
+        # update generation in mutateParams
+        self.mutateParams["generation"] = self.generation
+
+        # get all the current root teams to be parents
+        # mutate or clone
+        while (len(self.teams) < self.teamPopSize + extrasAdded or
+                (self.rootBasedPop and self.countRootTeams() < self.teamPopSize)):
+
+            parent = random.choice(self.rootTeams)
+            child = parent.clone
+
+            _, __, new_learners = child.mutate(self.mutateParams, oLearners, oTeams)
+
+            child.addSequence()
+
+            # then clone the referenced rootTeams
+            for new_learner in new_learners:
+                tm = new_learner.getActionTeam()
+                if tm in self.rootTeams:
+                    clone = tm.clone
+                    self.teams.append(clone)
+                    
+                    assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
+
+            self.teams.append(child)
+
+
+        # remove unused extras
+        if extraTeams is not None:
+            for team in extraTeams:
+                if team.numLearnersReferencing() == 0 and team not in protectedExtras:
+                    self.teams.remove(team)
+
     def setActions(self, actions):
         for i in range(actions):
-            self.__class__.ActionObject.actions.append([i])
+            self.__class__.ActionObject.actions.append([int(i)])
         self._initialize()
         return self.__class__.ActionObject.actions
 
@@ -906,7 +966,7 @@ class Trainer1_3(Trainer1_2):
             cls.Program = Program1_3
             cls.Hippocampus = Trainer2_3
             cls.ActionObject = Qualia
-            cls.ActionObject._nan = cls.ActionObject()
+            cls.ActionObject()
 
         return super().__new__(cls, *args, **kwargs)
 

@@ -3,7 +3,7 @@ import pickle
 from uuid import uuid4, UUID
 import numpy as np
 import random
-from _tpg.utils import flip, breakpoint, sigmoid, _Logger
+from _tpg.utils import flip, breakpoint, sigmoid, abstract, _Logger
 import logging
 
 # GAMMA = ['+','-','*','**','/','//','%','<','<=','<<','>','>=','>>','&','|','^','~','np.nan']
@@ -2305,7 +2305,6 @@ class ActionObject1(_ActionObject):
             cls._instance = True
             cls.Team = Team1_1
             cls.actions = Memory1()
-            cls.actions._logger=cls._logger
             
         return super().__new__(cls, *args, **kwargs)
 
@@ -2421,8 +2420,7 @@ class ActionObject2(ActionObject1):
             from _tpg.team import Team1_2
             cls._instance = True
             cls.Team = Team1_2
-            cls.actions = Memory1_1()
-            cls.actions._logger=cls._logger
+            cls.actions = Memory3()
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -2452,7 +2450,7 @@ class ActionObject2(ActionObject1):
             self.actionCode = action
             self.teamAction = None
             return
-        elif isinstance(action, list):
+        elif isinstance(action, list) or isinstance(action, np.ndarray):
             self.actionCode = self.__class__.actions.append(action)
             self.teamAction = None
             return
@@ -2753,11 +2751,20 @@ class ActionObject2(ActionObject1):
     
     def __invert__(self):
         return self.__class__(~self.action)
-    
-    @classmethod
+
+    def getAction(self, _state, visited, actVars, path_trace=None):
+        if self.teamAction is not None:
+            return self.teamAction.act(_state, visited, actVars=actVars, path_trace=path_trace)
+        else:
+            # breakpoint(self.__class__, __class__, self.__class__.NaN) # (Any, ActionObj1, property object)
+            assert self.actionCode in self.__class__.actions, f'{self.actionCode} is not in {self.__class__.actions}'
+            self.__class__.actions[self.actionCode].weight*=0.9 # 忘却確立減算
+            self.__class__.actions.updateWeights()               # 忘却確立計上
+            return self
+        
     @property
-    def NaN(cls):
-        return cls(cls._nan)
+    def action(self):
+        return self.actions[self.actionCode].fragment
 
     @property
     def bid(self):
@@ -2766,6 +2773,11 @@ class ActionObject2(ActionObject1):
     @property
     def ch(self):
         return int(self.action[-1]//1)
+    
+    @classmethod
+    @property
+    def NaN(cls):
+        return cls(cls._nan)
 
 class Qualia(ActionObject2):
     """ Memory object management

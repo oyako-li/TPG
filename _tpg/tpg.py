@@ -4,6 +4,8 @@ from _tpg.utils import breakpoint, log_show, _Logger
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from gym.spaces import *
+
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 import tkinter as tk
@@ -108,10 +110,12 @@ class _TPG(_Logger):
         self.setActions(self.env.action_space.n)
 
 
+
     def getAgents(self):
         return self.trainer.getAgents()
     
     def setAgents(self, task=None):
+        self.scores = {}
         self.agents = self.trainer.getAgents(task= task if task else self.task)
 
     def flush_render(self, step=0, name='', info=''):
@@ -201,10 +205,10 @@ class _TPG(_Logger):
 
         return self.epilogue()
 
-    def multi(self, _tasks):
+    def multi(self, _tasks, _generations=None, _load=None):
         self.archive=[]
         for task in _tasks:
-            title = self.story(_task=task)
+            title = self.story(_task=task, _generations=_generations, _load=_load)
             self.archive+=[title]
 
         return self.archive
@@ -227,6 +231,7 @@ class _TPG(_Logger):
             self.dir = _dir
         if _load:
             self.load = _load
+            self.set_level(logging.DEBUG)
         if _generations:
             self.generations=_generations
         if _episodes:
@@ -352,10 +357,45 @@ class Actor(ActorTPG):
         return self.trainer.getEliteAgent(task if task else self.task)
 
     def activator(self, acts):
-        return [ act for act in acts if act in [np.nan]+list(range(self.env.action_space.n))]
+        assert isinstance(acts, np.ndarray), f'{acts} cant fetch activation'
+        frame=0
+        score=0
+        sequence = []
 
-    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _actionSequence=None, _actionReward=None):
-        self.trainer.evolve(tasks=tasks, _actionSequence=_actionSequence, _actionReward=_actionReward)
+        if isinstance(self.env.action_space, Box):
+            shape = self.env.action_space.shape
+            actions = np.split(acts, np.prod(shape, dtype=np.int8))
+            # actions = acts[:].resize(shape)
+            self.debug(f'frame:{frame}, Box:{acts}')
+            for action in actions:
+                if frame>self.frames: break
+                frame+=1
+                try:
+                    state, reward, isDone, debug = self.env.step(action.reshape(shape))
+                    score+=reward
+                    sequence+=[action]
+                    if isDone: frame=self.frames
+                except Exception as e: print(e)
+        elif isinstance(self.env.action_space, Discrete):
+            self.debug(f'frame:{frame}, Discrete:{acts}')
+            for action in acts:
+                if frame>self.frames: break
+                frame+=1
+                try:
+                    state, reward, isDone, debug = self.env.step(int(action))
+                    score+=reward
+                    sequence+=[action]
+                    if isDone: frame=self.frames
+
+                except Exception as e: print(e)
+        else:
+            print(self.env.action_space)
+            raise 'EnvExpectation'
+        return frame, score, sequence
+        # return [ act for act in acts if act in range(self.env.action_space.n)]
+
+    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None):
+        self.trainer.evolve(tasks=tasks)
 
     def episode(self):
         assert self.trainer is not None and self.env is not None, 'You should set Actioins'
@@ -367,26 +407,19 @@ class Actor(ActorTPG):
             actions = []
             while frame<self.frames: # run episodes that last 500 frames
                 acts = agent.act(state.flatten()).action
-                for act in self.activator(acts):
-                    frame+=1
-                    # if not action in range(self.env.action_space.n): continue
-                    state, reward, isDone, debug = self.env.step(act)
-                    score += reward # accumulate reward in score
-                    # self.actionSequence[agent.id]+=[action]
-                    actions+=[act]
+                _frame, _reward, _sequences = self.activator(acts[~np.isnan(acts)])
+                frame+=_frame
+                score+=_reward
+                actions+=_sequences
+                self.debug(f'agent_id:{agent.id}, frame:{frame}, actions:{actions}')
 
-
-                    if isDone: break # end early if losing state
-                    if frame>self.frames: break
-                    # if self.show:self.flush_render()
-
+                if frame >= self.frames: break
 
             # self.actionReward[agent.id] += score # store score
             agent.trace(actions)
             agent.score+=score
 
     def generation(self):
-        # _task = self.env.spec.id
         self.setAgents()
         for _ in range(self.episodes):     
             self.episode()
@@ -399,7 +432,7 @@ class Actor(ActorTPG):
         self.evolve(list(self.tasks))
         self.info(f'generation:{self.gen}, min:{min(self.scores.values())}, max:{max(self.scores.values())}, ave:{sum(self.scores.values())/len(self.scores)}')
 
-
+        self.gen+=1
 
     def story(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
         self.prologue(_trainer=_trainer, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load, _dir=_dir)
@@ -871,7 +904,7 @@ class EmulatorEye(Emulator):
 
                 agent.score+=score
                 agent.trace(states)
-                            
+
         else: breakpoint('video is not open')
         
         return _scores, states, unexpectancies

@@ -1,5 +1,6 @@
 import unittest
 import gym
+import datetime
 from _tpg.utils import *
 
 class TPGTest(unittest.TestCase):
@@ -63,13 +64,15 @@ class TPGTest(unittest.TestCase):
     def test_muluti_task_learning(self):
         """ TODO: マルチタスク学習に対応できるように、改良。
         """
-        tasks = [
-            "CartPole-v1", 
-            "Centipede-v4",
-            
-        ]
+        tasks = random.choices([
+            i.id for i in gym.envs.registry.all()
+        ],k=10)
+
+        with open(f'log/multi/{datetime.now().strftime("%Y%m%d%H%M%S")}.txt', 'w') as multi:
+            for task in tasks: multi.write(f'{tasks}')
+        
         tpg = self.TPG()
-        tpg.multi(tasks)
+        tpg.multi(tasks, _generations=10, _load=True)
         self.assertEqual(tpg.tasks, set(tasks))
 
 class MHTPGTest(TPGTest):
@@ -162,17 +165,6 @@ class ActorBiasTest(ActorPointTest):
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
 
-    def test_muluti_task_learning(self):
-        """ TODO: マルチタスク学習に対応できるように、改良。
-        """
-        tasks = [
-            "CartPole-v1", 
-            "Centipede-v4",
-        ]
-        tpg = self.TPG()
-        tpg.multi(tasks)
-        self.assertEqual(tpg.tasks, set(tasks))
-
 class Actor1PointTest(ActorPointTest):
     def setUp(self) -> None:
         from _tpg.tpg import Actor
@@ -206,10 +198,10 @@ class Actor1BiasTest(ActorPointTest):
         self.assertEqual(self.TPG, Actor)
 
         from _tpg.trainer import Trainer1_2
-        from _tpg.memory_object import Fragment1_1
+        from _tpg.memory_object import Fragment3
         tpg = self.TPG()
         self.assertIsInstance(tpg.trainer, Trainer1_2)
-        self.assertEqual(tpg.trainer.ActionObject.actions.Fragment, Fragment1_1)
+        self.assertEqual(tpg.trainer.ActionObject.actions.Fragment, Fragment3)
 
 class EmulatorTPGTest(unittest.TestCase):
     def setUp(self) -> None:

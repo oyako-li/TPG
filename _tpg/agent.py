@@ -80,6 +80,7 @@ class _Agent(_Logger):
         self.team.zeroRegisters()
 
     def trace(self, _sequence):
+        assert _sequence != [], f'{_sequence} should not non list'
         self.team.sequence = _sequence
 
     @property

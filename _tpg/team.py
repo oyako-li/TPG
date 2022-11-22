@@ -374,10 +374,6 @@ class _Team(_Logger):
     def numLearnersReferencing(self):
         return len(self.inLearners)
 
-    def addSequence(self):
-        self.addLearner(self.__class__.Learner(memoryObj=self.sequence))
-        
-
     @property
     def clone(self): 
         _clone = self.__class__(
@@ -422,7 +418,7 @@ class Team1_2(Team1):
     def act(self, state, visited, actVars=None, path_trace=None): 
         # If we've already visited me, throw an exception
         assert not self.id in visited, f"Already visited team {self.id}"
-        
+
 
         # Add this team's id to the list of visited ids
         visited.append(self.id) 
@@ -476,6 +472,10 @@ class Team1_2(Team1):
             path_trace.append(path_segment)
 
         return top_learner.getAction(state, visited=visited, actVars=actVars, path_trace=path_trace)
+
+    def addSequence(self):
+        sequence = abstract(self.sequence)
+        self.addLearner(self.__class__.Learner(memoryObj=sequence))
 
 class Team1_3(Team1):
     """ birth child to rootteam with preference
