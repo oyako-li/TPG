@@ -1,1 +1,0 @@
-['ALE/SirLancelot-ram-v5', 'HandManipulateBlockRotateParallelTouchSensors-v0', 'Breakout-ramNoFrameskip-v4', 'DemonAttack-ramNoFrameskip-v4', 'MsPacman-ramDeterministic-v4', 'JamesbondDeterministic-v0', 'ALE/Enduro-v5', 'StarGunner-ramDeterministic-v0', 'Asterix-v0', 'ALE/Kaboom-v5']

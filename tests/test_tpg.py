@@ -31,7 +31,7 @@ class TPGTest(unittest.TestCase):
         score = tpg.generation()
         self.assertIsNotNone(score)
 
-    # @unittest.skip('next test case')
+    @unittest.skip('next test case')
     def test_story(self):
         '''test story'''
         tpg = self.TPG()
@@ -50,16 +50,50 @@ class TPGTest(unittest.TestCase):
     def test_muluti_task_learning(self):
         """ マルチタスク学習に対応できるように、改良。
         """
-        tasks = random.choices([
-            i.id for i in gym.envs.registry.all()
-        ],k=10)
-
-        with open(f'log/multi/{datetime.now().strftime("%Y%m%d%H%M%S")}-tasks.txt', 'w') as multi:
-            for task in tasks: multi.write(f'{task}\n')
+        tasks=[]
+        if os.path.exists('./tasks.txt'):
+            with open('./tasks.txt', 'r') as task_file:
+                tasks = task_file.readlines()
+                print(tasks, type(tasks))
+        else:
+            tasks = random.choices([
+                i.id for i in gym.envs.registry.all()
+            ],k=10)
+            with open(f'./tasks.txt', 'w') as multi:
+                for task in tasks: multi.write(f'{task}\n')
         
         tpg = self.TPG()
-        tpg.multi(tasks, _generations=10, _load=True)
+        try:
+            tpg.multi(tasks, _generations=10, _load=True)
+        except Exception as e:
+            print(e)
+            os.remove('./tasks.txt')
         self.assertEqual(tpg.tasks, set(tasks))
+
+    # @unittest.skip('test single task')
+    def test_muluti_task_envs(self):
+        """ マルチタスク学習に対応できるように、改良。
+        """
+        tasks=[]
+        if os.path.exists('./tasks.txt'):
+            with open('./tasks.txt', 'r') as task_file:
+                tasks = task_file.readlines()
+                print(tasks, type(tasks))
+        else:
+            tasks = random.choices([
+                i.id for i in gym.envs.registry.all()
+            ],k=10)
+            with open(f'./tasks.txt', 'w') as multi:
+                for task in tasks: multi.write(f'{task}\n')
+        
+        tpg = self.TPG()
+        try:
+            tpg.multi(tasks, _generations=1, _load=True)
+        except Exception as e:
+            print(e)
+            os.remove('./tasks.txt')
+        self.assertEqual(tpg.tasks, set(tasks))
+        print(tpg.tasks)
 
 class MHTPGTest(TPGTest):
 

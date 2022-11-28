@@ -18,6 +18,7 @@ import time
 
 class _TPG(_Logger):
     Trainer=None
+    taskName=None
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -104,6 +105,7 @@ class _TPG(_Logger):
         self.tasks.add(self.task)
         self.state = self.env.reset()
         self.setActions(self.env.action_space.n)
+        self.__class__.taskName=self.task
 
     def getAgents(self):
         return self.trainer.getAgents()
@@ -165,7 +167,7 @@ class _TPG(_Logger):
                 if not act in range(self.env.action_space.n): continue
                 state, reward, isDone, debug = self.env.step(act)
                 score += reward # accumulate reward in score
-                self.info(f'state:{state}')
+                # self.info(f'state:{state}')
 
 
                 if isDone: break # end early if losing state

@@ -19,30 +19,33 @@ class _Logger:
             cls._instance = True
             # cls._logger= logging.getLogger(cls.__name__)
         return super().__new__(cls)
+    
+    def __init__(self, *args, **kwargs) -> None:
+        self.dir=''
 
     @classmethod
     def info(cls, *args, **kwargs):
-        if cls._logger: cls._logger.info(*args, extra={'className': cls.__name__}, **kwargs)
+        if cls._logger: cls._logger.info(*args, extra={'className': cls.__name__, 'taskName': cls.taskName if cls.taskName else ''}, **kwargs)
 
     @classmethod
     def debug(cls, *args, **kwargs):
-        if cls._logger: cls._logger.debug(*args, extra={'className': cls.__name__}, **kwargs)
+        if cls._logger: cls._logger.debug(*args, extra={'className': cls.__name__, 'taskName': cls.taskName if cls.taskName else ''}, **kwargs)
 
     @classmethod
     def warning(cls, *args, **kwargs):
-        if cls._logger: cls._logger.warning(*args, extra={'className': cls.__name__}, **kwargs)
+        if cls._logger: cls._logger.warning(*args, extra={'className': cls.__name__, 'taskName': cls.taskName if cls.taskName else ''}, **kwargs)
 
     @classmethod
     def error(cls, *args, **kwargs):
-        if cls._logger: cls._logger.error(*args, extra={'className': cls.__name__}, **kwargs)
+        if cls._logger: cls._logger.error(*args, extra={'className': cls.__name__, 'taskName': cls.taskName if cls.taskName else ''}, **kwargs)
 
     @classmethod
     def critical(cls, *args, **kwargs):
-        if cls._logger: cls._logger.critical(*args, extra={'className': cls.__name__}, **kwargs)
+        if cls._logger: cls._logger.critical(*args, extra={'className': cls.__name__, 'taskName': cls.taskName if cls.taskName else ''}, **kwargs)
     
     @classmethod
     def log(cls, *args, **kwargs):
-        if cls._logger: cls._logger.log(*args, extra={'className': cls.__name__}, **kwargs)
+        if cls._logger: cls._logger.log(*args, extra={'className': cls.__name__, 'taskName': cls.taskName if cls.taskName else ''}, **kwargs)
 
     @classmethod
     def set_logger(cls, _logger):
@@ -65,7 +68,7 @@ class _Logger:
         if not _test:
             while True:
                 try:
-                    _fh = logging.FileHandler(f'log/{_logfile}/{self.filename}.log')
+                    _fh = logging.FileHandler(f'log/{self.dir}{self.filename}.log')
                     break
                 except FileNotFoundError:
                     os.makedirs(f'log/{_logfile}')
@@ -101,7 +104,7 @@ class _Logger:
             if load:
                 _ch = logging.StreamHandler()
                 _ch.setLevel(logging.DEBUG)
-                _ch_formatter = logging.Formatter('[{}][{}][%(className)s], %(message)s'.format(_logfile, self.filename))
+                _ch_formatter = logging.Formatter('[{}][%(className)s.%(taskName)s], %(message)s'.format(self.filename))
                 _ch.setFormatter(_ch_formatter)
 
                 # add the handlers to the logger
@@ -110,13 +113,13 @@ class _Logger:
             # self.add_handrer(_logfile,test)
             while True:
                 try:
-                    _fh = logging.FileHandler(f'log/{_logfile}/{self.filename}.log')
+                    _fh = logging.FileHandler(f'log/{self.dir}{self.filename}.log')
                     break
                 except FileNotFoundError:
                     os.makedirs(f'log/{_logfile}')
 
             _fh.setLevel(logging.INFO)
-            _fh_formatter = logging.Formatter('%(asctime)s, %(className)s, %(message)s')
+            _fh_formatter = logging.Formatter('%(asctime)s, %(className)s.%(taskName)s, %(message)s')
             _fh.setFormatter(_fh_formatter)
             self.__class__._logger.addHandler(_fh)
 
