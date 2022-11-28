@@ -44,27 +44,18 @@ class _Logger:
     def log(cls, *args, **kwargs):
         if cls._logger: cls._logger.log(*args, extra={'className': cls.__name__}, **kwargs)
 
-    # @classmethod
-    # @property
-    # def logger(cls):
-    #     return cls._logger
-
     @classmethod
     def set_logger(cls, _logger):
         if cls._logger is None :
-            # print(f'set logger {cls.__name__}')
             cls._logger = _logger
             for clsObj in [cls.__dict__[i] for i in cls.__dict__.keys() if inspect.isclass(cls.__dict__[i]) and re.match(r'^[A-Z]', i)]:
-                # print(f'set sub_logger',clsObj, _logger)
                 clsObj.set_logger(_logger)
 
     @classmethod
     def unset_logger(cls):
         if cls._logger :
-            # print(f'set logger {cls.__name__}')
             cls._logger=None
             for clsObj in [cls.__dict__[i] for i in cls.__dict__.keys() if inspect.isclass(cls.__dict__[i]) and re.match(r'^[A-Z]', i)]:
-                # print(f'set sub_logger',clsObj, _logger)
                 clsObj.unset_logger()
 
     def add_handrer(self, _logfile, _test):
@@ -80,7 +71,7 @@ class _Logger:
                     os.makedirs(f'log/{_logfile}')
 
             _fh.setLevel(logging.INFO)
-            _fh_formatter = logging.Formatter('%(asctime)s, %(filename)s:%(className)s.%(funcName)s, %(message)s')
+            _fh_formatter = logging.Formatter('%(asctime)s, %(className)s.%(taskName)s, %(message)s')
             _fh.setFormatter(_fh_formatter)
             self.__class__._logger.addHandler(_fh)
         
@@ -101,7 +92,7 @@ class _Logger:
 
     def setup_logger(self, _name, _logfile='LOGFILENAME', test=False, load=True):
 
-        self.remove_handrer()
+        # self.remove_handrer()
         self.filename = datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
         if self.__class__._logger is None :
             _logger = logging.getLogger(_name)
@@ -110,13 +101,24 @@ class _Logger:
             if load:
                 _ch = logging.StreamHandler()
                 _ch.setLevel(logging.DEBUG)
-                _ch_formatter = logging.Formatter('[{}][{}][%(name)s:%(className)s], %(message)s'.format(_logfile, self.filename))
+                _ch_formatter = logging.Formatter('[{}][{}][%(className)s], %(message)s'.format(_logfile, self.filename))
                 _ch.setFormatter(_ch_formatter)
 
                 # add the handlers to the logger
                 self.__class__._logger.addHandler(_ch)
             
-        self.add_handrer(_logfile,test)
+            # self.add_handrer(_logfile,test)
+            while True:
+                try:
+                    _fh = logging.FileHandler(f'log/{_logfile}/{self.filename}.log')
+                    break
+                except FileNotFoundError:
+                    os.makedirs(f'log/{_logfile}')
+
+            _fh.setLevel(logging.INFO)
+            _fh_formatter = logging.Formatter('%(asctime)s, %(className)s, %(message)s')
+            _fh.setFormatter(_fh_formatter)
+            self.__class__._logger.addHandler(_fh)
 
         return self.__class__._logger, self.filename
 
@@ -134,6 +136,7 @@ def log_load(_filename, _renge, _step=5):
             results = line.replace('\n','').split(', ')[2:]
             if 'generation:' in results[0]:
                 l.append([float(re.split(':')[1]) for re in results[1:]])
+                end = int(results[0].split(':')[1])
 
     __min = []
     __mi = 0.
@@ -159,11 +162,11 @@ def log_load(_filename, _renge, _step=5):
     ma = np.array(__max)
     av = np.array(__ave)
     
-    return mi, ma, av
+    return mi, ma, av, end
 
 def log_show(filename, renge=100, step=5):
-    mi, ma, av = log_load(filename, renge, step)
-    ge = np.arange(0, mi.size*step, step)
+    mi, ma, av, end = log_load(filename, renge, step)
+    ge = np.arange(0, (end//step)*step, step)
     # Figure instance
     fig = plt.Figure()
 
@@ -171,7 +174,7 @@ def log_show(filename, renge=100, step=5):
     ax1.plot(ge, mi, label='min')
     ax1.plot(ge, ma, label='max')
     ax1.plot(ge, av, label='ave')
-    ax1.set_title(f'{filename}')
+    # ax1.set_title(f'{filename}')
     ax1.set_ylabel('Score')
     ax1.set_xlabel('Generation')
     ax1.legend()
@@ -210,7 +213,8 @@ def log_show(filename, renge=100, step=5):
     # root
     root.update()
     root.deiconify()
-    # root.mainloop()
+    root.mainloop()
+    
     return mi, ma, av
 
 def log_load2(_filename, _renge, _step=5):
@@ -511,6 +515,10 @@ def pathDepths(team, prevDepth=0, parents=[]):
 def sigmoid(x):
     # assert isinstance(x, list) or isinstance(x, np.ndarray) or isinstance(x, ), f'{x} cant opelation sigmoid'
     return 1.0 / (1.0 + np.exp(-x))
+
+def sigmoid2(x):
+    # assert isinstance(x, list) or isinstance(x, np.ndarray) or isinstance(x, ), f'{x} cant opelation sigmoid'
+    return (1.0 / (1.0 + np.exp(-x)))**2
 
 def abstract(_sequence):
     assert isinstance(_sequence, np.ndarray), f'{_sequence} should be ndarray'

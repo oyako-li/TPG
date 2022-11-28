@@ -235,6 +235,69 @@ class Learner1_2(Learner1):
 
         return super().__new__(cls, *args, **kwargs)
 
+class Learner1_2_1(Learner1_2):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            from _tpg.team import Team1_2_1
+            from _tpg.program import Program1
+            from _tpg.memory_object import ActionObject3
+            cls.Team = Team1_2_1
+            cls.Program = Program1
+            cls.ActionObject = ActionObject3
+
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self, 
+        program=None, 
+        actionObj=None, 
+        numRegisters:int or np.ndarray=8, 
+        states:list=[],
+        inTeams:list=[],
+        frameNum:int=0,
+        initParams:int or dict=0
+    ):
+        self.program = self.__class__.Program() if program is None else self.__class__.Program(instructions=program.instructions)
+        self.actionObj = self.__class__.ActionObject(actionObj) if actionObj is None else self.__class__.ActionObject(action=actionObj,initParams=initParams)
+        if isinstance(numRegisters, int): 
+            self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
+        else: 
+            self.registers = copy.deepcopy(numRegisters)
+        if isinstance(initParams, int): 
+            self.genCreate = initParams # Store the generation that this learner was created on
+        elif isinstance(initParams, dict): 
+            self.genCreate = initParams["generation"] # Store the generation that this learner was created on
+
+        # self.ancestor = _ancestor #By default no ancestor
+        self.states = list(states)
+        self.inTeams = list(inTeams) # Store a list of teams that reference this learner, incoming edges
+        # self.actionCodes = initParams["actionCodes"]
+        self.frameNum = frameNum # Last seen frame is 0
+        self._id = uuid.uuid4()
+
+
+        if not self.isActionAtomic(): self.actionObj.teamAction.inLearners.append(self.id)
+
+    @property
+    def id(self):
+        return str(self._id)
+
+    @property
+    def clone(self): 
+        _clone = self.__class__(
+            program = self.program,
+            actionObj = self.actionObj,
+            numRegisters=self.registers,
+            states=self.states,
+            inTeams=self.inTeams,
+            frameNum=self.frameNum,
+            initParams=self.genCreate
+        )
+        if not _clone.isActionAtomic(): 
+            _clone.getActionTeam().inLearners.append(_clone.id)
+
+        return _clone
+
 class Learner1_3(Learner1):
 
     def __new__(cls, *args, **kwargs):

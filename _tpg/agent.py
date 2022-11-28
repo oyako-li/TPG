@@ -1,7 +1,7 @@
 # from program import Program
 from math import tanh
 from datetime import datetime
-from _tpg.utils import _Logger, sigmoid
+from _tpg.utils import _Logger, sigmoid, sigmoid2
 import pickle
 from random import random
 import time
@@ -62,7 +62,9 @@ class _Agent(_Logger):
         """
         Give this agent/root team a reward for the given task
         """
-        self.team[task] = score if score else self.score
+        self.info(f'task:{task}, agent_id:{self.id}, score:{self.score}')
+        _score = score if score else self.score
+        self.team[task] += sigmoid2(_score)
 
     def taskDone(self, task):
         """
@@ -80,7 +82,9 @@ class _Agent(_Logger):
         self.team.zeroRegisters()
 
     def trace(self, _sequence):
-        assert _sequence != [], f'{_sequence} should not non list'
+        # assert _sequence != [], f'{_sequence} should not non list'
+        if _sequence == []: return
+
         self.team.sequence = _sequence
 
     @property
@@ -99,21 +103,21 @@ class Agent1(_Agent):
             cls._instance = True
         return super().__new__(cls, *args, **kwargs)
 
+    @property
+    def id(self):
+        return self.team.id
+
 class Agent1_1(Agent1):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
         return super().__new__(cls, *args, **kwargs)
 
-    
-    def reward(self, score=None, task='task'):
-        if not self.team.outcomes.get(task):
-            self.team.outcomes[task]=0.
-
-        score = score if score else self.score
-        self.info(f'agent_id:{self.id}, reward:{self.score}')
-        self.team[task] += sigmoid(score)
-        # self.team[task] = tanh(self.team[task])
+class Agent1_2(Agent1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+        return super().__new__(cls, *args, **kwargs)
 
 class Agent1_3(Agent1):
     def __new__(cls, *args, **kwargs):
@@ -121,9 +125,6 @@ class Agent1_3(Agent1):
             cls._instance = True
         return super().__new__(cls, *args, **kwargs)
 
-    @property
-    def id(self):
-        return self.team.id
 
 class Agent2(_Agent):
     def __new__(cls, *args, **kwargs):

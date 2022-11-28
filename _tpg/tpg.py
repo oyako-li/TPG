@@ -11,17 +11,13 @@ import multiprocessing as mp
 import tkinter as tk
 import cv2
 import numpy as np
-import logging
 import sys
 import gym
 import signal
 import time
-import re
 
 class _TPG(_Logger):
     Trainer=None
-    # _instance=None
-    # logger = None
 
     def __new__(cls, *args, **kwargs):
         if not cls._instance:
@@ -109,14 +105,12 @@ class _TPG(_Logger):
         self.state = self.env.reset()
         self.setActions(self.env.action_space.n)
 
-
-
     def getAgents(self):
         return self.trainer.getAgents()
     
     def setAgents(self, task=None):
         self.scores = {}
-        self.agents = self.trainer.getAgents(task= task if task else self.task)
+        self.agents = self.trainer.getAgents(task = task if task else self.task)
 
     def flush_render(self, step=0, name='', info=''):
         self.ax1.imshow(self.env.render(mode='rgb_array'))
@@ -169,8 +163,10 @@ class _TPG(_Logger):
             for i in range(self.frames): # run episodes that last 500 frames
                 act = agent.act(state)
                 if not act in range(self.env.action_space.n): continue
-                self.state, reward, isDone, debug = self.env.step(act)
+                state, reward, isDone, debug = self.env.step(act)
                 score += reward # accumulate reward in score
+                self.info(f'state:{state}')
+
 
                 if isDone: break # end early if losing state
 
@@ -188,7 +184,6 @@ class _TPG(_Logger):
             agent.reward(task=self.task)
             self.scores[agent.id]=agent.score
         
-        # TODO: マルチタスク学習に対応できるように改良。
         self.trainer.evolve(list(self.tasks))
 
         self.info(f'generation:{self.gen}, min:{min(self.scores.values())}, max:{max(self.scores.values())}, ave:{sum(self.scores.values())/len(self.scores)}')
@@ -231,7 +226,7 @@ class _TPG(_Logger):
             self.dir = _dir
         if _load:
             self.load = _load
-            self.set_level(logging.DEBUG)
+            # self.set_level(logging.DEBUG)
         if _generations:
             self.generations=_generations
         if _episodes:
@@ -267,7 +262,6 @@ class MHTPG(_TPG):
             from _tpg.trainer import Trainer1
             cls._instance = True
             cls.Trainer = Trainer1
-            cls.Trainer._logger=cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -285,9 +279,6 @@ class ActorTPG(MHTPG):
 
     def __getitem__(self, __code):
         return self.actions[__code]
-    
-    def setActions(self, actions):
-        self.actions = self.trainer.setActions(actions)
 
     def setAgents(self, task='task'):
         self.agents = self.trainer.getAgents(task=task)
@@ -329,10 +320,11 @@ class ActorTPG(MHTPG):
 
             agent.score += score # store score
 
-class Actor(ActorTPG):
+class Actor(_TPG):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.trainer import Trainer1_2
+            
             cls._instance = True
             cls.Trainer = Trainer1_2
 
@@ -341,9 +333,9 @@ class Actor(ActorTPG):
     def __getitem__(self, __code):
         return self.actions[__code]
 
-    def __call__(self, actionSequence):
-        return self.__class__.Trainer.ActionObject(actionSequence)
-        # return super().__call__(*args, **kwds)
+    # def __call__(self, actionSequence):
+    #     return self.__class__.Trainer.ActionObject(actionSequence)
+    #     # return super().__call__(*args, **kwds)
 
     def setAgents(self, task=None):
         self.agents = self.trainer.getAgents(task=task if task else self.task)
@@ -358,41 +350,39 @@ class Actor(ActorTPG):
 
     def activator(self, acts):
         assert isinstance(acts, np.ndarray), f'{acts} cant fetch activation'
-        frame=0
-        score=0
-        sequence = []
+        if acts.size < 1 :
+            self.frame = self.frames
+            return
+        try:
+            # if acts == (np.array([], dtype=np.float64)): raise Exception('action is Null')
+            # self.info(f'acts_size:{acts.size}')
+            if isinstance(self.env.action_space, Box):
+                shape = self.env.action_space.shape
+                acts = np.split(acts, np.prod(shape, dtype=np.int8))
+                for action in acts:
+                    # self.info(f'act:{action}')
+                    if self.frame>self.frames: break
+                    self.frame+=1
+                    self.state, reward, isDone, debug = self.env.step(action.reshape(shape))
+                    self.score+=reward
+                    self.sequence+=[action]
+                    if isDone: self.frame=self.frames
+            elif isinstance(self.env.action_space, Discrete):
+                for action in acts:
+                    if self.frame>self.frames: break
+                    # self.info(f'act:{action}')
+                    self.state, reward, isDone, debug = self.env.step(int(action))
+                    self.frame+=1
+                    self.score+=reward
+                    self.sequence+=[action]
+                    if isDone: self.frame=self.frames
+            else:
+                print(self.env.action_space)
+                raise 'EnvExpectation'
+            self.info(f'frame:{self.frame}, acts:{acts}')
+        except Exception as e:
+            breakpoint(e)
 
-        if isinstance(self.env.action_space, Box):
-            shape = self.env.action_space.shape
-            actions = np.split(acts, np.prod(shape, dtype=np.int8))
-            # actions = acts[:].resize(shape)
-            self.debug(f'frame:{frame}, Box:{acts}')
-            for action in actions:
-                if frame>self.frames: break
-                frame+=1
-                try:
-                    state, reward, isDone, debug = self.env.step(action.reshape(shape))
-                    score+=reward
-                    sequence+=[action]
-                    if isDone: frame=self.frames
-                except Exception as e: print(e)
-        elif isinstance(self.env.action_space, Discrete):
-            self.debug(f'frame:{frame}, Discrete:{acts}')
-            for action in acts:
-                if frame>self.frames: break
-                frame+=1
-                try:
-                    state, reward, isDone, debug = self.env.step(int(action))
-                    score+=reward
-                    sequence+=[action]
-                    if isDone: frame=self.frames
-
-                except Exception as e: print(e)
-        else:
-            print(self.env.action_space)
-            raise 'EnvExpectation'
-        return frame, score, sequence
-        # return [ act for act in acts if act in range(self.env.action_space.n)]
 
     def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None):
         self.trainer.evolve(tasks=tasks)
@@ -401,23 +391,17 @@ class Actor(ActorTPG):
         assert self.trainer is not None and self.env is not None, 'You should set Actioins'
         
         for agent in self.agents: # to multi-proccess
-            state = self.env.reset() # get initial state and prep environment
-            score = 0
-            frame = 0
-            actions = []
-            while frame<self.frames: # run episodes that last 500 frames
-                acts = agent.act(state.flatten()).action
-                _frame, _reward, _sequences = self.activator(acts[~np.isnan(acts)])
-                frame+=_frame
-                score+=_reward
-                actions+=_sequences
-                self.debug(f'agent_id:{agent.id}, frame:{frame}, actions:{actions}')
+            self.state = self.env.reset() # get initial state and prep environment
+            self.score = 0
+            self.frame = 0
+            self.sequence = []
+            while self.frame<self.frames: # run episodes that last 500 frames
+                acts = agent.act(self.state.flatten()).action
 
-                if frame >= self.frames: break
+                self.activator(acts)
 
-            # self.actionReward[agent.id] += score # store score
-            agent.trace(actions)
-            agent.score+=score
+            agent.trace(self.sequence)
+            agent.score+=self.score
 
     def generation(self):
         self.setAgents()
@@ -431,22 +415,28 @@ class Actor(ActorTPG):
         
         self.evolve(list(self.tasks))
         self.info(f'generation:{self.gen}, min:{min(self.scores.values())}, max:{max(self.scores.values())}, ave:{sum(self.scores.values())/len(self.scores)}')
-
+        self.info(f'actions:{self.actions}')
         self.gen+=1
 
     def story(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
         self.prologue(_trainer=_trainer, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load, _dir=_dir)
 
 
-        for _ in range(_generations): # generation loop
+        for _ in range(self.generations): # generation loop
             self.generation()
 
         
         return self.epilogue()
 
-    @property
-    def NaN(self):
-        return self.trainer.ActionObject.NaN
+
+class Actor1(Actor):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.trainer import Trainer1_2_1
+            cls._instance = True
+            cls.Trainer = Trainer1_2_1
+
+        return super().__new__(cls, *args, **kwargs)
 
 class Opelator(Actor):
     def __new__(cls, *args, **kwargs):

@@ -11,8 +11,6 @@ action to take in the graph.
 
 class _Team(_Logger):
     Learner = None
-    # _instance = None
-    # _logger = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -175,7 +173,7 @@ class _Team(_Logger):
                     pActAtom0 = mutateParams['pActAtom']
 
                 #print("Team {} creating learner".format(self.id))
-                # Create a new new learner 
+                # Create a new learner 
                 newLearner = self.__class__.Learner(
                     program=learner.program, 
                     actionObj=learner.actionObj, 
@@ -397,6 +395,7 @@ class Team1(_Team):
 
         return super().__new__(cls, *args, **kwargs)
 
+
 class Team1_1(Team1):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -415,10 +414,29 @@ class Team1_2(Team1):
 
         return super().__new__(cls, *args, **kwargs)
 
+    def __init__(self,
+            learners:list = [],
+            inLearners:list = [],
+            outcomes:dict = {'task':0.},
+            fitness:float = 0.0,
+            extinction:float = 1.0,
+            initParams:int or dict=0
+        ): 
+        self.learners = list(learners)
+        self.inLearners = list(inLearners) # ids of learners referencing this team
+        self.outcomes =  dict(outcomes)# scores at various tasks
+        self._id = uuid.uuid4()
+        self.fitness = fitness
+        self.sequence = []
+        self.extinction=extinction
+        if isinstance(initParams, dict): self.genCreate = initParams["generation"]
+        elif isinstance(initParams, int): self.genCreate = initParams
+
     def act(self, state, visited, actVars=None, path_trace=None): 
         # If we've already visited me, throw an exception
         assert not self.id in visited, f"Already visited team {self.id}"
 
+        self.extinction*=0.9
 
         # Add this team's id to the list of visited ids
         visited.append(self.id) 
@@ -473,10 +491,127 @@ class Team1_2(Team1):
 
         return top_learner.getAction(state, visited=visited, actVars=actVars, path_trace=path_trace)
 
+    def addLearner(self, learner): 
+        self.learners.append(learner)
+        learner.inTeams.append(self.id) # Add this team's id to the list of teams that reference the learner
+
+        return True
+
     def addSequence(self):
+        if self.sequence ==[]: return
         sequence = abstract(self.sequence)
         self.addLearner(self.__class__.Learner(memoryObj=sequence))
 
+    def removeLearner(self, learner): 
+        # only delete if actually in this team
+        '''
+        TODO log the attempt to remove a learner that doesn't appear in this team
+        '''
+        if learner not in self.learners:
+            raise Exception("Attempted to remove a learner ({}) not referenced by team {}".format(
+            learner.id, self.id
+        ))
+
+        # Find the learner to remove
+        to_remove = [cursor for  cursor in self.learners if cursor == learner]
+        if len(to_remove) != 1:
+            raise Exception("Duplicate learner detected during team.removeLearner. {} duplicates".format(len(to_remove)))
+        to_remove = to_remove[0]
+
+        # Build a new list of learners containing only learners that are not the learner
+        self.learners = [cursor for cursor in self.learners if cursor != learner ]
+
+        # Remove our id from the learner's inTeams
+        # NOTE: Have to do this after removing the learner otherwise, removal will fail 
+        # since the learner's inTeams will not match 
+        to_remove.inTeams.remove(self.id)
+
+    def removeLearners(self): 
+        for learner in self.learners:
+            learner.inTeams.remove(self.id)
+
+        del self.learners[:]
+
+    def mutate(self, mutateParams, allLearners, teams):
+        '''
+        With rampant mutations every mutateParams["rampantGen"] generations we do X extra
+        iterations of mutation. Where X is a random number between mutateParams["rampantMin"] 
+        and mutateParams["rampantMax"].
+        '''
+        # Throw an error if rampantMin is undefined but 
+
+        # Throw an error if rampantMin > rampant Max
+        if mutateParams['rampantGen'] != 0 and mutateParams['rampantMin'] > mutateParams['rampantMax']:
+            raise Exception("Min rampant iterations is greater than max rampant iterations!", mutateParams)
+        
+        if (mutateParams["rampantGen"] > 0 and # The rapantGen cannot be 0, as x mod 0 is undefined
+            mutateParams["generation"] % mutateParams["rampantGen"] == 0 and # Determine if this is a rampant generation
+            mutateParams["generation"] > mutateParams["rampantGen"]  # Rampant generations cannot occur before generation passes rampantGen
+            ): 
+            rampantReps = random.randrange(mutateParams["rampantMin"], mutateParams["rampantMax"]) if mutateParams['rampantMin'] < mutateParams['rampantMax'] else mutateParams['rampantMin']
+        else:
+            rampantReps = 1
+
+        # increase diversity by repeating mutations
+
+        mutation_delta = {}
+        new_learners = []
+
+        for i in range(rampantReps):
+            #print("i/rampant reps:  {}/{} ".format(i, rampantReps))
+            # delete some learners
+            '''
+            TODO log mutation deltas...
+            '''
+            deleted_learners = self._mutation_delete(mutateParams["pLrnDel"])
+
+            # Create a selection pool from which to add learners to this team
+            
+            # Filter out learners that already belong to this team
+            selection_pool = list(filter(lambda x: x not in self.learners, allLearners))
+            
+            # Filter out learners that point to this team
+            selection_pool = list(filter(lambda x: x.id not in self.inLearners, selection_pool))
+
+            # Filter out learners we just deleted
+            selection_pool = list(filter(lambda x: x not in deleted_learners, selection_pool))
+            
+            added_learners = self._mutation_add(mutateParams["pLrnAdd"], mutateParams["maxTeamSize"], selection_pool)
+
+            # give chance to mutate all learners
+            mutated_learners, mutation_added_learners = self._mutation_mutate(mutateParams["pLrnMut"], mutateParams, teams)
+            new_learners += mutation_added_learners
+
+            # Compile mutation_delta for this iteration
+            mutation_delta[i] = {} 
+            mutation_delta[i]['deleted_learners'] = deleted_learners
+            mutation_delta[i]['added_learners'] = added_learners
+            mutation_delta[i]['mutated_learners'] = mutated_learners
+
+        for cursor in new_learners:
+            if cursor in self.learners:
+                new_learners.remove(cursor)
+
+        for cursor in new_learners:
+            if len(cursor.inTeams) == 0 and not cursor.isActionAtomic():
+                cursor.actionObj.teamAction.inLearners.remove(cursor.id)
+
+        # return the number of iterations of mutation
+        return rampantReps, mutation_delta, new_learners
+
+    @property
+    def id(self):
+        return str(self._id)
+
+class Team1_2_1(Team1_2):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.learner import Learner1_2_1
+            cls._instance = True
+            cls.Learner = Learner1_2_1
+
+        return super().__new__(cls, *args, **kwargs)
+     
 class Team1_3(Team1):
     """ birth child to rootteam with preference
     

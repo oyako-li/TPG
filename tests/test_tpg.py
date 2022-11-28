@@ -11,6 +11,7 @@ class TPGTest(unittest.TestCase):
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
 
+    @unittest.skip('wrapped initiation')
     def test_init_(self):
         '''test team object creation'''
         tpg = self.TPG()
@@ -19,22 +20,6 @@ class TPGTest(unittest.TestCase):
         # from _tpg.memory_object import _Memory
         self.assertEqual(tpg.trainer.ActionObject,_ActionObject)
         self.assertIsInstance(tpg.trainer.ActionObject.actions, list)
-
-    @unittest.skip('next test case')
-    def test_episode(self):
-        '''test episode'''
-        tpg = self.TPG()
-        tpg.setActions(self.action)
-        tpg.setEnv(self.env)
-        _scores = {}
-        _task = self.env.spec.id
-        for _ in range(1):     
-            _scores = tpg.episode()
-        for i in _scores:               
-            _scores[i]/=1
-        for agent in tpg.trainer.getAgents(): 
-            agent.reward(_scores[str(agent.team.id)],task=_task)
-        tpg.trainer.evolve([_task])
         # agents = tpg.getAgents()
 
     @unittest.skip('next test case')
@@ -46,12 +31,12 @@ class TPGTest(unittest.TestCase):
         score = tpg.generation()
         self.assertIsNotNone(score)
 
-    @unittest.skip('next test case')
+    # @unittest.skip('next test case')
     def test_story(self):
         '''test story'''
         tpg = self.TPG()
         tpg.setEnv(self.env)
-        title = tpg.story(_dir='test/', _load=True)
+        title = tpg.story(_dir='test/', _load=True, _generations=500)
         self.assertIsNotNone(title)
         # log_show(f'{filename}')
 
@@ -61,15 +46,16 @@ class TPGTest(unittest.TestCase):
         tpg.setEnv(self.env)
         tpg.setup_logger(__name__,test=True)
 
+    @unittest.skip('test single task')
     def test_muluti_task_learning(self):
-        """ TODO: マルチタスク学習に対応できるように、改良。
+        """ マルチタスク学習に対応できるように、改良。
         """
         tasks = random.choices([
             i.id for i in gym.envs.registry.all()
         ],k=10)
 
-        with open(f'log/multi/{datetime.now().strftime("%Y%m%d%H%M%S")}.txt', 'w') as multi:
-            for task in tasks: multi.write(f'{tasks}')
+        with open(f'log/multi/{datetime.now().strftime("%Y%m%d%H%M%S")}-tasks.txt', 'w') as multi:
+            for task in tasks: multi.write(f'{task}\n')
         
         tpg = self.TPG()
         tpg.multi(tasks, _generations=10, _load=True)
@@ -84,16 +70,6 @@ class MHTPGTest(TPGTest):
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
 
-    # @unittest.skip('wrapper test')
-    def test_init_(self):
-        '''test init'''
-        from _tpg.tpg import MHTPG
-        self.assertEqual(self.TPG, MHTPG)
-
-        from _tpg.trainer import Trainer1
-        tpg = self.TPG()
-        self.assertIsInstance(tpg.trainer, Trainer1)
-
 class MHPointTest(MHTPGTest):
 
     def setUp(self) -> None:
@@ -103,22 +79,13 @@ class MHPointTest(MHTPGTest):
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
 
-class ActorPointTest(MHTPGTest):
+class ActorTPGPointTest(MHTPGTest):
     def setUp(self) -> None:
         from _tpg.tpg import ActorTPG
         self.TPG = ActorTPG
         self.task = "Centipede-v4"
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
-
-    def test_init_(self):
-        '''test init'''
-        from _tpg.tpg import ActorTPG
-        self.assertEqual(self.TPG, ActorTPG)
-
-        from _tpg.trainer import Trainer1_1
-        tpg = self.TPG()
-        self.assertIsInstance(tpg.trainer, Trainer1_1)
 
     def test_tpg_setpu(self):
         """tpg setup"""
@@ -148,16 +115,7 @@ class ActorPointTest(MHTPGTest):
         
         tpg.evolve([_task], _actionSequence=actionSequence, _actionReward=actionReward)
 
-    @unittest.skip('next test case')
-    def test_story(self):
-        '''test story'''
-        tpg = self.TPG()
-        tpg.setEnv(self.env)
-        filename = tpg.story(_dir='test/')
-        self.assertIsNotNone(filename)
-        log_show(filename)
-
-class ActorBiasTest(ActorPointTest):
+class ActorTPGBiasTest(ActorTPGPointTest):
     def setUp(self) -> None:
         from _tpg.tpg import ActorTPG
         self.TPG = ActorTPG
@@ -165,26 +123,15 @@ class ActorBiasTest(ActorPointTest):
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
 
-class Actor1PointTest(ActorPointTest):
+class ActorPointTest(ActorTPGPointTest):
     def setUp(self) -> None:
         from _tpg.tpg import Actor
         self.TPG = Actor
         self.task = "Centipede-v4"
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
-
-    def test_init_(self):
-        '''test init'''
-        from _tpg.tpg import Actor
-        self.assertEqual(self.TPG, Actor)
-
-        from _tpg.trainer import Trainer1_2
-        from _tpg.memory_object import Fragment1_1
-        tpg = self.TPG()
-        self.assertIsInstance(tpg.trainer, Trainer1_2)
-        self.assertEqual(tpg.trainer.ActionObject.actions.Fragment, Fragment1_1)
  
-class Actor1BiasTest(ActorPointTest):
+class ActorBiasTest(ActorTPGBiasTest):
     def setUp(self) -> None:
         from _tpg.tpg import Actor
         self.TPG = Actor
@@ -192,16 +139,21 @@ class Actor1BiasTest(ActorPointTest):
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
 
-    def test_init_(self):
-        '''test init'''
-        from _tpg.tpg import Actor
-        self.assertEqual(self.TPG, Actor)
+class Actor1PointTest(ActorPointTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import Actor1
+        self.TPG = Actor1
+        self.task = "Centipede-v4"
+        self.env = gym.make(self.task)
+        self.action = self.env.action_space.n
 
-        from _tpg.trainer import Trainer1_2
-        from _tpg.memory_object import Fragment3
-        tpg = self.TPG()
-        self.assertIsInstance(tpg.trainer, Trainer1_2)
-        self.assertEqual(tpg.trainer.ActionObject.actions.Fragment, Fragment3)
+class Actor1BiasTest(ActorBiasTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import Actor1
+        self.TPG = Actor1
+        self.task = "CartPole-v1"
+        self.env = gym.make(self.task)
+        self.action = self.env.action_space.n
 
 class EmulatorTPGTest(unittest.TestCase):
     def setUp(self) -> None:

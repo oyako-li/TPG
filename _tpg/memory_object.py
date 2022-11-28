@@ -1285,6 +1285,20 @@ class Fragment3(Fragment1_1):
     def id(self):
         return str(self._id)
 
+class Fragment3_1(Fragment3):
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance=True
+        return super().__new__(cls, *args, **kwargs)
+    
+    def __init__(self, _sequence:list or np.ndarray=[], _weight=1.):
+        assert isinstance(_sequence, list) or isinstance(_sequence, np.ndarray), f'{_sequence} is not list'
+        # sequence = [_head]+list(_sequence)
+        self.fragment = np.array(_sequence)
+        self.weight = _weight
+        self._id = uuid4()
+
 class _Memory(_Logger):
     """states memory"""
     Fragment = None
@@ -1555,6 +1569,35 @@ class Memory3(Memory1_2):
     @property
     def weights(self):
         return [fragment.weight for fragment in self.values()]
+
+class Memory3_1(Memory3):
+    """ Fragment object management
+
+        Attribute:
+            memories: fragments
+            nan: Fragment([nan])
+    """
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            cls.Fragment = Fragment3_1
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self, primitive=[]):
+        assert isinstance(primitive, list), f'primitive is not list'
+        fragment = self.__class__.Fragment(_weight=0.)
+        self.memories:dict={fragment._id:fragment} # uuid:flagment
+        self.nan = fragment
+        for pri in primitive:
+            fragment = self.__class__.Fragment([pri], _weight=0.)
+            self.memories[fragment._id]=fragment
+
+    def append(self, _sequence, _weight=1.):
+        assert isinstance(_sequence, list) or isinstance(_sequence, np.ndarray), f'{_sequence} is not list'
+        fragment = self.__class__.Fragment(_sequence, _weight=_weight)
+        self.memories[fragment._id] = fragment
+        return fragment._id
 
 class _MemoryObject(_Logger):
     Team = None
@@ -2778,6 +2821,17 @@ class ActionObject2(ActionObject1):
     @property
     def NaN(cls):
         return cls(cls._nan)
+
+class ActionObject3(ActionObject2):
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.team import Team1_2_1
+            cls._instance = True
+            cls.Team = Team1_2_1
+            cls.actions = Memory3_1()
+
+        return super().__new__(cls, *args, **kwargs)
 
 class Qualia(ActionObject2):
     """ Memory object management
