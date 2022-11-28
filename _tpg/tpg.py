@@ -1,6 +1,6 @@
 from datetime import datetime
 from math import tanh
-from _tpg.utils import breakpoint, log_show, _Logger
+from _tpg.utils import breakpoint, _Logger
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -188,7 +188,7 @@ class _TPG(_Logger):
         
         self.trainer.evolve(list(self.tasks))
 
-        self.info(f'generation:{self.gen}, min:{min(self.scores.values())}, max:{max(self.scores.values())}, ave:{sum(self.scores.values())/len(self.scores)}')
+        self.info(f'task:{self.task}, generation:{self.gen}, min:{min(self.scores.values())}, max:{max(self.scores.values())}, ave:{sum(self.scores.values())/len(self.scores)}')
         
         self.gen+=1
     
@@ -238,7 +238,7 @@ class _TPG(_Logger):
         if _show:
             self.show = _show
 
-        self.setup_logger(__name__, f'{self.dir+self.task}', test=self.test, load=self.load)
+        self.setup_logger(__name__, test=self.test, load=self.load)
 
         def interruption(signum, frame):
             self.epilogue()
@@ -248,11 +248,11 @@ class _TPG(_Logger):
         signal.signal(signal.SIGINT, interruption)
 
     def epilogue(self):
-        title = f'{self.dir+self.task}/{self.filename}'
+        # title = f'{self.filename}'
         self.env.close()
-        log_show(title)
+        self.log_show()
 
-        return title
+        return f'log/{self.dir}{self.filename}'
 
     @property
     def task(self):
@@ -416,7 +416,7 @@ class Actor(_TPG):
             agent.reward()
         
         self.evolve(list(self.tasks))
-        self.info(f'generation:{self.gen}, min:{min(self.scores.values())}, max:{max(self.scores.values())}, ave:{sum(self.scores.values())/len(self.scores)}')
+        self.info(f'task:{self.task}, generation:{self.gen}, min:{min(self.scores.values())}, max:{max(self.scores.values())}, ave:{sum(self.scores.values())/len(self.scores)}')
         self.info(f'actions:{self.actions}')
         self.gen+=1
 

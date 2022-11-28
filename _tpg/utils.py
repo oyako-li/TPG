@@ -25,27 +25,27 @@ class _Logger:
 
     @classmethod
     def info(cls, *args, **kwargs):
-        if cls._logger: cls._logger.info(*args, extra={'className': cls.__name__, 'taskName': cls.taskName if cls.taskName else ''}, **kwargs)
+        if cls._logger: cls._logger.info(*args, extra={'className': cls.__name__ }, **kwargs)
 
     @classmethod
     def debug(cls, *args, **kwargs):
-        if cls._logger: cls._logger.debug(*args, extra={'className': cls.__name__, 'taskName': cls.taskName if cls.taskName else ''}, **kwargs)
+        if cls._logger: cls._logger.debug(*args, extra={'className': cls.__name__ }, **kwargs)
 
     @classmethod
     def warning(cls, *args, **kwargs):
-        if cls._logger: cls._logger.warning(*args, extra={'className': cls.__name__, 'taskName': cls.taskName if cls.taskName else ''}, **kwargs)
+        if cls._logger: cls._logger.warning(*args, extra={'className': cls.__name__ }, **kwargs)
 
     @classmethod
     def error(cls, *args, **kwargs):
-        if cls._logger: cls._logger.error(*args, extra={'className': cls.__name__, 'taskName': cls.taskName if cls.taskName else ''}, **kwargs)
+        if cls._logger: cls._logger.error(*args, extra={'className': cls.__name__ }, **kwargs)
 
     @classmethod
     def critical(cls, *args, **kwargs):
-        if cls._logger: cls._logger.critical(*args, extra={'className': cls.__name__, 'taskName': cls.taskName if cls.taskName else ''}, **kwargs)
+        if cls._logger: cls._logger.critical(*args, extra={'className': cls.__name__ }, **kwargs)
     
     @classmethod
     def log(cls, *args, **kwargs):
-        if cls._logger: cls._logger.log(*args, extra={'className': cls.__name__, 'taskName': cls.taskName if cls.taskName else ''}, **kwargs)
+        if cls._logger: cls._logger.log(*args, extra={'className': cls.__name__ }, **kwargs)
 
     @classmethod
     def set_logger(cls, _logger):
@@ -61,6 +61,10 @@ class _Logger:
             for clsObj in [cls.__dict__[i] for i in cls.__dict__.keys() if inspect.isclass(cls.__dict__[i]) and re.match(r'^[A-Z]', i)]:
                 clsObj.unset_logger()
 
+    @property
+    def task(self):
+        return ''
+
     def add_handrer(self, _logfile, _test):
         print(f'{_logfile} {self.filename}')
         time.sleep(0.1)
@@ -74,7 +78,7 @@ class _Logger:
                     os.makedirs(f'log/{_logfile}')
 
             _fh.setLevel(logging.INFO)
-            _fh_formatter = logging.Formatter('%(asctime)s, %(className)s.%(taskName)s, %(message)s')
+            _fh_formatter = logging.Formatter('%(asctime)s, %(className)s, %(message)s')
             _fh.setFormatter(_fh_formatter)
             self.__class__._logger.addHandler(_fh)
         
@@ -93,18 +97,18 @@ class _Logger:
         
 
 
-    def setup_logger(self, _name, _logfile='LOGFILENAME', test=False, load=True):
+    def setup_logger(self, _name, test=False, load=True):
 
         # self.remove_handrer()
-        self.filename = datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
         if self.__class__._logger is None :
+            self.filename = datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
             _logger = logging.getLogger(_name)
             _logger.setLevel(logging.DEBUG)
             self.set_logger(_logger)
             if load:
                 _ch = logging.StreamHandler()
                 _ch.setLevel(logging.DEBUG)
-                _ch_formatter = logging.Formatter('[{}][%(className)s.%(taskName)s], %(message)s'.format(self.filename))
+                _ch_formatter = logging.Formatter('[{}][%(className)s], %(message)s'.format(self.filename))
                 _ch.setFormatter(_ch_formatter)
 
                 # add the handlers to the logger
@@ -116,10 +120,10 @@ class _Logger:
                     _fh = logging.FileHandler(f'log/{self.dir}{self.filename}.log')
                     break
                 except FileNotFoundError:
-                    os.makedirs(f'log/{_logfile}')
+                    os.makedirs(f'log/{self.dir}')
 
             _fh.setLevel(logging.INFO)
-            _fh_formatter = logging.Formatter('%(asctime)s, %(className)s.%(taskName)s, %(message)s')
+            _fh_formatter = logging.Formatter('%(asctime)s, %(className)s, %(message)s')
             _fh.setFormatter(_fh_formatter)
             self.__class__._logger.addHandler(_fh)
 
@@ -130,95 +134,97 @@ class _Logger:
             for handler in self.__class__._logger.handlers:
                 handler.setLevel(_level)
 
-def log_load(_filename, _renge, _step=5):
-    l =[]
+    def log_load(self, _renge, _step=5):
+        l =[]
 
-    with open(f"log/{_filename}.log", "r") as file:
-        lines = file.readlines()
-        for line in lines:
-            results = line.replace('\n','').split(', ')[2:]
-            if 'generation:' in results[0]:
-                l.append([float(re.split(':')[1]) for re in results[1:]])
-                end = int(results[0].split(':')[1])
+        with open(f"log/{self.dir}{self.filename}.log", "r") as file:
+            lines = file.readlines()
+            for line in lines:
+                results = line.replace('\n','').split(', ')[2:]
+                # breakpoint(results)
+                if f'{self.task}' in results[0] and 'generation:' in results[1]:
+                    l.append([float(re.split(':')[1]) for re in results[2:]])
+                    end = int(results[1].split(':')[1])
+                    print(end)
 
-    __min = []
-    __mi = 0.
-    __max = []
-    __ma = 0.
-    __ave = []
-    __av = 0.
-    for i, item in enumerate(l):
-        _min, _max, _ave = item
-        __mi+=_min
-        __ma+=_max
-        __av+=_ave
-        # if i==0: continue
-        if i%_step==_step-1:
-            __min.append(__mi/float(_step))
-            __mi=0.
-            __max.append(__ma/float(_step))
-            __ma=0.
-            __ave.append(__av/float(_step))
-            __av=0.
-        if i == _renge: break
-    mi = np.array(__min)
-    ma = np.array(__max)
-    av = np.array(__ave)
-    
-    return mi, ma, av, end
+        __min = []
+        __mi = 0.
+        __max = []
+        __ma = 0.
+        __ave = []
+        __av = 0.
+        for i, item in enumerate(l):
+            _min, _max, _ave = item
+            __mi+=_min
+            __ma+=_max
+            __av+=_ave
+            # if i==0: continue
+            if i%_step==_step-1:
+                __min.append(__mi/float(_step))
+                __mi=0.
+                __max.append(__ma/float(_step))
+                __ma=0.
+                __ave.append(__av/float(_step))
+                __av=0.
+            if i == _renge: break
+        mi = np.array(__min)
+        ma = np.array(__max)
+        av = np.array(__ave)
+        
+        return mi, ma, av, end
 
-def log_show(filename, renge=100, step=5):
-    mi, ma, av, end = log_load(filename, renge, step)
-    ge = np.arange(0, (end//step)*step, step)
-    # Figure instance
-    fig = plt.Figure()
+    def log_show(self, renge=100, step=5):
+        mi, ma, av, end = self.log_load(renge, step)
+        ge = np.arange((end-mi.size*step), (end//step)*step, step)
+        # Figure instance
+        fig = plt.Figure()
 
-    ax1 = fig.add_subplot(111)
-    ax1.plot(ge, mi, label='min')
-    ax1.plot(ge, ma, label='max')
-    ax1.plot(ge, av, label='ave')
-    # ax1.set_title(f'{filename}')
-    ax1.set_ylabel('Score')
-    ax1.set_xlabel('Generation')
-    ax1.legend()
+        ax1 = fig.add_subplot(111)
+        ax1.plot(ge, mi, label='min')
+        ax1.plot(ge, ma, label='max')
+        ax1.plot(ge, av, label='ave')
+        # ax1.set_title(f'{filename}')
+        ax1.set_ylabel('Score')
+        ax1.set_xlabel('Generation')
+        ax1.legend()
 
-    # # ax2
-    # ax2 = fig.add_subplot(222)
-    # ax2.plot(ge, ma)
-    # ax2.set_title('Scatter plot')
+        # # ax2
+        # ax2 = fig.add_subplot(222)
+        # ax2.plot(ge, ma)
+        # ax2.set_title('Scatter plot')
 
-    # # ax3
-    # ax3 = fig.add_subplot(223)
-    # ax3.plot(ge, av)
-    # ax3.set_ylabel('Damped oscillation')
-    # ax3.set_xlabel('time (s)')
-    # When windows is closed.
+        # # ax3
+        # ax3 = fig.add_subplot(223)
+        # ax3.plot(ge, av)
+        # ax3.set_ylabel('Damped oscillation')
+        # ax3.set_xlabel('time (s)')
+        # When windows is closed.
 
-    def _destroyWindow():
-        fig.savefig(f'log/{filename}.png')
-        root.quit()
-        root.destroy()
+        def _destroyWindow():
+            fig.savefig(f'log/{self.dir}{self.filename}.png')
+            root.quit()
+            root.destroy()
 
 
 
-    # Tkinter Class
+        # Tkinter Class
 
-    root = tk.Tk()
-    root.withdraw()
-    root.protocol('WM_DELETE_WINDOW', _destroyWindow)  # When you close the tkinter window.
+        root = tk.Tk()
+        root.withdraw()
+        root.protocol('WM_DELETE_WINDOW', _destroyWindow)  # When you close the tkinter window.
 
-    # Canvas
-    canvas = FigureCanvasTkAgg(fig, master=root)  # Generate canvas instance, Embedding fig in root
-    canvas.draw()
-    canvas.get_tk_widget().pack()
-    #canvas._tkcanvas.pack()
+        # Canvas
+        canvas = FigureCanvasTkAgg(fig, master=root)  # Generate canvas instance, Embedding fig in root
+        canvas.draw()
+        canvas.get_tk_widget().pack()
+        #canvas._tkcanvas.pack()
 
-    # root
-    root.update()
-    root.deiconify()
-    root.mainloop()
-    
-    return mi, ma, av
+        # root
+        root.update()
+        root.deiconify()
+        # root.mainloop()
+        
+        return mi, ma, av
 
 def log_load2(_filename, _renge, _step=5):
     l =[]
