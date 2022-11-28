@@ -53,7 +53,7 @@ class TPGTest(unittest.TestCase):
         tasks=[]
         if os.path.exists('./tasks.txt'):
             with open('./tasks.txt', 'r') as task_file:
-                tasks = task_file.readlines()
+                tasks = task_file.read().splitlines()
                 print(tasks, type(tasks))
         else:
             tasks = random.choices([
@@ -77,7 +77,7 @@ class TPGTest(unittest.TestCase):
         tasks=[]
         if os.path.exists('./tasks.txt'):
             with open('./tasks.txt', 'r') as task_file:
-                tasks = task_file.readlines()
+                tasks = task_file.read().splitlines()
                 print(tasks, type(tasks))
         else:
             tasks = random.choices([
