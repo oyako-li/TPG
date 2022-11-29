@@ -251,12 +251,19 @@ class _TPG(_Logger):
         # title = f'{self.filename}'
         self.env.close()
         self.log_show()
+        self.trainer.save(f'log/{self.dir}{self.today}/{self.filename}')
 
-        return f'log/{self.dir}{self.filename}'
+        return f'log/{self.dir}{self.today}/{self.filename}'
 
     @property
     def task(self):
         return self.env.spec.id
+
+    # @classmethod
+    def load_story(self, _title):
+        _trainer = self.__class__.Trainer.load(_title)
+        self.trainer = _trainer
+        
 
 class MHTPG(_TPG):
     def __new__(cls, *args, **kwargs):

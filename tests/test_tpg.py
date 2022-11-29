@@ -38,6 +38,16 @@ class TPGTest(unittest.TestCase):
         tpg = self.TPG()
         tpg.setEnv(self.env)
         tpg.setup_logger(__name__,test=True)
+    
+    def test_save_load(self):
+
+        tpg = self.TPG()
+        tpg.setEnv(self.env)
+        title = tpg.story(_dir='test/', _load=True, _generations=1)
+        tpg.load_story(title)
+        new_title = tpg.story(_dir='test/', _load=True, _generations=1)
+        print(title, new_title)
+
 
     # @unittest.skip('next test case')
     def test_single(self):
@@ -68,7 +78,7 @@ class TPGTest(unittest.TestCase):
         self.assertEqual(tpg.tasks, set(tasks))
 
     # @unittest.skip('test single task')
-    def test_muluti_task_envs(self):
+    def test_multi_envs(self):
         """ マルチタスク学習に対応できるように、改良。
         """
         tasks=[]

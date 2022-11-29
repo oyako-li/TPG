@@ -534,12 +534,15 @@ class _Trainer(_Logger):
 
     def save(self, fileName):
         self._actions = self.__class__.ActionObject.actions
-        pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
+        with open(f'{fileName}.pickle', 'wb') as _trainer:
+            pickle.dump(self, _trainer)
 
     @classmethod
     def load(cls, fileName:str):
-        trainer = pickle.load(open(f'log/{fileName}.pickle', 'rb'))
-        assert isinstance(trainer, cls), f'this file is not {cls}'
+        trainer = None
+        with open(f'{fileName}.pickle', 'rb') as _trainer:
+            trainer = pickle.load(_trainer)
+            assert isinstance(trainer, cls), f'this file is not {cls}'
         
         trainer.ActionObject.actions = trainer._actions
         return trainer
