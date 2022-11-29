@@ -11,7 +11,7 @@ class TPGTest(unittest.TestCase):
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
 
-    @unittest.skip('wrapped initiation')
+    # @unittest.skip('wrapped initiation')
     def test_init_(self):
         '''test team object creation'''
         tpg = self.TPG()
@@ -22,7 +22,7 @@ class TPGTest(unittest.TestCase):
         self.assertIsInstance(tpg.trainer.ActionObject.actions, list)
         # agents = tpg.getAgents()
 
-    @unittest.skip('next test case')
+    # @unittest.skip('next test case')
     def test_generations(self):
         '''test generation'''
         tpg = self.TPG()
@@ -31,23 +31,24 @@ class TPGTest(unittest.TestCase):
         score = tpg.generation()
         self.assertIsNotNone(score)
 
-    @unittest.skip('next test case')
-    def test_story(self):
-        '''test story'''
-        tpg = self.TPG()
-        tpg.setEnv(self.env)
-        title = tpg.story(_dir='test/', _load=True, _generations=100)
-        self.assertIsNotNone(title)
         # log_show(f'{filename}')
 
-    @unittest.skip('prevent logger reset')
+    # @unittest.skip('prevent logger reset')
     def test_logger(self):
         tpg = self.TPG()
         tpg.setEnv(self.env)
         tpg.setup_logger(__name__,test=True)
 
+    # @unittest.skip('next test case')
+    def test_single(self):
+        '''test story'''
+        tpg = self.TPG()
+        tpg.setEnv(self.env)
+        title = tpg.story(_dir='test/', _load=True, _generations=100)
+        self.assertIsNotNone(title)
+    
     # @unittest.skip('test single task')
-    def test_muluti_task_learning(self):
+    def test_multi(self):
         """ マルチタスク学習に対応できるように、改良。
         """
         tasks=[]
@@ -66,7 +67,7 @@ class TPGTest(unittest.TestCase):
             os.remove('./tasks.txt')
         self.assertEqual(tpg.tasks, set(tasks))
 
-    @unittest.skip('test single task')
+    # @unittest.skip('test single task')
     def test_muluti_task_envs(self):
         """ マルチタスク学習に対応できるように、改良。
         """
