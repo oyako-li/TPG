@@ -63,10 +63,10 @@ class TPGTest(unittest.TestCase):
         """ マルチタスク学習に対応できるように、改良。
         """
         tasks=[]
-        if os.path.exists('./tasks.txt'):
-            with open('./tasks.txt', 'r') as task_file:
-                _tasks = task_file.read().splitlines()
-                tasks = random.shuffle(_tasks)
+        if os.path.exists('./.tasks'):
+            with open('./.tasks', 'r') as task_file:
+                tasks = task_file.read().splitlines()
+                random.shuffle(tasks)
                 print(tasks, type(tasks))
         else:
             raise Exception('tasksDoesntExist')
@@ -87,6 +87,7 @@ class TPGTest(unittest.TestCase):
         if os.path.exists('./tasks.txt'):
             with open('./tasks.txt', 'r') as task_file:
                 tasks = task_file.read().splitlines()
+                random.shuffle(tasks)
                 print(tasks, type(tasks))
         else:
             tasks = random.choices([
@@ -98,6 +99,8 @@ class TPGTest(unittest.TestCase):
         tpg = self.TPG()
         try:
             tpg.multi(tasks, _generations=1, _load=True)
+            with open(f'./.tasks', 'w') as multi:
+                for task in tasks: multi.write(f'{task}\n')
         except Exception as e:
             print(e)
             os.remove('./tasks.txt')
