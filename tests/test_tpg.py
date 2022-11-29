@@ -1,6 +1,7 @@
 import unittest
 import gym
 import datetime
+import random
 from _tpg.utils import *
 
 class TPGTest(unittest.TestCase):
@@ -64,7 +65,8 @@ class TPGTest(unittest.TestCase):
         tasks=[]
         if os.path.exists('./tasks.txt'):
             with open('./tasks.txt', 'r') as task_file:
-                tasks = task_file.read().splitlines()
+                _tasks = task_file.read().splitlines()
+                tasks = random.shuffle(_tasks)
                 print(tasks, type(tasks))
         else:
             raise Exception('tasksDoesntExist')
