@@ -46,7 +46,7 @@ class TPGTest(unittest.TestCase):
         tpg.setEnv(self.env)
         tpg.setup_logger(__name__,test=True)
 
-    # @unittest.skip('test single task')
+    @unittest.skip('test single task')
     def test_muluti_task_learning(self):
         """ マルチタスク学習に対応できるように、改良。
         """
@@ -70,7 +70,7 @@ class TPGTest(unittest.TestCase):
             os.remove('./tasks.txt')
         self.assertEqual(tpg.tasks, set(tasks))
 
-    @unittest.skip('test single task')
+    # @unittest.skip('test single task')
     def test_muluti_task_envs(self):
         """ マルチタスク学習に対応できるように、改良。
         """
