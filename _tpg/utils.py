@@ -101,7 +101,8 @@ class _Logger:
 
         # self.remove_handrer()
         if self.__class__._logger is None :
-            self.filename = datetime.today().strftime('%Y-%m-%d_%H-%M-%S')
+            self.filename = datetime.today().strftime('%H-%M-%S')
+            self.today = datetime.today().strftime('%Y-%m-%d')
             _logger = logging.getLogger(_name)
             _logger.setLevel(logging.DEBUG)
             self.set_logger(_logger)
@@ -117,10 +118,10 @@ class _Logger:
             # self.add_handrer(_logfile,test)
             while True:
                 try:
-                    _fh = logging.FileHandler(f'log/{self.dir}{self.filename}.log')
+                    _fh = logging.FileHandler(f'log/{self.dir}{self.today}/{self.filename}.log')
                     break
                 except FileNotFoundError:
-                    os.makedirs(f'log/{self.dir}')
+                    os.makedirs(f'log/{self.dir}{self.today}/')
 
             _fh.setLevel(logging.INFO)
             _fh_formatter = logging.Formatter('%(asctime)s, %(className)s, %(message)s')
@@ -137,7 +138,7 @@ class _Logger:
     def log_load(self, _renge, _step=5):
         l =[]
 
-        with open(f"log/{self.dir}{self.filename}.log", "r") as file:
+        with open(f"log/{self.dir}{self.today}/{self.filename}.log", "r") as file:
             lines = file.readlines()
             for line in lines:
                 results = line.replace('\n','').split(', ')[2:]
@@ -145,7 +146,6 @@ class _Logger:
                 if f'{self.task}' in results[0] and 'generation:' in results[1]:
                     l.append([float(re.split(':')[1]) for re in results[2:]])
                     end = int(results[1].split(':')[1])
-                    print(end)
 
         __min = []
         __mi = 0.
@@ -175,7 +175,8 @@ class _Logger:
 
     def log_show(self, renge=100, step=5):
         mi, ma, av, end = self.log_load(renge, step)
-        ge = np.arange((end-mi.size*step), (end//step)*step, step)
+        ends = (end//step)
+        ge = np.arange((ends-mi.size)*step, ends*step, step)
         # Figure instance
         fig = plt.Figure()
 
@@ -201,13 +202,19 @@ class _Logger:
         # When windows is closed.
 
         def _destroyWindow():
-            fig.savefig(f'log/{self.dir}{self.filename}.png')
             root.quit()
             root.destroy()
 
 
 
         # Tkinter Class
+        task = f'{self.task}'.replace('/', '-')
+        fig.savefig(f'log/{self.dir}{self.today}/{self.filename}-{task}.png')
+        # while True:
+        #     try:
+        #         break
+        #     except FileNotFoundError:
+        #         os.makedirs(f'log/{self.dir}{self.today}/')
 
         root = tk.Tk()
         root.withdraw()

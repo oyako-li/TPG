@@ -36,7 +36,7 @@ class TPGTest(unittest.TestCase):
         '''test story'''
         tpg = self.TPG()
         tpg.setEnv(self.env)
-        title = tpg.story(_dir='test/', _load=True, _generations=500)
+        title = tpg.story(_dir='test/', _load=True, _generations=100)
         self.assertIsNotNone(title)
         # log_show(f'{filename}')
 
@@ -56,11 +56,6 @@ class TPGTest(unittest.TestCase):
                 tasks = task_file.read().splitlines()
                 print(tasks, type(tasks))
         else:
-            # tasks = random.choices([
-            #     i.id for i in gym.envs.registry.all()
-            # ],k=10)
-            # with open(f'./tasks.txt', 'w') as multi:
-            #     for task in tasks: multi.write(f'{task}\n')
             raise Exception('tasksDoesntExist')
         
         tpg = self.TPG()
