@@ -46,7 +46,7 @@ class TPGTest(unittest.TestCase):
         tpg.setEnv(self.env)
         tpg.setup_logger(__name__,test=True)
 
-    @unittest.skip('test single task')
+    # @unittest.skip('test single task')
     def test_muluti_task_learning(self):
         """ マルチタスク学習に対応できるように、改良。
         """
@@ -56,11 +56,12 @@ class TPGTest(unittest.TestCase):
                 tasks = task_file.read().splitlines()
                 print(tasks, type(tasks))
         else:
-            tasks = random.choices([
-                i.id for i in gym.envs.registry.all()
-            ],k=10)
-            with open(f'./tasks.txt', 'w') as multi:
-                for task in tasks: multi.write(f'{task}\n')
+            # tasks = random.choices([
+            #     i.id for i in gym.envs.registry.all()
+            # ],k=10)
+            # with open(f'./tasks.txt', 'w') as multi:
+            #     for task in tasks: multi.write(f'{task}\n')
+            raise Exception('tasksDoesntExist')
         
         tpg = self.TPG()
         try:
@@ -70,7 +71,7 @@ class TPGTest(unittest.TestCase):
             os.remove('./tasks.txt')
         self.assertEqual(tpg.tasks, set(tasks))
 
-    # @unittest.skip('test single task')
+    @unittest.skip('test single task')
     def test_muluti_task_envs(self):
         """ マルチタスク学習に対応できるように、改良。
         """
