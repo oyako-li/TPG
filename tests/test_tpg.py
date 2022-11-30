@@ -22,7 +22,6 @@ class TPGTest(unittest.TestCase):
         # from _tpg.memory_object import _Memory
         self.assertEqual(tpg.trainer.ActionObject,_ActionObject)
         self.assertIsInstance(tpg.trainer.ActionObject.actions, list)
-        # agents = tpg.getAgents()
 
     # @unittest.skip('next test case')
     def test_generations(self):
@@ -113,6 +112,18 @@ class TPGTest(unittest.TestCase):
 
     def test_argv(self):
         print(sys.argv[2:])
+
+    def test_log(self):
+        title='log/test/2022-11-30/20-24-11'
+        task = 'CartPole-v1'
+        if args := sys.argv[2:]:
+            for arg in args:
+                if 'task:' in arg:
+                    task = arg.split(':')[1]
+                elif 'title:' in arg:
+                    title = arg.split(':')[1]
+
+        log_show(_title=title,_task=task)
 
 class MHTPGTest(TPGTest):
 

@@ -143,6 +143,7 @@ class _Logger:
             for line in lines:
                 results = line.replace('\n','').split(', ')[2:]
                 # breakpoint(results)
+                if len(results)<2: continue
                 if f'{self.task}' in results[0] and 'generation:' in results[1]:
                     l.append([float(re.split(':')[1]) for re in results[2:]])
                     end = int(results[1].split(':')[1])
@@ -232,6 +233,106 @@ class _Logger:
         root.mainloop()
         
         return mi, ma, av
+
+def log_load(_title , _task, _renge, _step=5):
+    l =[]
+
+    with open(f"{_title}.log", "r") as file:
+        lines = file.readlines()
+        for line in lines:
+            results = line.replace('\n','').split(', ')[2:]
+            # breakpoint(results)
+            if len(results)<2: continue
+            if f'{_task}' in results[0] and 'generation:' in results[1]:
+                l.append([float(re.split(':')[1]) for re in results[2:]])
+                end = int(results[1].split(':')[1])
+
+    __min = []
+    __mi = 0.
+    __max = []
+    __ma = 0.
+    __ave = []
+    __av = 0.
+    for i, item in enumerate(l):
+        _min, _max, _ave = item
+        __mi+=_min
+        __ma+=_max
+        __av+=_ave
+        # if i==0: continue
+        if i%_step==_step-1:
+            __min.append(__mi/float(_step))
+            __mi=0.
+            __max.append(__ma/float(_step))
+            __ma=0.
+            __ave.append(__av/float(_step))
+            __av=0.
+        if i == _renge: break
+    mi = np.array(__min)
+    ma = np.array(__max)
+    av = np.array(__ave)
+    
+    return mi, ma, av, end
+
+def log_show(_title, _task, renge=100, step=5):
+    mi, ma, av, end = log_load(_title, _task, renge, step)
+    ends = (end//step)
+    ge = np.arange((ends-mi.size)*step, ends*step, step)
+    # Figure instance
+    fig = plt.Figure()
+
+    ax1 = fig.add_subplot(111)
+    ax1.plot(ge, mi, label='min')
+    ax1.plot(ge, ma, label='max')
+    ax1.plot(ge, av, label='ave')
+    # ax1.set_title(f'{filename}')
+    ax1.set_ylabel('Score')
+    ax1.set_xlabel('Generation')
+    ax1.legend()
+
+    # # ax2
+    # ax2 = fig.add_subplot(222)
+    # ax2.plot(ge, ma)
+    # ax2.set_title('Scatter plot')
+
+    # # ax3
+    # ax3 = fig.add_subplot(223)
+    # ax3.plot(ge, av)
+    # ax3.set_ylabel('Damped oscillation')
+    # ax3.set_xlabel('time (s)')
+    # When windows is closed.
+
+    def _destroyWindow():
+        root.quit()
+        root.destroy()
+
+
+
+    # Tkinter Class
+    task = f'{_task}'.replace('/', '-')
+    fig.savefig(f'{_title}-{task}.png')
+    # while True:
+    #     try:
+    #         break
+    #     except FileNotFoundError:
+    #         os.makedirs(f'log/{self.dir}{self.today}/')
+
+    root = tk.Tk()
+    root.withdraw()
+    root.protocol('WM_DELETE_WINDOW', _destroyWindow)  # When you close the tkinter window.
+
+    # Canvas
+    canvas = FigureCanvasTkAgg(fig, master=root)  # Generate canvas instance, Embedding fig in root
+    canvas.draw()
+    canvas.get_tk_widget().pack()
+    #canvas._tkcanvas.pack()
+
+    # root
+    root.update()
+    root.deiconify()
+    root.mainloop()
+    
+    return mi, ma, av
+
 
 def log_load2(_filename, _renge, _step=5):
     l =[]
