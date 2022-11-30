@@ -258,7 +258,7 @@ class Learner1_2_1(Learner1_2):
         initParams:int or dict=0
     ):
         self.program = self.__class__.Program() if program is None else self.__class__.Program(instructions=program.instructions)
-        self.actionObj = self.__class__.ActionObject(actionObj) if actionObj is None else self.__class__.ActionObject(action=actionObj,initParams=initParams)
+        self.actionObj = self.__class__.ActionObject(actionObj)
         if isinstance(numRegisters, int): 
             self.registers = np.zeros(numRegisters, dtype=float) # 子供に記憶は継承されない。
         else: 
@@ -276,7 +276,31 @@ class Learner1_2_1(Learner1_2):
         self._id = uuid.uuid4()
 
 
-        if not self.isActionAtomic(): self.actionObj.teamAction.inLearners.append(self.id)
+        if not self.isActionAtomic(): self.actionObj.teamAction.inLearners.append(self._id)
+
+    def mutate(self, mutateParams, parentTeam, teams, pActAtom): 
+        """
+        Mutates either the program or the action or both. 
+        A mutation creates a new instance of the learner, removes it's anscestor and adds itself to the team.
+        """
+        
+        changed = False
+        while not changed:
+            # mutate the program
+            if flip(mutateParams["pProgMut"]):
+
+                changed = True
+              
+                self.program.mutate(mutateParams)
+
+            # mutate the action
+            if flip(mutateParams["pActMut"]):
+
+                changed = True
+                
+                self.actionObj.mutate(mutateParams, parentTeam, teams, pActAtom, learner_id=self._id)
+
+        return self
 
     @property
     def id(self):
@@ -294,8 +318,9 @@ class Learner1_2_1(Learner1_2):
             initParams=self.genCreate
         )
         if not _clone.isActionAtomic(): 
-            _clone.getActionTeam().inLearners.append(_clone.id)
-
+            _clone.getActionTeam().inLearners.append(_clone._id)
+            # self.debug('cloned')
+            assert any(isinstance(i, uuid.UUID) for i in _clone.getActionTeam().inLearners), f'must be uuid in {_clone.getActionTeam().inLearners}'
         return _clone
 
 class Learner1_3(Learner1):
@@ -407,9 +432,9 @@ class Learner2(_Learner):
         self.inTeams = list(inTeams) # Store a list of teams that reference this learner, incoming edges
         # self.actionCodes = initParams["actionCodes"]
         self.frameNum = frameNum # Last seen frame is 0
-        self.id = uuid.uuid4()
+        self._id = uuid.uuid4()
 
-        if not self.isMemoryAtomic(): self.memoryObj.teamMemory.inLearners.append(str(self.id))
+        if not self.isMemoryAtomic(): self.memoryObj.teamMemory.inLearners.append(self.id)
  
     def __eq__(self, __o: object) -> bool:
         # Object must be an instance of Learner
@@ -427,7 +452,7 @@ class Learner2(_Learner):
         '''
         The other object's inTeams must match our own, therefore:
             - len(inTeams) must be equal
-            - every id that appears in our inTeams must appear in theirs (order doesn't matter)
+            - every_id that appears in our inTeams must appear in theirs (order doesn't matter)
         '''
         if len(self.inTeams) != len(__o.inTeams): return False
 
@@ -437,8 +462,8 @@ class Learner2(_Learner):
         '''
         if collections.Counter(self.inTeams) != collections.Counter(__o.inTeams): return False
 
-        # The other object's id must be equal to ours
-        if self.id != __o.id: return False
+        # The other object's_id must be equal to ours
+        if self._id != __o._id: return False
         
         return True
 
@@ -465,7 +490,7 @@ class Learner2(_Learner):
 
                 changed = True
                 
-                self.memoryObj.mutate(mutateParams, parentTeam, teams, pMemAtom, learner_id=self.id)
+                self.memoryObj.mutate(mutateParams, parentTeam, teams, pMemAtom, learner_id=self._id)
 
         return self
 
@@ -518,7 +543,7 @@ class Learner2(_Learner):
             initParams=self.genCreate
         )
         if not _clone.isMemoryAtomic(): 
-            _clone.getMemoryTeam().inLearners.append(str(_clone.id))
+            _clone.getMemoryTeam().inLearners.append(_clone.id)
 
         return _clone
 
@@ -588,7 +613,7 @@ class Learner2_3(Learner2):
         self.frameNum = frameNum # Last seen frame is 0
         self._id = uuid.uuid4()
 
-        if not self.isMemoryAtomic(): self.memoryObj.teamMemory.inLearners.append(self.id)
+        if not self.isMemoryAtomic(): self.memoryObj.teamMemory.inLearners.append(self._id)
 
     def getImage(self, state, visited, memVars=None, path_trace=None): 
         """
@@ -627,7 +652,7 @@ class Learner2_3(Learner2):
             initParams=self.genCreate
         )
         if not _clone.isMemoryAtomic(): 
-            _clone.getMemoryTeam().inLearners.append(_clone.id)
+            _clone.getMemoryTeam().inLearners.append(_clone._id)
 
         return _clone
 

@@ -1332,6 +1332,12 @@ class _Memory(_Logger):
             result+=f'{code}, '
         return result+'>'
     
+    def __str__(self) -> str:
+        result = '<'
+        for code in self.memories.values():
+            result+=f'{code.fragment}, '
+        return result+'>'
+
     def append(self, _key, _state, _reward=0.):
         _key= list(set(_key))
         memory = self.__class__.Fragment(_key, _state, _reward)
@@ -1358,6 +1364,8 @@ class _Memory(_Logger):
 
     def oblivion(self, ignore):
         deleat_key = []
+        self.debug(f'oblivion:{str(self)}')
+        # breakpoint('oblivion')
         for k in self.memories:
             if not k in ignore: deleat_key.append(k)
         for key in deleat_key:
@@ -1509,7 +1517,7 @@ class Memory3(Memory1_2):
             property:
                 __o: uuid
         """
-        return __o in self.memories.keys()
+        return __o in list(self.memories.keys())
 
     def __delattr__(self, __name: str) -> None:
         del self.memories[__name]
@@ -1540,13 +1548,6 @@ class Memory3(Memory1_2):
         for fragment in self.values():
             fragment.weight*=rate
 
-    def oblivion(self, ignore):
-        deleat_key = []
-        for k in self.memories:
-            if not k in ignore: deleat_key.append(k)
-        for key in deleat_key:
-            self.__delattr__(key)
-
     def choices(self, k=1, _ignore:list=None)->list:
         p = 1-self.popus(_ignore)
         p=sigmoid(p)+0.0001
@@ -1557,10 +1558,6 @@ class Memory3(Memory1_2):
 
     def values(self):
         return self.memories.values()
-
-    @property
-    def score(self):
-        return np.sum(1-np.array(self.weights))
 
     @property
     def size(self):
@@ -2189,6 +2186,7 @@ class _ActionObject(_Logger):
     """
     actions=[0]
     Team = None
+    Memory=None
     # _instance = None
     # _logger  = None
 
@@ -2385,6 +2383,16 @@ class ActionObject1(_ActionObject):
             except:
                 print('諦めな・・・')
 
+    def __str__(self):
+        if self.actionCode:
+            return f"code:{self.actionCode}, action:{self.action}"
+        return f"team:{self.teamAction}"
+
+    def __repr__(self):
+        if self.actionCode:
+            return f"code:{self.actionCode}, action:{self.action}"
+        return f"team:{self.teamAction}"
+
     def __getitem__(self, _key):
         return self.__class__.actions[self.actionCode][_key]
     
@@ -2463,13 +2471,13 @@ class ActionObject2(ActionObject1):
             from _tpg.team import Team1_2
             cls._instance = True
             cls.Team = Team1_2
-            cls.actions = Memory3()
+            cls.Memory = Memory3
+            cls.actions = cls.Memory()
 
         return super().__new__(cls, *args, **kwargs)
 
     def __init__(self,
         action = None,
-        _task='task',
         initParams:dict or int =None
     ):
         '''
@@ -2481,26 +2489,33 @@ class ActionObject2(ActionObject1):
         if isinstance(action, self.__class__.Team):
             self.teamAction = action
             self.actionCode = None
+            self.debug(f'init:teamObj, {self}')
             return
         # The action is another action object
         elif isinstance(action, self.__class__):
             self.actionCode = action.actionCode
             self.teamAction = action.teamAction
+            # breakpoint(self.__class__)
+            self.debug(f'init:actObj, {self}')
             return
         # An int means the action is an index into the action codes in initParams
-        elif isinstance(action, str):
+        elif isinstance(action, UUID):
             assert action in self.__class__.actions, f'{action} not in {self.__class__.actions}'
             self.actionCode = action
             self.teamAction = None
+            self.debug(f'init:UUID, {self}')
             return
         elif isinstance(action, list) or isinstance(action, np.ndarray):
             self.actionCode = self.__class__.actions.append(action)
             self.teamAction = None
+            self.debug(f'init:list, {self}')
             return
         else:
             try:
+                # self.debug(f'init:list, actObj:{self}, action:{self.action}')
                 self.actionCode=self.__class__.actions.choice()
                 self.teamAction=None
+                self.debug(f'init:choice, {self}')
             except:
                 print('諦めな・・・')
 
@@ -2804,7 +2819,46 @@ class ActionObject2(ActionObject1):
             self.__class__.actions[self.actionCode].weight*=0.9 # 忘却確立減算
             self.__class__.actions.updateWeights()               # 忘却確立計上
             return self
-        
+
+    def mutate(self, mutateParams=None, parentTeam=None, teams=None, pActAtom=None, learner_id=None):
+        # mutate action
+        if any(item is None for item in (mutateParams, parentTeam, teams, pActAtom, learner_id)):
+            self.actionCode = self.__class__.actions.choice([self.actionCode])
+            self.teamAction = None
+            return self
+
+        if flip(pActAtom):
+            # atomic
+            '''
+            If we already have an action code make sure not to pick the same one.
+            TODO handle case where there is only 1 action code.
+            '''
+            if self.actionCode is not None:
+                _ignore = self.actionCode
+            else:
+                _ignore = None
+
+            # let our current team know we won't be pointing to them anymore
+            if not self.isAtomic():
+                #print("Learner {} switching from Team {} to atomic action".format(learner_id, self.teamAction.id))
+                self.teamAction.inLearners.remove(learner_id)
+
+            self.actionCode = self.__class__.actions.choice([_ignore])
+            self.teamAction = None
+        else:
+            # team action
+            selection_pool = [t for t in teams
+                    if t is not self.teamAction and t is not parentTeam]
+
+            if len(selection_pool) > 0:
+                if not self.isAtomic():
+                    self.teamAction.inLearners.remove(learner_id)
+
+                self.teamAction = random.choice(selection_pool)
+                self.teamAction.inLearners.append(learner_id)
+       
+        return self
+       
     @property
     def action(self):
         return self.actions[self.actionCode].fragment
@@ -2829,7 +2883,8 @@ class ActionObject3(ActionObject2):
             from _tpg.team import Team1_2_1
             cls._instance = True
             cls.Team = Team1_2_1
-            cls.actions = Memory3_1()
+            cls.Memory = Memory3_1
+            cls.actions = cls.Memory()
 
         return super().__new__(cls, *args, **kwargs)
 

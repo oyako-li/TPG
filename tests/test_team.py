@@ -1,4 +1,6 @@
 import unittest
+import uuid
+from _tpg.team import *
 
 class TeamTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -20,6 +22,21 @@ class TeamTest(unittest.TestCase):
     def test_act(self):
         '''test act'''
 
+class Team1_2_1Test(TeamTest):
+    def setUp(self) -> None:
+        from _tpg.team import Team1_2_1
+        self.Team = Team1_2_1
+
+    def test_init(self):
+        '''test team object creation'''
+        team = self.Team()
+        self.assertTrue(isinstance(team._id, uuid.UUID))
+
+    def test_clone(self):
+        team = self.Team()
+        self.assertTrue(
+            team._id != team.clone._id
+        )
 
 if __name__ == '__main__':
     unittest.main()

@@ -2,6 +2,7 @@ import unittest
 import gym
 import datetime
 import random
+import sys
 from _tpg.utils import *
 
 class TPGTest(unittest.TestCase):
@@ -32,8 +33,6 @@ class TPGTest(unittest.TestCase):
         score = tpg.generation()
         self.assertIsNotNone(score)
 
-        # log_show(f'{filename}')
-
     # @unittest.skip('prevent logger reset')
     def test_logger(self):
         tpg = self.TPG()
@@ -54,6 +53,11 @@ class TPGTest(unittest.TestCase):
     def test_single(self):
         '''test story'''
         tpg = self.TPG()
+        if args := sys.argv[2:]:
+            for arg in args:
+                if 'task:' in arg:
+                    self.env = gym.make(arg.split(':')[1])
+
         tpg.setEnv(self.env)
         title = tpg.story(_dir='test/', _load=True, _generations=100)
         self.assertIsNotNone(title)
@@ -106,6 +110,9 @@ class TPGTest(unittest.TestCase):
             os.remove('./tasks.txt')
         self.assertEqual(tpg.tasks, set(tasks))
         print(tpg.tasks)
+
+    def test_argv(self):
+        print(sys.argv[2:])
 
 class MHTPGTest(TPGTest):
 

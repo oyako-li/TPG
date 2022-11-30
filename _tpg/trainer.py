@@ -1,6 +1,7 @@
 from _tpg.utils import *
 from _tpg.utils import _Logger
 import random
+import uuid
 import pickle
 import numpy as np
 
@@ -954,6 +955,63 @@ class Trainer1_2_1(Trainer1_2):
 
         return super().__new__(cls, *args, **kwargs)
 
+    def _initialize(self):
+
+        for _ in range(self.teamPopSize):
+            # create 2 unique actions and learners
+            l1 = self.__class__.Learner(
+                initParams=self.mutateParams,
+                program=self.__class__.Program(
+                    maxProgramLength=self.initMaxProgSize,
+                    nOperations=self.nOperations,
+                    nDestinations=self.nRegisters,
+                    inputSize=self.inputSize,
+                    initParams=self.mutateParams),
+                numRegisters=self.nRegisters)
+            
+            l2 = self.__class__.Learner(
+                initParams=self.mutateParams,
+                program=self.__class__.Program(
+                    maxProgramLength=self.initMaxProgSize,
+                    nOperations=self.nOperations,
+                    nDestinations=self.nRegisters,
+                    inputSize=self.inputSize,
+                    initParams=self.mutateParams),
+                numRegisters=self.nRegisters)
+
+            # save learner population
+            self.learners.append(l1)
+            self.learners.append(l2)
+
+            # create team and add initial learners
+            team = self.__class__.Team(initParams=self.mutateParams)
+            team.addLearner(l1)
+            team.addLearner(l2)
+
+            # add more learners
+            moreLearners = random.randint(0, self.initMaxTeamSize-2)
+            for __ in range(moreLearners):
+                # select action
+                # act = self.__class__.ActionObject.actions.choice()
+
+                # create new learner
+                learner = self.__class__.Learner(
+                    initParams=self.mutateParams,
+                    program=self.__class__.Program(
+                        maxProgramLength=self.initMaxProgSize,
+                        nOperations=self.nOperations,
+                        nDestinations=self.nRegisters,
+                        inputSize=self.inputSize,
+                        initParams=self.mutateParams),
+                    numRegisters=self.nRegisters)
+
+                team.addLearner(learner)
+                self.learners.append(learner)
+
+            # save to team populations
+            self.teams.append(team)
+            self.rootTeams.append(team)
+
     def _select(self, extraTeams=None):
 
         rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.fitness, reverse=True)
@@ -970,8 +1028,9 @@ class Trainer1_2_1(Trainer1_2):
     
         for cursor in orphans:
             if not cursor.isActionAtomic(): # If the orphan does NOT point to an atomic action
-                # Get the team the orphan is pointing to and remove the orphan's id from the team's in learner list
-                cursor.actionObj.teamAction.inLearners.remove(cursor.id)
+                # Get the team the orphan is pointing to and remove the orphan's  _id from the team's in learner list
+                assert cursor._id in cursor.actionObj.teamAction.inLearners, f'{cursor._id} not in {cursor.actionObj.teamAction.inLearners}'
+                cursor.actionObj.teamAction.inLearners.remove(cursor._id)
 
         # Finaly, purge the orphans
         # AtomicActionのLearnerはどのように生成すれば良いのだろうか？ -> actionObj.mutate()による
@@ -1028,27 +1087,38 @@ class Trainer1_2_1(Trainer1_2):
                     self.teams.remove(team)
 
     def _nextEpoch(self):
-        # add in newly added learners, and decide root teams
+        # add in newly added learners, and dec _ide root teams
         self.rootTeams = []
         for team in self.teams:
             # add any new learners to the population
             # team.extinction*=1.01
+            assert len(team.inLearners)==0 or any(isinstance(i, uuid.UUID) for i in team.inLearners), f'must be uuid in {team.inLearners}, {[i for i in team.inLearners]}'
             
             for learner in team.learners:
                 if learner not in self.learners:
-                    #print("Adding {} to trainer learners".format(learner.id))
+                    #print("Adding {} to trainer learners".format(learner. _id))
                     self.learners.append(learner)
 
+            self.debug(f'team_sequences:{team.sequence}')
             # maybe make root team
             if team.numLearnersReferencing() == 0 or team in self.elites:
                 self.rootTeams.append(team)
+
+
+        action_code_list = set()
+        for lrnr in self.learners:
+            if lrnr.isActionAtomic():
+                action_code_list.add(lrnr.actionObj.actionCode)
+
+        action_code_list = list(action_code_list)
+        self.__class__.ActionObject.actions.oblivion(action_code_list)
 
         self.generation += 1
 
     def setActions(self, actions):
         if self.__class__.ActionObject.actions:
             for i in range(actions):
-                self.__class__.ActionObject.actions.append([int(i)], _weight=0.)
+                self.__class__.ActionObject.actions.append([i], _weight=0.)
         else:
             breakpoint('notImpletemted')
         self._initialize()

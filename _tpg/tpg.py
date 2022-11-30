@@ -359,15 +359,15 @@ class Actor(_TPG):
 
     def activator(self, acts):
         assert isinstance(acts, np.ndarray), f'{acts} cant fetch activation'
-        if acts.size < 1 :
-            self.frame = self.frames
-            return
         try:
             # if acts == (np.array([], dtype=np.float64)): raise Exception('action is Null')
             # self.info(f'acts_size:{acts.size}')
             if isinstance(self.env.action_space, Box):
                 shape = self.env.action_space.shape
                 acts = np.split(acts, np.prod(shape, dtype=np.int8))
+                if acts.size < 1 :
+                    self.frame = self.frames
+                    return
                 for action in acts:
                     # self.info(f'act:{action}')
                     if self.frame>self.frames: break
@@ -378,6 +378,9 @@ class Actor(_TPG):
                     if isDone: self.frame=self.frames
             elif isinstance(self.env.action_space, Discrete):
                 acts = acts[acts<self.env.action_space.n]
+                if acts.size < 1 :
+                    self.frame = self.frames
+                    return
                 for action in acts:
                     if self.frame>self.frames: break
                     # self.info(f'act:{action}')
@@ -421,11 +424,11 @@ class Actor(_TPG):
         for agent in self.agents:
             agent.score/=self.episodes
             self.scores[agent.id]=agent.score
-            agent.reward()
+            agent.reward(task=self.task)
         
         self.evolve(list(self.tasks))
         self.info(f'task:{self.task}, generation:{self.gen}, min:{min(self.scores.values())}, max:{max(self.scores.values())}, ave:{sum(self.scores.values())/len(self.scores)}')
-        self.info(f'actions:{self.actions}')
+        self.info(f'actions:{repr(self.actions)}')
         self.gen+=1
 
     def story(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):

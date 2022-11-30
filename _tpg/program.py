@@ -214,6 +214,97 @@ class Program1(_Program):
         if cls._instance is None:
             cls._instance = True
         return super().__new__(cls, *args, **kwargs)
+    def __init__(self, 
+            instructions=None, 
+            maxProgramLength=128, 
+            nOperations=5,
+            nDestinations=8, 
+            inputSize=30720, 
+            initParams=None
+        ):
+       
+        if instructions is not None: # copy from existing
+            self.instructions = np.array(instructions, dtype=np.int32)
+        else: # create random new
+            self.instructions = np.array([
+                (
+                    random.randint(0,1),
+                    random.randint(0, nOperations-1),
+                    random.randint(0, nDestinations-1),
+                    random.randint(0, inputSize-1)
+                ) for _ in range(random.randint(1, maxProgramLength))], dtype=np.int32)
+
+        self._id = uuid.uuid4()
+
+    @classmethod
+    def id(self):
+        return str(self._id)
+  
+    def mutate(self, mutateParams):
+        """
+        Potentially modifies the instructions in a few ways.
+        """
+        # Make a copy of our original instructions
+        original_instructions = np.array(self.instructions)
+
+        # Since we're mutating change our id
+        self._id = uuid.uuid4()
+
+        # While we haven't changed from our original instructions keep mutating
+        while np.array_equal(self.instructions, original_instructions):
+            # maybe delete instruction
+            if len(self.instructions) > 1 and flip(mutateParams["pInstDel"]):
+                # delete random row/instruction
+                self.instructions = np.delete(self.instructions,
+                                    random.randint(0, len(self.instructions)-1),
+                                    0)
+
+                
+
+            # maybe mutate an instruction (flip a bit)
+            if flip(mutateParams["pInstMut"]):
+                # index of instruction and part of instruction
+                idx1 = random.randint(0, len(self.instructions)-1)
+                idx2 = random.randint(0,3)
+
+                # change max value depending on part of instruction
+                if idx2 == 0:
+                    maxVal = 1
+                elif idx2 == 1:
+                    maxVal = mutateParams["nOperations"]-1
+                elif idx2 == 2:
+                    maxVal = mutateParams["nDestinations"]-1
+                elif idx2 == 3:
+                    maxVal = mutateParams["inputSize"]-1
+
+                # change it
+                self.instructions[idx1, idx2] = random.randint(0, maxVal)
+
+                
+
+            # maybe swap two instructions
+            if len(self.instructions) > 1 and flip(mutateParams["pInstSwp"]):
+                # indices to swap
+                idx1, idx2 = random.sample(range(len(self.instructions)), 2)
+
+                # do swap
+                tmp = np.array(self.instructions[idx1])
+                self.instructions[idx1] = np.array(self.instructions[idx2])
+                self.instructions[idx2] = tmp
+
+                
+
+            # maybe add instruction
+            if flip(mutateParams["pInstAdd"]):
+                # insert new random instruction
+                self.instructions = np.insert(self.instructions,
+                        random.randint(0,len(self.instructions)),
+                            (random.randint(0,1),
+                            random.randint(0, mutateParams["nOperations"]-1),
+                            random.randint(0, mutateParams["nDestinations"]-1),
+                            random.randint(0, mutateParams["inputSize"]-1)),0)
+            
+            return self
 
 class Program1_3(Program1):
     """Activate sequence create program

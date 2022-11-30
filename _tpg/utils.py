@@ -123,7 +123,7 @@ class _Logger:
                 except FileNotFoundError:
                     os.makedirs(f'log/{self.dir}{self.today}/')
 
-            _fh.setLevel(logging.INFO)
+            _fh.setLevel(logging.DEBUG)
             _fh_formatter = logging.Formatter('%(asctime)s, %(className)s, %(message)s')
             _fh.setFormatter(_fh_formatter)
             self.__class__._logger.addHandler(_fh)
@@ -229,7 +229,7 @@ class _Logger:
         # root
         root.update()
         root.deiconify()
-        # root.mainloop()
+        root.mainloop()
         
         return mi, ma, av
 

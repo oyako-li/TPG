@@ -382,6 +382,8 @@ class _Team(_Logger):
         )
         for learner in self.learners:
             _clone.addLearner(learner.clone)
+        
+        assert _clone.id != self.id, f'clone cant make'
 
         return _clone
 
@@ -427,19 +429,165 @@ class Team1_2(Team1):
         self.outcomes =  dict(outcomes)# scores at various tasks
         self._id = uuid.uuid4()
         self.fitness = fitness
-        self.sequence = []
+        self.sequence = list()
         self.extinction=extinction
         if isinstance(initParams, dict): self.genCreate = initParams["generation"]
         elif isinstance(initParams, int): self.genCreate = initParams
 
+    def __eq__(self, __o: object) -> bool: 
+        # Object must be instance of Team
+        if not isinstance(__o, self.__class__):    return False
+
+        # Object must be created the same generation as us
+        if self.genCreate != __o.genCreate:   return False
+        
+        '''
+        The other object's learners must match our own, therefore:
+            - len(self.learners) must be equal to len(o.learners)
+            - every learner that appears in our list of learners must appear in the 
+              other object's list of learners as well.
+        '''
+        if len(self.learners) != len(__o.learners):   return False
+        
+        for l in self.learners:
+            if l not in __o.learners:
+                return False
+
+        
+        '''
+        The other object's inLearners must match our own, therefore:
+            - len(self.inLearners) must be equal to len(o.inLearners)
+            - every learner that appears in our list of inLearners must appear in 
+              the other object's list of inLearners as well. 
+        '''
+        if len(self.inLearners) != len(__o.inLearners):   return False
+        
+        '''
+        Collection comparison via collection counters
+        https://www.journaldev.com/37089/how-to-compare-two-lists-in-python
+        '''
+        if collections.Counter(self.inLearners) != collections.Counter(__o.inLearners):   return False
+
+        # The other object's id must be equal to ours
+        if self._id != __o._id: return False
+
+        return True
+
+    def _mutation_delete(self, probability):
+
+            original_probability = float(probability)
+
+            if probability == 0.0:
+                return []
+
+            if probability >= 1.0: 
+                raise Exception("pLrnDel is greater than or equal to 1.0!")
+
+            # Freak out if we don't have an atomic action
+            if self.numAtomicActions() < 1: 
+                raise Exception("Less than one atomic action in team! This shouldn't happen", self)
+
+
+            deleted_learners = []
+
+            # delete some learners
+            while flip(probability) and len(self.learners) > 2: # must have >= 2 learners
+                probability *= original_probability # decrease next chance
+
+
+                # If we have more than one learner with an atomic action pick any learner to delete
+                if self.numAtomicActions() > 1:
+                    learner = random.choice(self.learners)
+                else: 
+                    # Otherwise if we only have one, filter it out and pick from the remaining learners
+                    valid_choices = list(filter(lambda x: not x.isActionAtomic(), self.learners)) # isActionAtomic以外から削除を決定。
+                    learner = random.choice(valid_choices)
+
+                deleted_learners.append(learner)
+                self.removeLearner(learner)
+
+            return deleted_learners
+
+    def _mutation_add(self, probability, maxTeamSize, selection_pool):
+
+        original_probability = float(probability)
+
+        # Zero chance to add anything, return right away
+        if probability == 0.0 or len(selection_pool) == 0 or (maxTeamSize > 0 and len(self.learners) >= maxTeamSize):   return []
+        
+        # If this were true, we'd end up adding the entire selection pool
+        if probability >= 1.0:  raise Exception("pLrnAdd is greater than or equal to 1.0!")
+
+        added_learners = []  
+        while flip(probability) and (maxTeamSize <= 0 or len(self.learners) < maxTeamSize):
+            # If no valid selections left, break out of the loop
+            if len(selection_pool) == 0:    break
+
+            probability *= original_probability # decrease next chance
+
+
+            learner = random.choice(selection_pool)
+            added_learners.append(learner)
+            self.addLearner(learner)
+
+            # Ensure we don't pick the same learner twice by filtering the learners we've added from the selection pool
+            selection_pool = list(filter(lambda x:x not in added_learners, selection_pool))
+
+        return added_learners
+
+    def _mutation_mutate(self, probability, mutateParams, teams):
+        mutated_learners = {}
+        '''
+         This original learners thing is important, otherwise may mutate learners that we just added through mutation. 
+         This breaks reference tracking because it results in 'ghost learners' that were created during mutation, added themselves 
+         to inLearners in the teams they pointed to, but them were mutated out before being tracked by the trainer. So you end up
+         with teams hold a record in their inLearners to a learner that doesn't exist
+        '''
+        original_learners = list(self.learners)
+        new_learners = []
+        for learner in original_learners:
+            if flip(probability):
+
+                # If we only have one learner with an atomic action and the current learner is it
+                if self.numAtomicActions() == 1 and learner.isActionAtomic():
+                    pActAtom0 = 1.1 # Ensure their action remains atomic
+                else:
+                    # Otherwise let there be a probability that the learner's action is atomic as defined in the mutate params
+                    pActAtom0 = mutateParams['pActAtom']
+
+                #print("Team {} creating learner".format(self.id))
+                # Create a new learner 
+                newLearner = self.__class__.Learner(
+                    program=learner.program, 
+                    actionObj=learner.actionObj, 
+                    numRegisters=len(learner.registers), 
+                    initParams=mutateParams,
+                    frameNum=learner.frameNum
+                )
+                new_learners.append(newLearner)
+                # Add the mutated learner to our learners
+                # Must add before mutate so that the new learner has this team in its inTeams
+                self.addLearner(newLearner)
+
+
+                # mutate it
+                newLearner.mutate(mutateParams, self, teams, pActAtom0)
+                # Remove the existing learner from the team
+                self.removeLearner(learner)
+
+                mutated_learners[learner._id] = newLearner._id
+
+      
+        return mutated_learners, new_learners
+
     def act(self, state, visited, actVars=None, path_trace=None): 
         # If we've already visited me, throw an exception
-        assert not self.id in visited, f"Already visited team {self.id}"
+        assert not self._id in visited, f"Already visited team {self._id}"
 
         self.extinction*=0.9
 
-        # Add this team's id to the list of visited ids
-        visited.append(self.id) 
+        # Add this team's_id to the list of visited_ids
+        visited.append(self._id) 
         if len(self.learners)==0:
             print('0 valid')
             self.addLearner(self.__class__.Learner())
@@ -449,13 +597,13 @@ class Team1_2(Team1):
             * Are action atomic
             * Whose team we have not yet visited
         '''
-        valid_learners = [lrnr for lrnr in self.learners if lrnr.isActionAtomic() or lrnr.getActionTeam().id not in visited]
+        valid_learners = [lrnr for lrnr in self.learners if lrnr.isActionAtomic() or lrnr.getActionTeam()._id not in visited]
         
         if len(valid_learners)==0: 
 
             mutate_learner = random.choice(self.learners)
             clone = mutate_learner.clone
-            if not clone.isActionAtomic(): clone.actionObj.teamAction.inLearner.remove(clone.id)
+            if not clone.isActionAtomic(): clone.actionObj.teamAction.inLearner.remove(clone._id)
             clone.actionObj.mutate()
 
             self.addLearner(clone)
@@ -473,9 +621,9 @@ class Team1_2(Team1):
                 'team_id': self.id,
                 'top_learner': top_learner.id,
                 'top_bid': top_learner.bid(state, actVars=actVars),
-                'top_action': top_learner.actionObj.actionCode if top_learner.isActionAtomic() else top_learner.actionObj.teamAction.id,
+                'top_action': top_learner.actionObj.actionCode if top_learner.isActionAtomic() else top_learner.actionObj.teamAction._id,
                 'depth': last_segment['depth'] + 1 if last_segment != None else 0,# Record path depth
-                'bids': []
+                'b_ids': []
             }
 
             # Populate bid values
@@ -483,7 +631,7 @@ class Team1_2(Team1):
                 path_segment['bids'].append({
                     'learner_id': cursor.id,
                     'bid': cursor.bid(state, actVars=actVars),
-                    'action': cursor.actionObj.actionCode if cursor.isActionAtomic() else cursor.actionObj.teamAction.id
+                    'action': cursor.actionObj.actionCode if cursor.isActionAtomic() else cursor.actionObj.teamAction._id
                 })
 
             # Append our path segment to the trace
@@ -493,14 +641,21 @@ class Team1_2(Team1):
 
     def addLearner(self, learner): 
         self.learners.append(learner)
-        learner.inTeams.append(self.id) # Add this team's id to the list of teams that reference the learner
+        learner.inTeams.append(self._id) # Add this team's_id to the list of teams that reference the learner
 
         return True
 
+    def appendSequence(self, _sequence):
+        self.sequence=np.array(_sequence)
+        self.addLearner(self.__class__.Learner(actionObj=self.sequence))
+
     def addSequence(self):
-        if self.sequence ==[]: return
-        sequence = abstract(self.sequence)
-        self.addLearner(self.__class__.Learner(memoryObj=sequence))
+        # if self.sequence ==[]: return
+        # assert self.sequence != [], f'{self.sequence}'
+        # sequence = abstract(self.sequence)
+        sequence_learner = self.__class__.Learner(actionObj=self.sequence)
+        self.addLearner(sequence_learner)
+        self.debug(f'append_sequence:{sequence_learner}, sequence:{sequence_learner.actionObj.action}')
 
     def removeLearner(self, learner): 
         # only delete if actually in this team
@@ -509,7 +664,7 @@ class Team1_2(Team1):
         '''
         if learner not in self.learners:
             raise Exception("Attempted to remove a learner ({}) not referenced by team {}".format(
-            learner.id, self.id
+            learner._id, self._id
         ))
 
         # Find the learner to remove
@@ -521,14 +676,14 @@ class Team1_2(Team1):
         # Build a new list of learners containing only learners that are not the learner
         self.learners = [cursor for cursor in self.learners if cursor != learner ]
 
-        # Remove our id from the learner's inTeams
+        # Remove our_id from the learner's inTeams
         # NOTE: Have to do this after removing the learner otherwise, removal will fail 
         # since the learner's inTeams will not match 
-        to_remove.inTeams.remove(self.id)
+        to_remove.inTeams.remove(self._id)
 
     def removeLearners(self): 
         for learner in self.learners:
-            learner.inTeams.remove(self.id)
+            learner.inTeams.remove(self._id)
 
         del self.learners[:]
 
@@ -571,7 +726,8 @@ class Team1_2(Team1):
             selection_pool = list(filter(lambda x: x not in self.learners, allLearners))
             
             # Filter out learners that point to this team
-            selection_pool = list(filter(lambda x: x.id not in self.inLearners, selection_pool))
+            selection_pool = list(filter(lambda x: x._id not in self.inLearners, selection_pool))
+            
 
             # Filter out learners we just deleted
             selection_pool = list(filter(lambda x: x not in deleted_learners, selection_pool))
@@ -594,14 +750,43 @@ class Team1_2(Team1):
 
         for cursor in new_learners:
             if len(cursor.inTeams) == 0 and not cursor.isActionAtomic():
-                cursor.actionObj.teamAction.inLearners.remove(cursor.id)
+                cursor.actionObj.teamAction.inLearners.remove(cursor._id)
 
         # return the number of iterations of mutation
         return rampantReps, mutation_delta, new_learners
 
+    def numAtomicActions(self):
+        num = 0
+        for lrnr in self.learners:
+            if lrnr.isActionAtomic():
+                num += 1
+
+        return num
+
+    def zeroRegisters(self):
+        for learner in self.learners:
+            learner.zeroRegisters()
+
+    def numLearnersReferencing(self):
+        return len(self.inLearners)
+
     @property
     def id(self):
         return str(self._id)
+
+    @property
+    def clone(self): 
+        _clone = self.__class__(
+            inLearners=self.inLearners,
+            outcomes=self.outcomes,
+            fitness=self.fitness,
+            extinction=self.extinction,
+        )
+        for learner in self.learners:
+            _clone.addLearner(learner.clone)
+
+        return _clone
+
 
 class Team1_2_1(Team1_2):
     def __new__(cls, *args, **kwargs):
@@ -762,7 +947,7 @@ class Team1_3(Team1):
         '''
         if learner not in self.learners:
             raise Exception("Attempted to remove a learner ({}) not referenced by team {}".format(
-            learner.id, self.id
+            learner._id, self._id
         ))
 
         # Find the learner to remove

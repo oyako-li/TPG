@@ -24,6 +24,7 @@ class _Agent(_Logger):
         self.agentNum = num
         self.actVars = actVars
         self.score = 0.
+        self.sequence=list()
 
     def __hash__(self):
         return int(self.id)
@@ -85,7 +86,8 @@ class _Agent(_Logger):
         # assert _sequence != [], f'{_sequence} should not non list'
         if _sequence == []: return
 
-        self.team.sequence = _sequence
+        self.team.sequence = list(_sequence)
+        self.debug(f'trace_sequence:{self.team.sequence},')
 
     @property
     def id(self):
@@ -118,6 +120,14 @@ class Agent1_2(Agent1):
         if cls._instance is None:
             cls._instance = True
         return super().__new__(cls, *args, **kwargs)
+
+    def trace(self, _sequence):
+        # assert _sequence != [], f'{_sequence} should not non list'
+        if _sequence == []: return
+
+        self.team.appendSequence(_sequence)
+        self.debug(f'trace_sequence:{self.team.sequence},')
+
 
 class Agent1_3(Agent1):
     def __new__(cls, *args, **kwargs):
