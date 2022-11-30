@@ -548,6 +548,13 @@ class _Trainer(_Logger):
         trainer.ActionObject.actions = trainer._actions
         return trainer
 
+    # @property
+    def getElite(self, tasks, multiTaskType='min'):
+        self._scoreIndividuals(self, tasks, multiTaskType='min')
+        return self.__class__.Agent(max([rt for rt in self.rootTeams],
+                        key=lambda rt: rt.fitness),
+                        num=0, actVars=self.actVars)
+
 class Trainer(_Trainer):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -1062,11 +1069,11 @@ class Trainer1_2_1(Trainer1_2):
                 (self.rootBasedPop and self.countRootTeams() < self.teamPopSize)):
 
             parent = random.choice(self.rootTeams)
+            parent.addSequence()
             child = parent.clone
 
             _, __, new_learners = child.mutate(self.mutateParams, oLearners, oTeams)
 
-            # child.addSequence()
 
             # then clone the referenced rootTeams
             for new_learner in new_learners:
@@ -1099,7 +1106,7 @@ class Trainer1_2_1(Trainer1_2):
                     #print("Adding {} to trainer learners".format(learner. _id))
                     self.learners.append(learner)
 
-            self.debug(f'team_sequences:{team.sequence}')
+            # self.debug(f'team_sequences:{team.sequence}')
             # maybe make root team
             if team.numLearnersReferencing() == 0 or team in self.elites:
                 self.rootTeams.append(team)

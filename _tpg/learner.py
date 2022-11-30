@@ -255,6 +255,7 @@ class Learner1_2_1(Learner1_2):
         states:list=[],
         inTeams:list=[],
         frameNum:int=0,
+        extinction:float=1.,
         initParams:int or dict=0
     ):
         self.program = self.__class__.Program() if program is None else self.__class__.Program(instructions=program.instructions)
@@ -274,9 +275,36 @@ class Learner1_2_1(Learner1_2):
         # self.actionCodes = initParams["actionCodes"]
         self.frameNum = frameNum # Last seen frame is 0
         self._id = uuid.uuid4()
+        self.extinction = extinction
 
 
         if not self.isActionAtomic(): self.actionObj.teamAction.inLearners.append(self._id)
+
+    def bid(self, state, actVars=None): 
+        """
+        Get the bid value, highest gets its action selected.
+        """
+        # exit early if we already got bidded this frame
+        if self.frameNum == actVars["frameNum"]: return self.registers[0]
+
+        self.frameNum = actVars["frameNum"]
+        self.extinction*=1.01
+
+        self.__class__.Program.execute(state, self.registers,
+                        self.program.instructions[:,0], self.program.instructions[:,1],
+                        self.program.instructions[:,2], self.program.instructions[:,3],
+                        actVars["memMatrix"], actVars["memMatrix"].shape[0], actVars["memMatrix"].shape[1],
+                        self.__class__.Program.memWriteProb)
+
+        return self.registers[0]
+
+    def getAction(self, state, visited, actVars=None, path_trace=None): 
+        """
+        Returns the action of this learner, either atomic, or requests the action
+        from the action team.
+        """
+        self.extinction*=0.9
+        return self.actionObj.getAction(state, visited, actVars=actVars, path_trace=path_trace)
 
     def mutate(self, mutateParams, parentTeam, teams, pActAtom): 
         """
@@ -315,6 +343,7 @@ class Learner1_2_1(Learner1_2):
             states=self.states,
             inTeams=self.inTeams,
             frameNum=self.frameNum,
+            extinction=self.extinction,
             initParams=self.genCreate
         )
         if not _clone.isActionAtomic(): 

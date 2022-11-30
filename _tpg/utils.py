@@ -57,9 +57,15 @@ class _Logger:
     @classmethod
     def unset_logger(cls):
         if cls._logger :
+            for handler in cls._logger.handlers:
+                if isinstance(handler, logging.FileHandler):
+                    handler.close()
+                cls._logger.removeHandler(handler)
+
             cls._logger=None
             for clsObj in [cls.__dict__[i] for i in cls.__dict__.keys() if inspect.isclass(cls.__dict__[i]) and re.match(r'^[A-Z]', i)]:
                 clsObj.unset_logger()
+            
 
     @property
     def task(self):
@@ -230,7 +236,7 @@ class _Logger:
         # root
         root.update()
         root.deiconify()
-        root.mainloop()
+        # root.mainloop()
         
         return mi, ma, av
 

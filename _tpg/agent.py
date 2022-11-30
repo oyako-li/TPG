@@ -123,10 +123,10 @@ class Agent1_2(Agent1):
 
     def trace(self, _sequence):
         # assert _sequence != [], f'{_sequence} should not non list'
-        if _sequence == []: return
+        if len(_sequence)<1: return
 
         self.team.appendSequence(_sequence)
-        self.debug(f'trace_sequence:{self.team.sequence},')
+        # self.debug(f'trace_sequence:{self.team.sequence},')
 
 
 class Agent1_3(Agent1):

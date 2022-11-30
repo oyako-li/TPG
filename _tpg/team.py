@@ -646,16 +646,18 @@ class Team1_2(Team1):
         return True
 
     def appendSequence(self, _sequence):
+        if len(_sequence)<1: return
         self.sequence=np.array(_sequence)
-        self.addLearner(self.__class__.Learner(actionObj=self.sequence))
+        # self.addSequence()
 
     def addSequence(self):
-        # if self.sequence ==[]: return
+        # self.debug(f'append_sequence:{self.sequence}')
+        if len(self.sequence)<1: return
         # assert self.sequence != [], f'{self.sequence}'
         # sequence = abstract(self.sequence)
         sequence_learner = self.__class__.Learner(actionObj=self.sequence)
         self.addLearner(sequence_learner)
-        self.debug(f'append_sequence:{sequence_learner}, sequence:{sequence_learner.actionObj.action}')
+        # self.debug(f'appended_sequence:{sequence_learner.actionObj}')
 
     def removeLearner(self, learner): 
         # only delete if actually in this team

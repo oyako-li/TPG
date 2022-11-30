@@ -186,5 +186,7 @@ class Trainer2Test(unittest.TestCase):
         trainer.save(filename)
         self.Trainer.load(filename)
 
+class Trainer1_2_1
+
 if __name__ == '__main__':
     unittest.main()

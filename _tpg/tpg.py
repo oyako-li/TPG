@@ -202,6 +202,28 @@ class _TPG(_Logger):
 
         return self.epilogue()
 
+    def success_story(self, _trainer=None, _task:str=None, _generations:int=1, _episodes:int=None, _frames:int=None, _show=None, _test=None, _load=None, _dir=None):
+        self.prologue(_trainer=_trainer, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load, _dir=_dir)
+        self.debug(f'story_task:{self.task}, gen:{self.gen}')
+
+        for _ in range(self.generations): # generation loop
+            score=0
+            for i in range(self.frames): # run episodes that last 500 frames
+                act = self.elite.act(state)
+                if not act in range(self.env.action_space.n): continue
+                state, reward, isDone, debug = self.env.step(act)
+                score += reward # accumulate reward in score
+                # self.info(f'state:{state}')
+
+
+                if isDone: break # end early if losing state
+
+            self.info(f'task:{self.task}, time:{_}, elite_score:{score}')
+
+        self.env.close()
+
+        return f'log/{self.dir}{self.today}/{self.filename}'
+
     def multi(self, _tasks, _generations=None, _load=None):
         self.archive=[]
         for task in _tasks:
@@ -258,6 +280,10 @@ class _TPG(_Logger):
     @property
     def task(self):
         return self.env.spec.id
+
+    @property
+    def elite(self):
+        return self.trainer.getElite(list(self.tasks))
 
     # @classmethod
     def load_story(self, _title):
@@ -392,7 +418,6 @@ class Actor(_TPG):
             else:
                 print(self.env.action_space)
                 raise 'EnvExpectation'
-            self.info(f'frame:{self.frame}, acts:{acts}')
         except Exception as e:
             breakpoint(e)
 
@@ -428,7 +453,7 @@ class Actor(_TPG):
         
         self.evolve(list(self.tasks))
         self.info(f'task:{self.task}, generation:{self.gen}, min:{min(self.scores.values())}, max:{max(self.scores.values())}, ave:{sum(self.scores.values())/len(self.scores)}')
-        self.info(f'actions:{repr(self.actions)}')
+        # self.info(f'actions:{repr(self.actions)}')
         self.gen+=1
 
     def story(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):

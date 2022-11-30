@@ -60,6 +60,29 @@ class TPGTest(unittest.TestCase):
         tpg.setEnv(self.env)
         title = tpg.story(_dir='test/', _load=True, _generations=100)
         self.assertIsNotNone(title)
+
+    def test_single_each(self):
+        """ マルチタスク学習に対応できるように、改良。
+        """
+        tasks=[]
+        if os.path.exists('./.tasks'):
+            with open('./.tasks', 'r') as task_file:
+                tasks = task_file.read().splitlines()
+                random.shuffle(tasks)
+                print(tasks, type(tasks))
+        else:
+            raise Exception('tasksDoesntExist')
+        
+        try:
+            for task in tasks:
+                tpg = self.TPG()
+                tpg.unset_logger()
+                # tpg.setEnv(gym.make(task))
+                tpg.story(_task=task, _generations=100, _load=True)
+        except Exception as e:
+            print(e)
+            # os.remove('./tasks.txt')
+        self.assertTrue(tpg.tasks!=set(tasks))
     
     # @unittest.skip('test single task')
     def test_multi(self):
@@ -79,8 +102,44 @@ class TPGTest(unittest.TestCase):
             tpg.multi(tasks, _generations=100, _load=True)
         except Exception as e:
             print(e)
-            os.remove('./tasks.txt')
+            # os.remove('./tasks.txt')
         self.assertEqual(tpg.tasks, set(tasks))
+
+    def test_multi_elite(self):
+        """ マルチタスク学習に対応できるように、改良。
+        """
+        tasks=[]
+        title='log/'
+        _title='log/'
+        tpg = self.TPG()
+        if args := sys.argv[2:]:
+            for arg in args:
+                if 'title:' in arg:
+                    title = gym.make(arg.split(':')[1])
+
+        if os.path.exists('./.tasks'):
+            with open('./.tasks', 'r') as task_file:
+                tasks = task_file.read().splitlines()
+                random.shuffle(tasks)
+                print(tasks, type(tasks))
+        else:
+            raise Exception('tasksDoesntExist')
+    
+        if os.path.exists(title):
+            tpg.load_story(title)
+        else:
+            raise Exception('titleDoesntExist')
+        
+        try:
+            for task in tasks:
+                # tpg.setEnv()
+                _title = tpg.success_story(_task=gym.make(task))
+        except Exception as e:
+            print(e)
+            # os.remove('./tasks.txt')
+        print(_title)
+        self.assertEqual(tpg.tasks, set(tasks))
+        self.assertFalse(_title==title)
 
     # @unittest.skip('test single task')
     def test_multi_envs(self):
