@@ -831,17 +831,17 @@ class Trainer1_1(Trainer1):
         self._generate(extraTeams, _actionSequence=_actionSequence, _actionReward=_actionReward) # create new individuals from those kept
         self._nextEpoch() # set up for next generation
 
-    def save(self, fileName):
-        self._actions = self.__class__.ActionObject.actions
-        pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
+    # def save(self, fileName):
+    #     self._actions = self.__class__.ActionObject.actions
+    #     pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
 
-    @classmethod
-    def load(cls, fileName:str):
-        trainer = pickle.load(open(f'log/{fileName}.pickle', 'rb'))
-        assert isinstance(trainer, cls), f'this file is not {cls}'
+    # @classmethod
+    # def load(cls, fileName:str):
+    #     trainer = pickle.load(open(f'log/{fileName}.pickle', 'rb'))
+    #     assert isinstance(trainer, cls), f'this file is not {cls}'
 
-        trainer.ActionObject.actions = trainer._actions
-        return trainer
+    #     trainer.ActionObject.actions = trainer._actions
+    #     return trainer
 
 class Trainer1_2(Trainer1_1):
     def __new__(cls, *args, **kwargs):

@@ -377,6 +377,7 @@ class Actor(_TPG):
                     self.sequence+=[action]
                     if isDone: self.frame=self.frames
             elif isinstance(self.env.action_space, Discrete):
+                acts = acts[acts<self.env.action_space.n]
                 for action in acts:
                     if self.frame>self.frames: break
                     # self.info(f'act:{action}')
