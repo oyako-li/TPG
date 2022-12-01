@@ -65,7 +65,8 @@ class _Agent(_Logger):
         """
         self.info(f'task:{task}, agent_id:{self.id}, score:{self.score}')
         _score = score if score else self.score
-        self.team[task] += sigmoid2(_score)
+        # self.team[task] += sigmoid2(_score)
+        self.team[task] =_score
 
     def taskDone(self, task):
         """

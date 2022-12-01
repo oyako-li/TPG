@@ -105,6 +105,31 @@ class TPGTest(unittest.TestCase):
             # os.remove('./tasks.txt')
         self.assertEqual(tpg.tasks, set(tasks))
 
+    # @unittest.skip('test single task')
+    def test_multi_random_(self):
+        """ マルチタスク学習に対応できるように、改良。
+        """
+        tasks=[]
+        if os.path.exists('./.tasks'):
+            with open('./.tasks', 'r') as task_file:
+                tasks = task_file.read().splitlines()
+                random.shuffle(tasks)
+                print(tasks, type(tasks))
+        else:
+            raise Exception('tasksDoesntExist')
+        
+        tpg = self.TPG()
+        try:
+            for _ in range(10):
+                tpg.multi(tasks, _generations=10, _load=True)
+                tpg.unset_logger()
+                random.shuffle(tasks)
+
+        except Exception as e:
+            print(e)
+            # os.remove('./tasks.txt')
+        self.assertEqual(tpg.tasks, set(tasks))
+
     def test_multi_elite(self):
         """ マルチタスク学習に対応できるように、改良。
         """
