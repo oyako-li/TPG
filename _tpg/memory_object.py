@@ -1364,7 +1364,7 @@ class _Memory(_Logger):
 
     def oblivion(self, ignore):
         deleat_key = []
-        self.debug(f'oblivion:{str(self)}')
+        # self.debug(f'oblivion:{str(self)}')
         # breakpoint('oblivion')
         for k in self.memories:
             if not k in ignore: deleat_key.append(k)
@@ -2489,33 +2489,33 @@ class ActionObject2(ActionObject1):
         if isinstance(action, self.__class__.Team):
             self.teamAction = action
             self.actionCode = None
-            self.debug(f'init:teamObj, {self}')
+            # self.debug(f'init:teamObj, {self}')
             return
         # The action is another action object
         elif isinstance(action, self.__class__):
             self.actionCode = action.actionCode
             self.teamAction = action.teamAction
             # breakpoint(self.__class__)
-            self.debug(f'init:actObj, {self}')
+            # self.debug(f'init:actObj, {self}')
             return
         # An int means the action is an index into the action codes in initParams
         elif isinstance(action, UUID):
             assert action in self.__class__.actions, f'{action} not in {self.__class__.actions}'
             self.actionCode = action
             self.teamAction = None
-            self.debug(f'init:UUID, {self}')
+            # self.debug(f'init:UUID, {self}')
             return
         elif isinstance(action, list) or isinstance(action, np.ndarray):
             self.actionCode = self.__class__.actions.append(action)
             self.teamAction = None
-            self.debug(f'init:list, {self}')
+            # self.debug(f'init:list, {self}')
             return
         else:
             try:
                 # self.debug(f'init:list, actObj:{self}, action:{self.action}')
                 self.actionCode=self.__class__.actions.choice()
                 self.teamAction=None
-                self.debug(f'init:choice, {self}')
+                # self.debug(f'init:choice, {self}')
             except:
                 print('諦めな・・・')
 
