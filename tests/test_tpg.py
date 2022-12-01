@@ -74,11 +74,12 @@ class TPGTest(unittest.TestCase):
             raise Exception('tasksDoesntExist')
         
         try:
-            for task in tasks:
-                tpg = self.TPG()
-                tpg.unset_logger()
-                # tpg.setEnv(gym.make(task))
-                tpg.story(_task=task, _generations=100, _load=True)
+            for _ in range(10):
+                for task in tasks:
+                    tpg = self.TPG()
+                    tpg.unset_logger()
+                    # tpg.setEnv(gym.make(task))
+                    tpg.story(_task=task, _generations=100, _load=True)
         except Exception as e:
             print(e)
             # os.remove('./tasks.txt')
@@ -97,9 +98,12 @@ class TPGTest(unittest.TestCase):
         else:
             raise Exception('tasksDoesntExist')
         
-        tpg = self.TPG()
         try:
-            tpg.multi(tasks, _generations=100, _load=True)
+            for _ in range(10):
+                tpg = self.TPG()
+                tpg.multi(tasks, _generations=100, _load=True)
+                tpg.unset_logger()
+
         except Exception as e:
             print(e)
             # os.remove('./tasks.txt')
