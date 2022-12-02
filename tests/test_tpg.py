@@ -103,7 +103,7 @@ class TPGTest(unittest.TestCase):
             for _ in range(10):
                 tpg = self.TPG()
                 random.shuffle(tasks)
-                tpg.multi(tasks, _generations=1, _load=True)
+                tpg.multi(tasks, _generations=100, _load=True)
                 tpg.unset_logger()
 
         except Exception as e:
@@ -112,7 +112,7 @@ class TPGTest(unittest.TestCase):
         self.assertEqual(tpg.tasks, set(tasks))
 
     # @unittest.skip('test single task')
-    def test_multi_random_(self):
+    def test_multi_random(self):
         """ マルチタスク学習に対応できるように、改良。
         """
         tasks=[]
