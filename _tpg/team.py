@@ -397,7 +397,6 @@ class Team1(_Team):
 
         return super().__new__(cls, *args, **kwargs)
 
-
 class Team1_1(Team1):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -789,13 +788,30 @@ class Team1_2(Team1):
 
         return _clone
 
-
 class Team1_2_1(Team1_2):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.learner import Learner1_2_1
             cls._instance = True
             cls.Learner = Learner1_2_1
+
+        return super().__new__(cls, *args, **kwargs)
+
+class Team1_2_2(Team1_2_1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.learner import Learner1_2_2
+            cls._instance = True
+            cls.Learner = Learner1_2_2
+
+        return super().__new__(cls, *args, **kwargs)
+
+class Team1_2_3(Team1_2_2):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.learner import Learner1_2_3
+            cls._instance = True
+            cls.Learner = Learner1_2_3
 
         return super().__new__(cls, *args, **kwargs)
      

@@ -352,6 +352,32 @@ class Learner1_2_1(Learner1_2):
             assert any(isinstance(i, uuid.UUID) for i in _clone.getActionTeam().inLearners), f'must be uuid in {_clone.getActionTeam().inLearners}'
         return _clone
 
+class Learner1_2_2(Learner1_2_1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            from _tpg.team import Team1_2_2
+            from _tpg.program import Program1
+            from _tpg.memory_object import ActionObject4
+            cls.Team = Team1_2_2
+            cls.Program = Program1
+            cls.ActionObject = ActionObject4
+
+        return super().__new__(cls, *args, **kwargs)
+
+class Learner1_2_3(Learner1_2_2):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            from _tpg.team import Team1_2_3
+            from _tpg.program import Program1
+            from _tpg.memory_object import ActionObject5
+            cls.Team = Team1_2_3
+            cls.Program = Program1
+            cls.ActionObject = ActionObject5
+
+        return super().__new__(cls, *args, **kwargs)
+
 class Learner1_3(Learner1):
 
     def __new__(cls, *args, **kwargs):

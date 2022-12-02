@@ -68,6 +68,7 @@ class TPGTest(unittest.TestCase):
         if os.path.exists('./.tasks'):
             with open('./.tasks', 'r') as task_file:
                 tasks = task_file.read().splitlines()
+                random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
                 random.shuffle(tasks)
                 print(tasks, type(tasks))
         else:
@@ -83,7 +84,7 @@ class TPGTest(unittest.TestCase):
         except Exception as e:
             print(e)
             # os.remove('./tasks.txt')
-        self.assertTrue(tpg.tasks!=set(tasks))
+        # self.assertTrue(tpg.tasks!=set(tasks))
     
     # @unittest.skip('test single task')
     def test_multi(self):
@@ -93,15 +94,16 @@ class TPGTest(unittest.TestCase):
         if os.path.exists('./.tasks'):
             with open('./.tasks', 'r') as task_file:
                 tasks = task_file.read().splitlines()
-                random.shuffle(tasks)
                 print(tasks, type(tasks))
+                random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
         else:
             raise Exception('tasksDoesntExist')
         
         try:
             for _ in range(10):
                 tpg = self.TPG()
-                tpg.multi(tasks, _generations=100, _load=True)
+                random.shuffle(tasks)
+                tpg.multi(tasks, _generations=1, _load=True)
                 tpg.unset_logger()
 
         except Exception as e:
@@ -117,6 +119,8 @@ class TPGTest(unittest.TestCase):
         if os.path.exists('./.tasks'):
             with open('./.tasks', 'r') as task_file:
                 tasks = task_file.read().splitlines()
+                random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
+
                 random.shuffle(tasks)
                 print(tasks, type(tasks))
         else:
@@ -149,6 +153,7 @@ class TPGTest(unittest.TestCase):
         if os.path.exists('./.tasks'):
             with open('./.tasks', 'r') as task_file:
                 tasks = task_file.read().splitlines()
+                random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
                 random.shuffle(tasks)
                 print(tasks, type(tasks))
         else:
@@ -178,6 +183,7 @@ class TPGTest(unittest.TestCase):
         if os.path.exists('./tasks.txt'):
             with open('./tasks.txt', 'r') as task_file:
                 tasks = task_file.read().splitlines()
+                random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
                 random.shuffle(tasks)
                 print(tasks, type(tasks))
         else:
@@ -303,6 +309,22 @@ class Actor1BiasTest(ActorBiasTest):
     def setUp(self) -> None:
         from _tpg.tpg import Actor1
         self.TPG = Actor1
+        self.task = "CartPole-v1"
+        self.env = gym.make(self.task)
+        self.action = self.env.action_space.n
+
+class Actor2PointTest(ActorPointTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import Actor2
+        self.TPG = Actor2
+        self.task = "Centipede-v4"
+        self.env = gym.make(self.task)
+        self.action = self.env.action_space.n
+
+class Actor2BiasTest(ActorBiasTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import Actor2
+        self.TPG = Actor2
         self.task = "CartPole-v1"
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n

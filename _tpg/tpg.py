@@ -466,13 +466,21 @@ class Actor(_TPG):
         
         return self.epilogue()
 
-
 class Actor1(Actor):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.trainer import Trainer1_2_1
             cls._instance = True
             cls.Trainer = Trainer1_2_1
+
+        return super().__new__(cls, *args, **kwargs)
+
+class Actor2(Actor):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.trainer import Trainer1_2_2
+            cls._instance = True
+            cls.Trainer = Trainer1_2_2
 
         return super().__new__(cls, *args, **kwargs)
 

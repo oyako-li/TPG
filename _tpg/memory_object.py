@@ -1596,6 +1596,25 @@ class Memory3_1(Memory3):
         self.memories[fragment._id] = fragment
         return fragment._id
 
+class Memory3_2(Memory3_1):
+    """ Fragment object management
+
+        Attribute:
+            memories: fragments
+            nan: Fragment([nan])
+    """
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            cls.Fragment = Fragment3_1
+        return super().__new__(cls, *args, **kwargs)
+
+    def choices(self, k=1, _ignore:list=None)->list:
+        # p = 1-self.popus(_ignore)
+        # p=sigmoid(p)+0.0001
+        return random.choices(self.codes(_ignore), k=k)
+
 class _MemoryObject(_Logger):
     Team = None
     Memory = None
@@ -2884,6 +2903,30 @@ class ActionObject3(ActionObject2):
             cls._instance = True
             cls.Team = Team1_2_1
             cls.Memory = Memory3_1
+            cls.actions = cls.Memory()
+
+        return super().__new__(cls, *args, **kwargs)
+
+class ActionObject4(ActionObject3):
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.team import Team1_2_2
+            cls._instance = True
+            cls.Team = Team1_2_2
+            cls.Memory = Memory3_2
+            cls.actions = cls.Memory()
+
+        return super().__new__(cls, *args, **kwargs)
+
+class ActionObject5(ActionObject4):
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.team import Team1_2_3
+            cls._instance = True
+            cls.Team = Team1_2_3
+            cls.Memory = Memory3_2
             cls.actions = cls.Memory()
 
         return super().__new__(cls, *args, **kwargs)
