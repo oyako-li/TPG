@@ -138,6 +138,29 @@ class TPGTest(unittest.TestCase):
             # os.remove('./tasks.txt')
         self.assertEqual(tpg.tasks, set(tasks))
 
+    # @unittest.skip('test single task')
+    def test_multi_chaos(self):
+        """ マルチタスク学習に対応できるように、改良。
+        """
+        tasks=[]
+        if os.path.exists('./.tasks'):
+            with open('./.tasks', 'r') as task_file:
+                tasks = task_file.read().splitlines()
+                random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
+
+                print(tasks, type(tasks))
+        else:
+            raise Exception('tasksDoesntExist')
+        
+        tpg = self.TPG()
+        try:
+            tpg.chaos_story(_tasks=tasks, _generations=100, _load=True)
+
+        except Exception as e:
+            print(e)
+            # os.remove('./tasks.txt')
+        self.assertEqual(tpg.tasks, set(tasks))
+
     def test_multi_elite(self):
         """ マルチタスク学習に対応できるように、改良。
         """

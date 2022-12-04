@@ -1138,6 +1138,25 @@ class Trainer1_2_2(Trainer1_2_1):
 
         return super().__new__(cls, *args, **kwargs)
 
+class Trainer1_2_2(Trainer1_2_1):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.agent import Agent1_2
+            from _tpg.team import Team1_2_3
+            from _tpg.learner import Learner1_2_3
+            from _tpg.program import Program1
+            from _tpg.memory_object import ActionObject5
+
+            cls._instance = True
+            cls.Agent = Agent1_2
+            cls.Team = Team1_2_3
+            cls.Learner = Learner1_2_3
+            cls.Program = Program1
+            cls.ActionObject = ActionObject5
+            cls.ActionObject()
+
+        return super().__new__(cls, *args, **kwargs)
+
     # def _initialize(self):
 
     #     for _ in range(self.teamPopSize):

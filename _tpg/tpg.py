@@ -1,6 +1,7 @@
 from datetime import datetime
 from math import tanh
-from _tpg.utils import breakpoint, _Logger
+from _tpg.utils import _Logger
+from _tpg.utils import *
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
@@ -202,6 +203,14 @@ class _TPG(_Logger):
 
         return self.epilogue()
 
+    def story1(self, *args, **kwargs):
+        self.prologue1(*args, **kwargs)
+        self.debug(f'story_task:{self.task}, gen:{self.gen}')
+        for _ in range(self.generations):
+            self.generation()
+        
+        return self.epilogue1()
+
     def success_story(self, _trainer=None, _task:str=None, _generations:int=1, _episodes:int=None, _frames:int=None, _show=None, _test=None, _load=None, _dir=None):
         self.prologue(_trainer=_trainer, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load, _dir=_dir)
         self.debug(f'story_task:{self.task}, gen:{self.gen}')
@@ -224,6 +233,20 @@ class _TPG(_Logger):
 
         return f'log/{self.dir}{self.today}/{self.filename}'
 
+    def chaos_story(self, **kwargs):
+        random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
+
+        
+        self.setEnv(gym.make(random.choice(kwargs['_tasks'])))
+        self.prologue1(**kwargs)
+        for _ in range(self.generations):
+            self.frames=random.randint(0,1000)
+            self.generation()
+            self.env.close()
+            self.setEnv(gym.make(random.choice(kwargs['_tasks'])))
+
+        return self.epilogue1()
+
     def multi(self, _tasks, _generations=None, _load=None):
         self.archive=[]
         for task in _tasks:
@@ -231,6 +254,7 @@ class _TPG(_Logger):
             self.archive+=[title]
 
         return self.archive
+
     
     def instance_valid(self, trainer) -> bool:
         if not isinstance(trainer, self.__class__.Trainer): raise Exception(f'this object is not {self.__class__.Trainer}')
@@ -250,7 +274,6 @@ class _TPG(_Logger):
             self.dir = _dir
         if _load:
             self.load = _load
-            # self.set_level(logging.DEBUG)
         if _generations:
             self.generations=_generations
         if _episodes:
@@ -269,12 +292,52 @@ class _TPG(_Logger):
         
         signal.signal(signal.SIGINT, interruption)
 
+    def prologue1(self, *args, **kwargs):
+        if kwargs.get('_trainer'):
+            self.instance_valid(kwargs['_trainer'])
+            self.trainer = kwargs['_trainer']
+        
+        if kwargs.get('_task'):
+            env = gym.make(kwargs['_task'])
+            self.setEnv(env)
+        
+        if kwargs.get('_test'):
+            self.test = kwargs['_test']
+        if kwargs.get('_dir'):
+            self.dir = kwargs['_dir']
+        if kwargs.get('_load'):
+            self.load = kwargs['_load']
+            # self.set_level(logging.DEBUG)
+        if kwargs.get('_generations'):
+            self.generations=kwargs['_generations']
+        if kwargs.get('_episodes'):
+            self.episodes = kwargs['_episodes']
+        if kwargs.get('_frames'):
+            self.frames = kwargs['_frames']
+        if kwargs.get('_show'):
+            self.show = kwargs['_show']
+        self.setup_logger(__name__, test=self.test, load=self.load)
+        self.debug(f'gen:{self.gen}, task:{self.task}, frames:{self.frames}')
+
+        def interruption(signum, frame):
+            self.epilogue1()
+            print('interruption')
+            sys.exit()
+        
+        signal.signal(signal.SIGINT, interruption)
+
     def epilogue(self):
         # title = f'{self.filename}'
         self.env.close()
         self.log_show()
         self.trainer.save(f'log/{self.dir}{self.today}/{self.filename}')
 
+        return f'log/{self.dir}{self.today}/{self.filename}'
+
+    def epilogue1(self, **kwargs):
+        self.env.close()
+        self.log_show1()
+        self.trainer.save(f'log/{self.dir}{self.today}/{self.filename}')
         return f'log/{self.dir}{self.today}/{self.filename}'
 
     @property
