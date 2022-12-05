@@ -193,7 +193,6 @@ class _TPG(_Logger):
         
         self.gen+=1
     
-    
     def story(self, _trainer=None, _task:str=None, _generations:int=None, _episodes:int=None, _frames:int=None, _show=None, _test=None, _load=None, _dir=None):
         self.prologue(_trainer=_trainer, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load, _dir=_dir)
         self.debug(f'story_task:{self.task}, gen:{self.gen}')
@@ -353,6 +352,14 @@ class _TPG(_Logger):
         _trainer = self.__class__.Trainer.load(_title)
         self.trainer = _trainer
         
+class MTPG(_TPG):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.trainer import Trainer
+            cls._instance = True
+            cls.Trainer = Trainer
+
+        return super().__new__(cls, *args, **kwargs)
 
 class MHTPG(_TPG):
     def __new__(cls, *args, **kwargs):
@@ -363,8 +370,8 @@ class MHTPG(_TPG):
 
         return super().__new__(cls, *args, **kwargs)
 
-    def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None):
-        self.trainer.evolve(tasks, multiTaskType, extraTeams)
+    # def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None):
+    #     self.trainer.evolve(tasks, multiTaskType, extraTeams)
 
 class ActorTPG(MHTPG):
     def __new__(cls, *args, **kwargs):

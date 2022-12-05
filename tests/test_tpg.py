@@ -58,7 +58,7 @@ class TPGTest(unittest.TestCase):
                     self.env = gym.make(arg.split(':')[1])
 
         tpg.setEnv(self.env)
-        title = tpg.story(_dir='test/', _load=True, _generations=100)
+        title = tpg.story(_dir=f'{tpg.task}'.replace('/','-')+'/', _load=True, _generations=100)
         self.assertIsNotNone(title)
 
     def test_single_each(self):
@@ -244,7 +244,15 @@ class TPGTest(unittest.TestCase):
 
         log_show(_title=title,_task=task)
 
-class MHTPGTest(TPGTest):
+class MTPGTest(TPGTest):
+    def setUp(self) -> None:
+        from _tpg.tpg import MTPG
+        self.TPG = MTPG
+        self.task = "CartPole-v1"
+        self.env = gym.make(self.task)
+        self.action = self.env.action_space.n
+
+class MHTPGTest(MTPGTest):
 
     def setUp(self) -> None:
         from _tpg.tpg import MHTPG

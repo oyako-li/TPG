@@ -131,6 +131,58 @@ class _Program(_Logger):
             return self
 
     @classmethod
+    def execute(cls, inpt, regs, modes, ops, dsts, srcs):
+        regSize = len(regs)
+        inptLen = len(inpt)
+        for i in range(len(modes)):
+            # first get source
+            if modes[i] == 0:   src = regs[srcs[i]%regSize]
+            else:               src = inpt[srcs[i]%inptLen]
+
+            # get data for operation
+            op = ops[i]
+            x = regs[dsts[i]]
+            y = src
+            dest = dsts[i]%regSize
+
+            # do an operation
+            try:
+                if op == 0:             regs[dest] = x+y
+                elif op == 1:           regs[dest] = x-y
+                elif op == 2:           regs[dest] = x*y
+                elif op == 3 and y != 0:regs[dest] = x/y
+                elif op == 4:           pass #regs[dest] = x**y
+                elif op == 5 and x < y: regs[dest] = x*(-1)
+                elif op == 6 and x > y: regs[dest] = x*(-1)
+                elif op == 7:           regs[dest] = sin(y)
+                elif op == 8:           regs[dest] = cos(y)
+                elif op == 9:           regs[dest] = tanh(y)
+                elif op == 10 and y > 0:regs[dest] = log(y)
+                elif op == 11 and y > 0:regs[dest] = sqrt(y)
+                elif op == 12:          regs[dest] = exp(y)
+                elif op == 13:          regs[dest] = pow(y,2)
+                elif op == 14:          regs[dest] = pow(y,3)
+                elif op == 15:          regs[dest] = abs(y)
+                else:
+                    regs[dest]=np.nan
+            
+            except Warning as w:
+                regs[dest] = 0
+
+            except Exception as e:
+                regs[dest] = 0
+
+            if isnan(regs[dest]):       regs[dest] = 0
+            elif regs[dest] == inf:     regs[dest] = finfo(float64).max
+            elif regs[dest] == NINF:    regs[dest] = finfo(float64).min
+
+class Program(_Program):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+        return super().__new__(cls, *args, **kwargs)
+  
+    @classmethod
     def execute(cls,
         inpt,   # state: np.ndarray or MemoryObj
         regs,   # self.registers: np.ndarray
@@ -209,7 +261,7 @@ class _Program(_Logger):
             elif regs[dest] == inf:     regs[dest] = finfo(float64).max
             elif regs[dest] == NINF:    regs[dest] = finfo(float64).min
 
-class Program1(_Program):
+class Program1(Program):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True
@@ -236,10 +288,6 @@ class Program1(_Program):
 
         self._id = uuid.uuid4()
 
-    @classmethod
-    def id(self):
-        return str(self._id)
-  
     def mutate(self, mutateParams):
         """
         Potentially modifies the instructions in a few ways.
@@ -305,6 +353,10 @@ class Program1(_Program):
                             random.randint(0, mutateParams["inputSize"]-1)),0)
             
             return self
+
+    @classmethod
+    def id(self):
+        return str(self._id)
 
 class Program1_3(Program1):
     """Activate sequence create program

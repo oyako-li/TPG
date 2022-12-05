@@ -113,20 +113,16 @@ class _Learner(_Logger):
         
         return result
 
-    def bid(self, state, actVars=None): 
-        """
-        Get the bid value, highest gets its action selected.
-        """
+    def bid(self, state, actVars=None):
         # exit early if we already got bidded this frame
-        if self.frameNum == actVars["frameNum"]: return self.registers[0]
+        if self.frameNum == actVars["frameNum"]:
+            return self.registers[0]
 
         self.frameNum = actVars["frameNum"]
 
         self.__class__.Program.execute(state, self.registers,
                         self.program.instructions[:,0], self.program.instructions[:,1],
-                        self.program.instructions[:,2], self.program.instructions[:,3],
-                        actVars["memMatrix"], actVars["memMatrix"].shape[0], actVars["memMatrix"].shape[1],
-                        self.__class__.Program.memWriteProb)
+                        self.program.instructions[:,2], self.program.instructions[:,3])
 
         return self.registers[0]
 
@@ -196,7 +192,37 @@ class _Learner(_Logger):
 
         return _clone
 
-class Learner1(_Learner):
+class Learner(_Learner):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+            from _tpg.team import _Team
+            from _tpg.action_object import _ActionObject
+            from _tpg.program import Program
+            cls.Team = _Team
+            cls.ActionObject = _ActionObject
+            cls.Program = Program
+            
+        return super().__new__(cls, *args, **kwargs)
+        
+    def bid(self, state, actVars=None): 
+        """
+        Get the bid value, highest gets its action selected.
+        """
+        # exit early if we already got bidded this frame
+        if self.frameNum == actVars["frameNum"]: return self.registers[0]
+
+        self.frameNum = actVars["frameNum"]
+
+        self.__class__.Program.execute(state, self.registers,
+                        self.program.instructions[:,0], self.program.instructions[:,1],
+                        self.program.instructions[:,2], self.program.instructions[:,3],
+                        actVars["memMatrix"], actVars["memMatrix"].shape[0], actVars["memMatrix"].shape[1],
+                        self.__class__.Program.memWriteProb)
+
+        return self.registers[0]
+
+class Learner1(Learner):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = True

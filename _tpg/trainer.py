@@ -163,6 +163,7 @@ class _Trainer(_Logger):
         self.elites:    list = [] # save best at each task
 
         self.generation = 0 # track this
+        self.nOperations = 16
 
         # these are to be filled in by the configurer after
         self.mutateParams:  dict = {
@@ -178,7 +179,7 @@ class _Trainer(_Logger):
             "pInstDel": pInstDel, 
             "pInstMut": pInstMut,
             "pInstSwp": pInstSwp, 
-            "nOperations": 18,
+            "nOperations": self.nOperations,
             "nDestinations": nRegisters,
             "inputSize": inputSize, 
             "initMaxProgSize": initMaxProgSize,
@@ -194,7 +195,6 @@ class _Trainer(_Logger):
             "task": [],
             "memMatrix": self.memMatrix,
         }
-        self.nOperations = 18
         # self.logger=None
 
         if actions: self.setActions(actions)
@@ -560,16 +560,202 @@ class Trainer(_Trainer):
         if cls._instance is None:
             from _tpg.agent import _Agent
             from _tpg.team import _Team
-            from _tpg.learner import _Learner
-            from _tpg.program import _Program
+            from _tpg.learner import Learner
+            from _tpg.program import Program
             from _tpg.action_object import _ActionObject
 
             cls._instance = True
             cls.Agent = _Agent
             cls.Team = _Team
-            cls.Learner = _Learner
-            cls.Program = _Program
+            cls.Learner = Learner
+            cls.Program = Program
             cls.ActionObject = _ActionObject
+
+        return super().__new__(cls, *args, **kwargs)
+
+    def __init__(self, 
+        actions=None, 
+        teamPopSize:int=1000,               # *
+        rootBasedPop:bool=True,             
+        gap:float=0.5,                      
+        inputSize:int=33600,                
+        nRegisters:int=8,                   # *
+        initMaxTeamSize:int=10,             # *
+        initMaxProgSize:int=10,             # *
+        maxTeamSize:int=-1,                 # *
+        pLrnDel:float=0.7,                  # *
+        pLrnAdd:float=0.6,                  # *
+        pLrnMut:float=0.2,                  # *
+        pProgMut:float=0.1,                 # *
+        pActMut:float=0.1,                  # *
+        pActAtom:float=0.95,                # *
+        pInstDel:float=0.5,                 # *
+        pInstAdd:float=0.4,                 # *
+        pInstSwp:float=0.2,                 # *
+        pInstMut:float=1.0,                 # *
+        doElites:bool=True, 
+        # memType="def", 
+        memMatrixShape:tuple=(100,8),       # *
+        rampancy:tuple=(0,0,0),
+        # operationSet:str="custom", 
+        # traversal:str="team", 
+        prevPops=None, mutatePrevs=True,
+        initMaxActProgSize:int=6,           # *
+        nActRegisters:int=4
+    ):
+        '''
+        Validate inputs
+        '''
+        int_greater_than_zero = {
+            "teamPopSize": teamPopSize,
+            "inputSize": inputSize,
+            "nRegisters": nRegisters,
+            "initMaxTeamSize": initMaxTeamSize,
+            "initMaxProgSize": initMaxProgSize,
+        }
+
+        for entry in int_greater_than_zero.items(): self._must_be_integer_greater_than_zero(entry[0], entry[1])
+
+        # Validate doElites
+        if type(doElites) is not bool:  raise Exception("Invalid doElites")
+
+        # Validate rootBasedPop
+        if type(rootBasedPop) is not bool:  raise Exception("Invalid rootBasedPop")
+
+        # Validate Traversal
+        # if traversal not in ["team", "learner"]:    raise Exception("Invalid traversal")
+        
+        '''
+        Gap must be a float greater than 0 but less than or equal to 1
+        '''
+        if type(gap) is not float or gap == 0.0 or gap > 1.0:   raise Exception("gap must be a float greater than 0 but less than or equal to 1")
+
+
+        # Validate Operation Set
+        # if operationSet not in ["def", "full", "robo", "custom"]:   raise Exception("Invalid operation set")
+
+        # Validate Probability parameters
+        probabilities = {
+            "pLrnDel": pLrnDel,
+            "pLrnAdd": pLrnAdd,
+            "pLrnMut": pLrnMut,
+            "pProgMut": pProgMut,
+            "pActMut": pActMut,
+            "pActAtom": pActAtom,
+            "pInstDel": pInstDel,
+            "pInstAdd": pInstAdd,
+            "pInstSwp": pInstSwp,
+            "pInstMut": pInstMut
+        }
+
+
+        for entry in probabilities.items(): self._validate_probability(entry[0],entry[1])
+
+        # Validate rampancy
+        if (
+            len(rampancy) != 3 or
+            rampancy[0] < 0 or
+            rampancy[2] < rampancy[1] or 
+            rampancy[1] < 0 or
+            rampancy[2] < 0
+        ): raise Exception("Invalid rampancy parameter!", rampancy)
+
+        # store all necessary params
+
+        # first store actions properly
+        # population params
+        self.teamPopSize = teamPopSize
+        # whether population size is based on root teams or all teams
+        self.rootBasedPop = rootBasedPop
+        self.gap = gap # portion of root teams to remove each generation
+
+        # input to agent (must be at-least size of input/state from environment)
+        self.inputSize = inputSize # defaulted to number of Atari screen pixels
+        # number of local memory registers each learner will have
+        self.nRegisters = nRegisters
+
+        # params for initializing evolution
+        self.initMaxTeamSize = initMaxTeamSize # size of team = # of learners
+        self.initMaxProgSize = initMaxProgSize # size of program = # of instructions
+
+
+        # whether to keep elites
+        self.doElites = doElites
+
+        # if memType == "None":   self.memType = None
+        # self.memType = memType
+        # self.memMatrixShape = memMatrixShape
+        self.memMatrix = np.zeros(shape=memMatrixShape)
+
+        self.rampancy = rampancy
+
+        # self.operationSet = operationSet
+
+        # self.traversal = traversal
+
+        self.initMaxActProgSize = initMaxActProgSize
+        # ensure nActRegisters is larger than the largest action length
+        # if self.doReal: nActRegisters = max(max(self.actionLengths), nActRegisters)
+        self.nActRegisters = nActRegisters
+
+        # core components of TPG
+        self.teams:     list = []
+        self.rootTeams: list = []
+        self.learners:  list = []
+        self.elites:    list = [] # save best at each task
+
+        self.generation = 0 # track this
+        self.nOperations = 18
+
+        # these are to be filled in by the configurer after
+        self.mutateParams:  dict = {
+            "generation": self.generation,
+            "maxTeamSize": maxTeamSize,
+            "pLrnAdd": pLrnAdd, 
+            "pLrnDel": pLrnDel, 
+            "pLrnMut": pLrnMut,
+            "pProgMut": pProgMut, 
+            "pActAtom": pActAtom, 
+            "pActMut": pActMut, 
+            "pInstAdd": pInstAdd, 
+            "pInstDel": pInstDel, 
+            "pInstMut": pInstMut,
+            "pInstSwp": pInstSwp, 
+            "nOperations": self.nOperations,
+            "nDestinations": nRegisters,
+            "inputSize": inputSize, 
+            "initMaxProgSize": initMaxProgSize,
+            "rampantGen": rampancy[0], 
+            "rampantMin": rampancy[1], 
+            "rampantMax": rampancy[2], 
+            "idCountTeam": 0, 
+            "idCountLearner": 0, 
+            "idCountProgram": 0
+        }
+        self.actVars:       dict = {
+            "frameNum": 0,
+            "task": [],
+            "memMatrix": self.memMatrix,
+        }
+        # self.logger=None
+
+        if actions: self.setActions(actions)
+
+class Trainer1(Trainer):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            from _tpg.agent import Agent1
+            from _tpg.team import Team1
+            from _tpg.learner import Learner1
+            from _tpg.program import Program1
+            from _tpg.action_object import _ActionObject
+
+            cls._instance = True
+            cls.Agent = Agent1
+            cls.Team = Team1
+            cls.Learner = Learner1
+            cls.Program = Program1
+            cls.ActionObject= _ActionObject
 
         return super().__new__(cls, *args, **kwargs)
     
@@ -627,24 +813,6 @@ class Trainer(_Trainer):
             for team in extraTeams:
                 if team.numLearnersReferencing() == 0 and team not in protectedExtras:
                     self.teams.remove(team)
-
-class Trainer1(Trainer):
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            from _tpg.agent import Agent1
-            from _tpg.team import Team1
-            from _tpg.learner import Learner1
-            from _tpg.program import Program1
-            from _tpg.action_object import _ActionObject
-
-            cls._instance = True
-            cls.Agent = Agent1
-            cls.Team = Team1
-            cls.Learner = Learner1
-            cls.Program = Program1
-            cls.ActionObject= _ActionObject
-
-        return super().__new__(cls, *args, **kwargs)
 
 class Trainer1_1(Trainer1):
     def __new__(cls, *args, **kwargs):
