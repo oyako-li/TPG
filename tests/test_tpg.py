@@ -154,8 +154,10 @@ class TPGTest(unittest.TestCase):
         
         tpg = self.TPG()
         try:
-            tpg.chaos_story(_tasks=tasks, _generations=100, _load=True)
-
+            for _ in range(10):
+                tpg.chaos_story(_tasks=tasks, _generations=100, _load=True)
+                tpg.unset_logger()
+                tpg = self.TPG()
         except Exception as e:
             print(e)
             # os.remove('./tasks.txt')
