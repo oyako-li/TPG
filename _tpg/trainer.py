@@ -801,9 +801,7 @@ class Trainer1(Trainer):
                 tm = new_learner.getActionTeam()
                 if tm in self.rootTeams:
                     clone = tm.clone
-                    clone.inLearner=list()
                     self.teams.append(clone)
-                    # child.removeLearner(new_learner)
                     
                     assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
 
@@ -940,7 +938,6 @@ class Trainer1_1(Trainer1):
                 tm = new_learner.getActionTeam()
                 if tm in self.rootTeams:
                     clone = tm.clone
-                    clone.inLearner=list()
                     self.teams.append(clone)
                     
                     
@@ -1079,7 +1076,6 @@ class Trainer1_2(Trainer1_1):
                 tm = new_learner.getActionTeam()
                 if tm in self.rootTeams:
                     clone = tm.clone
-                    clone.inLearner=list()
                     self.teams.append(clone)
                     
                     assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
@@ -1241,7 +1237,6 @@ class Trainer1_2_1(Trainer1_2):
                 tm = new_learner.getActionTeam()
                 if tm in self.rootTeams:
                     clone = tm.clone
-                    clone.inLearner=list()
                     self.teams.append(clone)
                     
                     assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'

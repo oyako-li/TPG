@@ -37,6 +37,17 @@ class _Team(_Logger):
         if isinstance(initParams, dict): self.genCreate = initParams["generation"]
         elif isinstance(initParams, int): self.genCreate = initParams
 
+    def __str__(self) -> str:
+        return f"""
+        learners:{self.learners},
+        inLearners:{self.inLearners},
+        outcomes:{self.outcomes},
+        id:{self.id},
+        fitness:{self.fitness},
+        sequence:{self.sequence},
+        extinction:{self.extinction}
+        """
+
     def __eq__(self, __o: object) -> bool: 
         # Object must be instance of Team
         if not isinstance(__o, self.__class__):    return False
@@ -375,7 +386,6 @@ class _Team(_Logger):
     @property
     def clone(self): 
         _clone = self.__class__(
-            inLearners=self.inLearners,
             outcomes=self.outcomes,
             fitness=self.fitness,
             extinction=self.extinction,
@@ -774,19 +784,6 @@ class Team1_2(Team1):
     @property
     def id(self):
         return str(self._id)
-
-    @property
-    def clone(self): 
-        _clone = self.__class__(
-            inLearners=self.inLearners,
-            outcomes=self.outcomes,
-            fitness=self.fitness,
-            extinction=self.extinction,
-        )
-        for learner in self.learners:
-            _clone.addLearner(learner.clone)
-
-        return _clone
 
 class Team1_2_1(Team1_2):
     def __new__(cls, *args, **kwargs):

@@ -97,6 +97,7 @@ class _TPG(_Logger):
         self.tasks = set()
         self.scores = {}
         self.gen=0
+        self.archive=list()
 
     def setActions(self, actions):
         self.actions = self.trainer.setActions(actions)
@@ -326,18 +327,27 @@ class _TPG(_Logger):
         signal.signal(signal.SIGINT, interruption)
 
     def epilogue(self):
-        # title = f'{self.filename}'
+        title = f'log/{self.dir}{self.today}/{self.filename}'
+        self.archive.append(title)
         self.env.close()
         self.log_show()
-        self.trainer.save(f'log/{self.dir}{self.today}/{self.filename}')
+        self.trainer.save(title)
 
-        return f'log/{self.dir}{self.today}/{self.filename}'
+        return title
 
     def epilogue1(self, **kwargs):
+        title = f'log/{self.dir}{self.today}/{self.filename}'
+        self.archive.append(title)
         self.env.close()
         self.log_show1()
-        self.trainer.save(f'log/{self.dir}{self.today}/{self.filename}')
-        return f'log/{self.dir}{self.today}/{self.filename}'
+        self.trainer.save(title)
+        return title
+
+    def restert(self):
+        self.trainer = self.__class__.Trainer()
+        self.gen=0
+        self.unset_logger()
+        self.setup_logger(__name__, test=self.test, load=self.load)
 
     @property
     def task(self):

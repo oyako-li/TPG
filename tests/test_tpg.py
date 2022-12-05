@@ -52,14 +52,22 @@ class TPGTest(unittest.TestCase):
     def test_single(self):
         '''test story'''
         tpg = self.TPG()
+        times = 10
         if args := sys.argv[2:]:
             for arg in args:
                 if 'task:' in arg:
                     self.env = gym.make(arg.split(':')[1])
-
-        tpg.setEnv(self.env)
-        title = tpg.story(_dir=f'{tpg.task}'.replace('/','-')+'/', _load=True, _generations=100)
-        self.assertIsNotNone(title)
+                if 'times:' in arg:
+                    times = int(arg.split(':')[1])
+        archive = set()
+        for _ in range(times):
+            tpg.setEnv(self.env)
+            title = tpg.story(_dir=f'{tpg.task}'.replace('/','-')+'/', _load=True, _generations=100)
+            # tpg.restert()
+            tpg = self.TPG()
+            tpg.unset_logger()
+            archive.add(title)
+        self.assertEqual(set(tpg.archive))
 
     def test_single_each(self):
         """ マルチタスク学習に対応できるように、改良。
@@ -151,10 +159,14 @@ class TPGTest(unittest.TestCase):
                 print(tasks, type(tasks))
         else:
             raise Exception('tasksDoesntExist')
-        
+        times = 10
+        if args := sys.argv[2:]:
+            for arg in args:
+                if 'times:' in arg:
+                    times = int(arg.split(':')[1])
         tpg = self.TPG()
         try:
-            for _ in range(10):
+            for _ in range(times):
                 tpg.chaos_story(_tasks=tasks, _generations=100, _load=True)
                 tpg.unset_logger()
                 tpg = self.TPG()
