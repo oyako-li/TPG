@@ -801,7 +801,9 @@ class Trainer1(Trainer):
                 tm = new_learner.getActionTeam()
                 if tm in self.rootTeams:
                     clone = tm.clone
+                    clone.inLearner=list()
                     self.teams.append(clone)
+                    # child.removeLearner(new_learner)
                     
                     assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
 
@@ -938,7 +940,9 @@ class Trainer1_1(Trainer1):
                 tm = new_learner.getActionTeam()
                 if tm in self.rootTeams:
                     clone = tm.clone
+                    clone.inLearner=list()
                     self.teams.append(clone)
+                    
                     
                     assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
 
@@ -1075,6 +1079,7 @@ class Trainer1_2(Trainer1_1):
                 tm = new_learner.getActionTeam()
                 if tm in self.rootTeams:
                     clone = tm.clone
+                    clone.inLearner=list()
                     self.teams.append(clone)
                     
                     assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
@@ -1236,6 +1241,7 @@ class Trainer1_2_1(Trainer1_2):
                 tm = new_learner.getActionTeam()
                 if tm in self.rootTeams:
                     clone = tm.clone
+                    clone.inLearner=list()
                     self.teams.append(clone)
                     
                     assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
@@ -1306,17 +1312,17 @@ class Trainer1_2_2(Trainer1_2_1):
 
         return super().__new__(cls, *args, **kwargs)
 
-class Trainer1_2_3(Trainer1_2_1):
+class Trainer1_2_3(Trainer1_2_2):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            from _tpg.agent import Agent1_2
+            from _tpg.agent import Agent1_2_1
             from _tpg.team import Team1_2_3
             from _tpg.learner import Learner1_2_3
             from _tpg.program import Program1
             from _tpg.memory_object import ActionObject5
 
             cls._instance = True
-            cls.Agent = Agent1_2
+            cls.Agent = Agent1_2_1
             cls.Team = Team1_2_3
             cls.Learner = Learner1_2_3
             cls.Program = Program1
@@ -1382,117 +1388,29 @@ class Trainer1_2_3(Trainer1_2_1):
     #         self.teams.append(team)
     #         self.rootTeams.append(team)
 
-    # def _select(self, extraTeams=None):
+    def _select(self, extraTeams=None):
 
-    #     rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.fitness, reverse=True)
-    #     numKeep = len(self.rootTeams) - int(len(self.rootTeams)*self.gap)
-    #     deleteTeams = rankedTeams[numKeep:]
+        rankedTeams = sorted(self.rootTeams, key=lambda rt: rt.fitness, reverse=True)
+        numKeep = len(self.rootTeams) - int(len(self.rootTeams)*self.gap)
+        deleteTeams = rankedTeams[numKeep:]
 
-    #     for team in [t for t in deleteTeams if t not in self.elites]:
-    #         # remove learners from team and delete team from populations
-    #         if extraTeams is None or team not in extraTeams: team.removeLearners()
-    #         self.teams.remove(team)
-    #         self.rootTeams.remove(team)
+        for team in [t for t in deleteTeams if t not in self.elites]:
+            # remove learners from team and delete team from populations
+            if extraTeams is None or team not in extraTeams: team.removeLearners()
+            self.teams.remove(team)
+            self.rootTeams.remove(team)
 
-    #     orphans = [learner for learner in self.learners if learner.numTeamsReferencing() == 0]
+        orphans = [learner for learner in self.learners if learner.numTeamsReferencing() == 0]
     
-    #     for cursor in orphans:
-    #         if not cursor.isActionAtomic(): # If the orphan does NOT point to an atomic action
-    #             # Get the team the orphan is pointing to and remove the orphan's  _id from the team's in learner list
-    #             assert cursor._id in cursor.actionObj.teamAction.inLearners, f'{cursor._id} not in {cursor.actionObj.teamAction.inLearners}'
-    #             cursor.actionObj.teamAction.inLearners.remove(cursor._id)
+        for cursor in orphans:
+            if not cursor.isActionAtomic(): # If the orphan does NOT point to an atomic action
+                # Get the team the orphan is pointing to and remove the orphan's  _id from the team's in learner list
+                assert cursor._id in cursor.actionObj.teamAction.inLearners, f'{cursor._id} not in {cursor.actionObj.teamAction.inLearners}'
+                cursor.actionObj.teamAction.inLearners.remove(cursor._id)
 
-    #     # Finaly, purge the orphans
-    #     # AtomicActionのLearnerはどのように生成すれば良いのだろうか？ -> actionObj.mutate()による
-    #     self.learners = [learner for learner in self.learners if learner.numTeamsReferencing() > 0]
-
-    # def _generate(self, extraTeams=None):
-    #     # extras who are already part of the team population
-    #     protectedExtras = []
-    #     extrasAdded = 0
-
-    #     # add extras into the population
-    #     if extraTeams is not None:
-    #         for team in extraTeams:
-    #             if team not in self.teams:
-    #                 self.teams.append(team)
-    #                 extrasAdded += 1
-    #             else:
-    #                 protectedExtras.append(team)
-
-    #     oLearners = list(self.learners)
-    #     oTeams = list(self.teams)
-
-    #     # update generation in mutateParams
-    #     self.mutateParams["generation"] = self.generation
-
-    #     # get all the current root teams to be parents
-    #     # mutate or clone
-    #     while (len(self.teams) < self.teamPopSize + extrasAdded or
-    #             (self.rootBasedPop and self.countRootTeams() < self.teamPopSize)):
-
-    #         parent = random.choice(self.rootTeams)
-    #         parent.addSequence()
-    #         child = parent.clone
-
-    #         _, __, new_learners = child.mutate(self.mutateParams, oLearners, oTeams)
-
-
-    #         # then clone the referenced rootTeams
-    #         for new_learner in new_learners:
-    #             tm = new_learner.getActionTeam()
-    #             if tm in self.rootTeams:
-    #                 clone = tm.clone
-    #                 self.teams.append(clone)
-                    
-    #                 assert not clone in self.rootTeams and tm in self.rootTeams, 'prease clone remove from rootTeams'
-
-    #         self.teams.append(child)
-
-
-    #     # remove unused extras
-    #     if extraTeams is not None:
-    #         for team in extraTeams:
-    #             if team.numLearnersReferencing() == 0 and team not in protectedExtras:
-    #                 self.teams.remove(team)
-
-    # def _nextEpoch(self):
-    #     # add in newly added learners, and dec _ide root teams
-    #     self.rootTeams = []
-    #     for team in self.teams:
-    #         # add any new learners to the population
-    #         # team.extinction*=1.01
-    #         assert len(team.inLearners)==0 or any(isinstance(i, uuid.UUID) for i in team.inLearners), f'must be uuid in {team.inLearners}, {[i for i in team.inLearners]}'
-            
-    #         for learner in team.learners:
-    #             if learner not in self.learners:
-    #                 #print("Adding {} to trainer learners".format(learner. _id))
-    #                 self.learners.append(learner)
-
-    #         # self.debug(f'team_sequences:{team.sequence}')
-    #         # maybe make root team
-    #         if team.numLearnersReferencing() == 0 or team in self.elites:
-    #             self.rootTeams.append(team)
-
-
-    #     action_code_list = set()
-    #     for lrnr in self.learners:
-    #         if lrnr.isActionAtomic():
-    #             action_code_list.add(lrnr.actionObj.actionCode)
-
-    #     action_code_list = list(action_code_list)
-    #     self.__class__.ActionObject.actions.oblivion(action_code_list)
-
-    #     self.generation += 1
-
-    # def setActions(self, actions):
-    #     if self.__class__.ActionObject.actions:
-    #         for i in range(actions):
-    #             self.__class__.ActionObject.actions.append([i], _weight=0.)
-    #     else:
-    #         breakpoint('notImpletemted')
-    #     self._initialize()
-    #     return self.__class__.ActionObject.actions
+        # Finaly, purge the orphans
+        # AtomicActionのLearnerはどのように生成すれば良いのだろうか？ -> actionObj.mutate()による
+        self.learners = [learner for learner in self.learners if learner.numTeamsReferencing() > 0]
 
 class Trainer1_3(Trainer1_2):
     Hippocampus=None

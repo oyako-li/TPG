@@ -129,6 +129,20 @@ class Agent1_2(Agent1):
         self.team.appendSequence(_sequence)
         # self.debug(f'trace_sequence:{self.team.sequence},')
 
+class Agent1_2_1(Agent1_2):
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = True
+        return super().__new__(cls, *args, **kwargs)
+
+    def reward(self, score=None, task='task'):
+        """
+        Give this agent/root team a reward for the given task
+        """
+        self.info(f'task:{task}, agent_id:{self.id}, score:{self.score}')
+        _score = score if score else self.score
+        # self.team[task] += sigmoid2(_score)
+        self.team[task] = _score
 
 class Agent1_3(Agent1):
     def __new__(cls, *args, **kwargs):
