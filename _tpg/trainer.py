@@ -550,7 +550,7 @@ class _Trainer(_Logger):
 
     # @property
     def getElite(self, tasks, multiTaskType='min'):
-        self._scoreIndividuals(self, tasks, multiTaskType='min')
+        self._scoreIndividuals(self, tasks, multiTaskType=multiTaskType)
         return self.__class__.Agent(max([rt for rt in self.rootTeams],
                         key=lambda rt: rt.fitness),
                         num=0, actVars=self.actVars)
@@ -1306,7 +1306,7 @@ class Trainer1_2_2(Trainer1_2_1):
 
         return super().__new__(cls, *args, **kwargs)
 
-class Trainer1_2_2(Trainer1_2_1):
+class Trainer1_2_3(Trainer1_2_1):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             from _tpg.agent import Agent1_2
