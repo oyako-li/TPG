@@ -52,17 +52,22 @@ class TPGTest(unittest.TestCase):
     def test_single(self):
         '''test story'''
         tpg = self.TPG()
-        times = 10
+        times = 1
+        generations=100
         if args := sys.argv[2:]:
             for arg in args:
                 if 'task:' in arg:
                     self.env = gym.make(arg.split(':')[1])
                 if 'times:' in arg:
                     times = int(arg.split(':')[1])
+                if 'show' == arg:
+                    tpg.show = True
+                if 'generations:' in arg:
+                    generations = int(arg.split(':')[1])
         archive = set()
         for _ in range(times):
             tpg.setEnv(self.env)
-            title = tpg.story(_dir=f'{tpg.task}'.replace('/','-')+'/', _load=True, _generations=100)
+            title = tpg.story(_dir=f'{tpg.task}'.replace('/','-')+'/', _load=True, _generations=generations)
             # tpg.restert()
             tpg = self.TPG()
             tpg.unset_logger()

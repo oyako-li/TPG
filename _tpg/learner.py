@@ -204,7 +204,7 @@ class Learner(_Learner):
             cls.Program = Program
             
         return super().__new__(cls, *args, **kwargs)
-        
+
     def bid(self, state, actVars=None): 
         """
         Get the bid value, highest gets its action selected.
@@ -302,6 +302,7 @@ class Learner1_2_1(Learner1_2):
         self.frameNum = frameNum # Last seen frame is 0
         self._id = uuid.uuid4()
         self.extinction = extinction
+        self.fitness = 0.
 
 
         if not self.isActionAtomic(): self.actionObj.teamAction.inLearners.append(self._id)
@@ -314,7 +315,7 @@ class Learner1_2_1(Learner1_2):
         if self.frameNum == actVars["frameNum"]: return self.registers[0]
 
         self.frameNum = actVars["frameNum"]
-        self.extinction*=1.01
+        self.extinction*=1.05
 
         self.__class__.Program.execute(state, self.registers,
                         self.program.instructions[:,0], self.program.instructions[:,1],

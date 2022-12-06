@@ -1543,7 +1543,7 @@ class Memory3(Memory1_2):
             return np.array([frg.weight for frg in self.values() if frg._id not in _ignore])
         return np.array(self.weights)
 
-    def updateWeights(self, rate=1.1):
+    def updateWeights(self, rate=1.05):
         # self.weights = {x: val*rate for x, val in self.weights.items()}
         for fragment in self.values():
             fragment.weight*=rate
@@ -2890,6 +2890,10 @@ class ActionObject2(ActionObject1):
     def ch(self):
         return int(self.action[-1]//1)
     
+    @property
+    def weight(self):
+        return self.actions[self.actionCode].weight
+    
     @classmethod
     @property
     def NaN(cls):
@@ -2930,6 +2934,8 @@ class ActionObject5(ActionObject4):
             cls.actions = cls.Memory()
 
         return super().__new__(cls, *args, **kwargs)
+
+    
 
 class Qualia(ActionObject2):
     """ Memory object management

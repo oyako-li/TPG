@@ -611,8 +611,6 @@ def abstract(_sequence):
     state[key] = _sequence[key]
     return state
 
-
-
 class _Logger:
     _instance=None
     _logger=None
@@ -776,7 +774,7 @@ class _Logger:
                 __ma=0.
                 __ave.append(__av/float(_step))
                 __av=0.
-            if i == _renge: break
+            # if i == _renge: break
         mi = np.array(__min)
         ma = np.array(__max)
         av = np.array(__ave)
@@ -840,6 +838,7 @@ class _Logger:
         root.update()
         root.deiconify()
         # root.mainloop()
+        if self.show: root.mainloop()
         
         return mi, ma, av
 
@@ -947,6 +946,6 @@ class _Logger:
         # root
         root.update()
         root.deiconify()
-        # root.mainloop()
+        if self.show: root.mainloop()
         
         return mi, ma, av

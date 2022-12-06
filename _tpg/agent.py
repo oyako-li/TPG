@@ -141,7 +141,7 @@ class Agent1_2_1(Agent1_2):
         """
         self.info(f'task:{task}, agent_id:{self.id}, score:{self.score}')
         _score = score if score else self.score
-        # self.team[task] += sigmoid2(_score)
+        # self.team[task] = sigmoid2(_score)*1000
         self.team[task] = _score
 
 class Agent1_3(Agent1):

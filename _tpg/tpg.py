@@ -345,6 +345,7 @@ class _TPG(_Logger):
 
     def restert(self):
         self.trainer = self.__class__.Trainer()
+        # self.trainer.ActionObject.actions=self.trainer.ActionObject.__class__.Memory()
         self.gen=0
         self.unset_logger()
         self.setup_logger(__name__, test=self.test, load=self.load)
@@ -379,9 +380,6 @@ class MHTPG(_TPG):
             cls.Trainer = Trainer1
 
         return super().__new__(cls, *args, **kwargs)
-
-    # def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None):
-    #     self.trainer.evolve(tasks, multiTaskType, extraTeams)
 
 class ActorTPG(MHTPG):
     def __new__(cls, *args, **kwargs):
@@ -558,9 +556,9 @@ class Actor1(Actor):
 class Actor2(Actor):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            from _tpg.trainer import Trainer1_2_2
+            from _tpg.trainer import Trainer1_2_3
             cls._instance = True
-            cls.Trainer = Trainer1_2_2
+            cls.Trainer = Trainer1_2_3
 
         return super().__new__(cls, *args, **kwargs)
 

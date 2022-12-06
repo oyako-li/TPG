@@ -1,5 +1,6 @@
 import uuid
-from _tpg.utils import flip, breakpoint, abstract, _Logger
+from _tpg.utils import _Logger
+from _tpg.utils import *
 import random
 import collections
 import numpy as np
@@ -811,6 +812,10 @@ class Team1_2_3(Team1_2_2):
             cls.Learner = Learner1_2_3
 
         return super().__new__(cls, *args, **kwargs)
+
+    def allocation(self):
+        for l in self.learners:
+            l.fitness = self.fitness*sigmoid2(1-l.extinction)
      
 class Team1_3(Team1):
     """ birth child to rootteam with preference
