@@ -1543,7 +1543,7 @@ class Memory3(Memory1_2):
             return np.array([frg.weight for frg in self.values() if frg._id not in _ignore])
         return np.array(self.weights)
 
-    def updateWeights(self, rate=1.05):
+    def updateWeights(self, rate=3.):
         # self.weights = {x: val*rate for x, val in self.weights.items()}
         for fragment in self.values():
             fragment.weight*=rate
@@ -1611,9 +1611,10 @@ class Memory3_2(Memory3_1):
         return super().__new__(cls, *args, **kwargs)
 
     def choices(self, k=1, _ignore:list=None)->list:
-        # p = 1-self.popus(_ignore)
-        # p=sigmoid(p)+0.0001
-        return random.choices(self.codes(_ignore), k=k)
+        p = 1-self.popus(_ignore)
+        p=sigmoid(p)+0.0001
+        return random.choices(self.codes(_ignore), p=p, k=k)
+        # return random.choices(self.codes(_ignore), k=k)
 
 class _MemoryObject(_Logger):
     Team = None
@@ -2835,7 +2836,7 @@ class ActionObject2(ActionObject1):
         else:
             # breakpoint(self.__class__, __class__, self.__class__.NaN) # (Any, ActionObj1, property object)
             assert self.actionCode in self.__class__.actions, f'{self.actionCode} is not in {self.__class__.actions}'
-            self.__class__.actions[self.actionCode].weight*=0.9 # 忘却確立減算
+            self.__class__.actions[self.actionCode].weight*=0.5 # 忘却確立減算
             self.__class__.actions.updateWeights()               # 忘却確立計上
             return self
 
