@@ -1,0 +1,1 @@
+min-min:0.0, max-min:0.0, ave-min:0.0, min-max:0.0, max-max:0.0, ave-max:0.0, min-ave:0.0, max-ave:0.0, ave-ave:0.0
