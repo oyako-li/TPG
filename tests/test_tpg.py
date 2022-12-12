@@ -190,32 +190,31 @@ class TPGTest(unittest.TestCase):
         if args := sys.argv[2:]:
             for arg in args:
                 if 'title:' in arg:
-                    title = gym.make(arg.split(':')[1])
+                    title = arg.split(':')[1]
 
         if os.path.exists('./.tasks'):
             with open('./.tasks', 'r') as task_file:
                 tasks = task_file.read().splitlines()
-                random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
-                random.shuffle(tasks)
-                print(tasks, type(tasks))
+                # random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
+                # random.shuffle(tasks)
+                # print(tasks, type(tasks))
         else:
             raise Exception('tasksDoesntExist')
     
-        if os.path.exists(title):
+        if os.path.exists(f'{title}.pickle'):
             tpg.load_story(title)
         else:
             raise Exception('titleDoesntExist')
         
+        archive = []
         try:
             for task in tasks:
-                # tpg.setEnv()
-                _title = tpg.success_story(_task=gym.make(task))
+                _title = tpg.success_story(_task=task)
+                archive.append(_title)
         except Exception as e:
             print(e)
             # os.remove('./tasks.txt')
-        print(_title)
-        self.assertEqual(tpg.tasks, set(tasks))
-        self.assertFalse(_title==title)
+        print(archive)
 
     # @unittest.skip('test single task')
     def test_multi_envs(self):

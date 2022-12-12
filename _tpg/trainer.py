@@ -549,8 +549,8 @@ class _Trainer(_Logger):
         return trainer
 
     # @property
-    def getElite(self, tasks, multiTaskType='min'):
-        self._scoreIndividuals(self, tasks, multiTaskType=multiTaskType)
+    def getElite(self, tasks):
+        self._scoreIndividuals(tasks)
         return self.__class__.Agent(max([rt for rt in self.rootTeams],
                         key=lambda rt: rt.fitness),
                         num=0, actVars=self.actVars)

@@ -1,0 +1,1 @@
+min-min:0.0, max-min:1.5, ave-min:0.13636363636363638, min-max:1.5, max-max:7.5, ave-max:6.75, min-ave:0.45, max-ave:7.2, ave-ave:5.514545454545455

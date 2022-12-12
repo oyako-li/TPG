@@ -16,6 +16,7 @@ import sys
 import gym
 import signal
 import time
+import requests
 
 class _TPG(_Logger):
     Trainer=None
@@ -212,13 +213,16 @@ class _TPG(_Logger):
         return self.epilogue1()
 
     def success_story(self, _trainer=None, _task:str=None, _generations:int=1, _episodes:int=None, _frames:int=None, _show=None, _test=None, _load=None, _dir=None):
+        # breakpoint('come here')
         self.prologue(_trainer=_trainer, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load, _dir=_dir)
-        self.debug(f'story_task:{self.task}, gen:{self.gen}')
-
+        # assert isinstance(_tasks, list), f'{_tasks} should list'
+        elite = self.trainer.getEliteAgent(task=self.task)
+        # elite = self.trainer.getElite(list(self.tasks))
         for _ in range(self.generations): # generation loop
             score=0
+            state = self.env.reset()
             for i in range(self.frames): # run episodes that last 500 frames
-                act = self.elite.act(state)
+                act = elite.act(state)
                 if not act in range(self.env.action_space.n): continue
                 state, reward, isDone, debug = self.env.step(act)
                 score += reward # accumulate reward in score
@@ -255,7 +259,31 @@ class _TPG(_Logger):
 
         return self.archive
 
-    
+    def post_elite(self, _trainer=None, _task:str=None, _generations:int=1, _episodes:int=None, _frames:int=None, _show=None, _test=None, _load=None, _dir=None):
+        # breakpoint('come here')
+        self.prologue(_trainer=_trainer, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load, _dir=_dir)
+        # assert isinstance(_tasks, list), f'{_tasks} should list'
+        elite = self.trainer.getEliteAgent(task=self.task)
+        # elite = self.trainer.getElite(list(self.tasks))
+        for _ in range(self.generations): # generation loop
+            score=0
+            state = self.env.reset()
+            for i in range(self.frames): # run episodes that last 500 frames
+                act = elite.act(state)
+                if not act in range(self.env.action_space.n): continue
+                state, reward, isDone, debug = self.env.step(act)
+                score += reward # accumulate reward in score
+                # self.info(f'state:{state}')
+
+
+                if isDone: break # end early if losing state
+
+            self.info(f'task:{self.task}, time:{_}, elite_score:{score}')
+
+        self.env.close()
+
+        return f'log/{self.dir}{self.today}/{self.filename}'
+
     def instance_valid(self, trainer) -> bool:
         if not isinstance(trainer, self.__class__.Trainer): raise Exception(f'this object is not {self.__class__.Trainer}')
 
@@ -354,9 +382,9 @@ class _TPG(_Logger):
     def task(self):
         return self.env.spec.id
 
-    @property
-    def elite(self):
-        return self.trainer.getElite(list(self.tasks))
+    # @property
+    def getElite(self):
+        return self.trainer.getElite(tasks=list(self.tasks))
 
     # @classmethod
     def load_story(self, _title):
@@ -543,6 +571,30 @@ class Actor(_TPG):
 
         
         return self.epilogue()
+    
+
+    def success_story(self, _trainer=None, _task:str=None, _generations:int=1, _episodes:int=None, _frames:int=None, _show=None, _test=None, _load=None, _dir=None):
+        # breakpoint('come here')
+        self.prologue(_trainer=_trainer, _task=_task, _generations=_generations, _episodes=_episodes, _frames=_frames, _show=_show, _test=_test, _load=_load, _dir=_dir)
+        # self.debug(f'story_task:{self.task}, gen:{self.gen}')
+        # assert isinstance(_tasks, list), f'{_tasks} should list'
+        elite = self.trainer.getEliteAgent(task=self.task)
+        for _ in range(self.generations): # generation loop
+            self.state = self.env.reset()
+            self.score = 0
+            self.frame = 0
+            self.sequence=[]
+            while self.frame<self.frames: # run episodes that last 500 frames
+                acts = elite.act(self.state.flatten()).action
+
+                self.activator(acts)
+
+            self.info(f'task:{self.task}, time:{_}, elite_score:{self.score}')
+
+        self.env.close()
+
+        return f'log/{self.dir}{self.today}/{self.filename}'
+
 
 class Actor1(Actor):
     def __new__(cls, *args, **kwargs):

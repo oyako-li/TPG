@@ -1,0 +1,1 @@
+min-min:32.0, max-min:200.0, ave-min:142.78181818181818, min-max:80.0, max-max:200.0, ave-max:185.25454545454548, min-ave:59.0, max-ave:200.0, ave-ave:176.91545454545457
