@@ -7,6 +7,8 @@
 - emulator
 - sequence activation
 - generate from exsistance team
+- minimam bit
+- XOR team scoreling
 # 評価実験
 
 # 考察
