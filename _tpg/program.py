@@ -553,11 +553,9 @@ class Program2(_Program):
                                 memMatrix[row,col] = regs[col]
                         
             except Warning as w:
-                print(w, ' on calculation')
                 regs[dest] = finfo(float64).min
 
             except Exception as e:
-                print(f'{e} on program')
                 regs[dest] = finfo(float64).min
 
             if isnan(regs[dest]):       regs[dest] = 0
@@ -642,11 +640,9 @@ class Program2_1(Program2):
                                 memMatrix[row,col] = regs[col]
             
             except Warning as w:
-                print(w, ' on calculation')
                 regs[dest] = finfo(float64).min
 
             except Exception as e:
-                print(f'{e} on program')
                 regs[dest] = finfo(float64).min
 
             if isnan(regs[dest]):       regs[dest] = 0

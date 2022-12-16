@@ -1089,14 +1089,31 @@ class Team2(_Team):
 
         return super().__new__(cls, *args, **kwargs)
 
-    def __init__(self, 
-            learners: list = [], 
-            inLearners: list = [], 
-            outcomes: dict = { 'task': 0., 'survive':1., 'reward':0., 'inheritance':0. }, 
-            fitness: float = 0, 
-            initParams: int or dict = 0
-        ):
-        super().__init__(learners, inLearners, outcomes, fitness, initParams)
+    # def __init__(self, 
+    #         learners: list = [], 
+    #         inLearners: list = [], 
+    #         outcomes: dict = { 'task': 0., 'survive':1., 'reward':0., 'inheritance':0. }, 
+    #         fitness: float = 0, 
+    #         initParams: int or dict = 0
+    #     ):
+    #     super().__init__(learners, inLearners, outcomes, fitness, initParams)
+    def __init__(self,
+            learners:list = [],
+            inLearners:list = [],
+            outcomes:dict = {'task':0.},
+            fitness:float = 0.0,
+            extinction:float = 1.0,
+            initParams:int or dict=0
+        ): 
+        self.learners = list(learners)
+        self.inLearners = list(inLearners) # ids of learners referencing this team
+        self.outcomes =  dict(outcomes)# scores at various tasks
+        self.id = uuid.uuid4()
+        self.fitness = fitness
+        self.sequence = []
+        self.extinction=extinction
+        if isinstance(initParams, dict): self.genCreate = initParams["generation"]
+        elif isinstance(initParams, int): self.genCreate = initParams
 
     def _mutation_delete(self, probability):
 
@@ -1336,18 +1353,18 @@ class Team2_3(Team2):
             inLearners:list = [],
             outcomes:dict = {'task':0.},
             fitness:float = 0.0,
+            extinction:float = 1.0,
             initParams:int or dict=0
         ): 
         self.learners = list(learners)
-        self.inLearners = list(inLearners)  # ids of learners referencing this team
-        self.outcomes =  dict(outcomes)     # scores at various tasks
+        self.inLearners = list(inLearners) # ids of learners referencing this team
+        self.outcomes =  dict(outcomes)# scores at various tasks
         self._id = uuid.uuid4()
-        self.preference = None
         self.fitness = fitness
         self.sequence = []
-        self.extinction = 1.
+        self.extinction=extinction
         if isinstance(initParams, dict): self.genCreate = initParams["generation"]
-        elif isinstance(initParams, int): self.genCreate = initParams    
+        elif isinstance(initParams, int): self.genCreate = initParams
 
     def __hash__(self):
         return int(self._id)

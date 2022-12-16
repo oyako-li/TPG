@@ -1961,15 +1961,19 @@ class Trainer2(Trainer):
 
     def save(self, fileName):
         self._memories = self.__class__.MemoryObject.memories
-        pickle.dump(self, open(f'log/{fileName}.pickle', 'wb'))
+        with open(f'{fileName}.pickle', 'wb') as _trainer:
+            pickle.dump(self, _trainer)
 
     @classmethod
     def load(cls, fileName:str):
-        trainer = pickle.load(open(f'log/{fileName}.pickle', 'rb'))
-        assert isinstance(trainer, cls), f'this file is not {cls}'
-
+        trainer = None
+        with open(f'{fileName}.pickle', 'rb') as _trainer:
+            trainer = pickle.load(_trainer)
+            assert isinstance(trainer, cls), f'this file is not {cls}'
+        
         trainer.MemoryObject.memories = trainer._memories
         return trainer
+
 
 class Trainer2_1(Trainer2):
     def __new__(cls, *args, **kwargs):

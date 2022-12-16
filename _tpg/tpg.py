@@ -595,7 +595,6 @@ class Actor(_TPG):
 
         return f'log/{self.dir}{self.today}/{self.filename}'
 
-
 class Actor1(Actor):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -686,23 +685,39 @@ class EmulatorTPG(_TPG):
             initMaxActProgSize=initMaxActProgSize,           # *
             nMemRegisters=nMemRegisters)
         
+        # self.generations=10
+        # self.episodes=1
+        # self.frames = 500
+        # self.show = False
+        # self.test = False
+        # self.dir = ''
+
         self.generations=10
         self.episodes=1
         self.frames = 500
         self.show = False
         self.test = False
-        self.dir = ''
+        self.load = True
+        self.dir = 'test/'
+
+        self.env = None
+        self.tasks = set()
+        self.scores = {}
+        self.gen=0
+        self.archive=list()
 
     def __getitem__(self, __code):
         return self.memories[__code]
 
     def evolve(self, tasks=['task'], multiTaskType='min', extraTeams=None, _states=None, _rewards=None, _unexpectancies=None):
         self.trainer.evolve(tasks, multiTaskType, extraTeams, _states, _rewards, _unexpectancies)
+
     def setEnv(self, env):
         self.env = env
         self.tasks.add(self.env.spec.id)
         self.state = self.env.reset()
         self.setMemories(self.state)
+        self.__class__.taskName=self.task
 
     def setMemories(self, state):
         self.memories = self.trainer.setMemories(state.flatten())
@@ -732,7 +747,7 @@ class EmulatorTPG(_TPG):
             # if _scores.get(_id) is None : _scores[_id]=0
             # _scores[_id] += score # store score
             agent.score+=score
-            if self.__class__.logger is not None: self.debug(f'{agent.id}:{score}')
+            self.debug(f'{agent.id}:{score}')
 
         return _scores, states, unexpectancies
 
@@ -755,49 +770,49 @@ class EmulatorTPG(_TPG):
 
         for gen in tqdm(range(self.generations)): # generation loop
             scores = self.generation()
-            self.info(f'generation:{gen}, min:{min(scores.values())}, max:{max(scores.values())}, ave:{sum(scores.values())/len(scores)}')
+            self.info(f'task:{self.task}, generation:{gen}, min:{min(scores.values())}, max:{max(scores.values())}, ave:{sum(scores.values())/len(scores)}')
 
         self.epilogue()
 
         return f'{self.dir+self.task}/{self.filename}'
 
-    def prologue(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
-        if _trainer: 
-            self.instance_valid(_trainer)
-            self.trainer = _trainer
+    # def prologue(self, _trainer=None, _task:str=None, _generations:int=100, _episodes:int=1, _frames:int=500, _show=False, _test=False, _load=True, _dir=''):
+    #     if _trainer: 
+    #         self.instance_valid(_trainer)
+    #         self.trainer = _trainer
         
-        if _task:
-            self.env = gym.make(_task)
+    #     if _task:
+    #         self.env = gym.make(_task)
         
-        if _test:
-            self.test = _test
-        if _dir:
-            self.dir = _dir
-        # task = _dir+self.env.spec.id
+    #     if _test:
+    #         self.test = _test
+    #     if _dir:
+    #         self.dir = _dir
+    #     # task = _dir+self.env.spec.id
 
-        logger, self.filename = setup_logger(__name__, f'{self.dir+self.task}', test=_test, load=_load)
-        self.__class__.logger = logger
-        self.generations = _generations
-        self.episodes = _episodes
-        self.frames = _frames
-        self.show = _show
+    #     logger, self.filename = setup_logger(__name__, f'{self.dir+self.task}', test=_test, load=_load)
+    #     self.__class__.logger = logger
+    #     self.generations = _generations
+    #     self.episodes = _episodes
+    #     self.frames = _frames
+    #     self.show = _show
 
-        self.setMemories(state=self.state.flatten())
+    #     self.setMemories(state=self.state.flatten())
 
-        def interruption(signum, frame):
-            self.epilogue()
-            print('interruption')
-            sys.exit()
+    #     def interruption(signum, frame):
+    #         self.epilogue()
+    #         print('interruption')
+    #         sys.exit()
         
-        signal.signal(signal.SIGINT, interruption)
+    #     signal.signal(signal.SIGINT, interruption)
 
 
-    def epilogue(self):
-        title = f'{self.dir+self.task}/{self.filename}'
-        map(self.__class__.logger.removeHandler, self.__class__.logger.handlers)
-        map(self.__class__.logger.removeFilter, self.__class__.logger.filters)
-        if not self.test: self.trainer.save(title)
-        log_show(title)
+    # def epilogue(self):
+    #     title = f'{self.dir+self.task}/{self.filename}'
+    #     map(self.__class__.logger.removeHandler, self.__class__.logger.handlers)
+    #     map(self.__class__.logger.removeFilter, self.__class__.logger.filters)
+    #     if not self.test: self.trainer.save(title)
+    #     log_show(title)
 
 class EmulatorTPG1(EmulatorTPG):
     def __new__(cls, *args, **kwargs):
@@ -805,7 +820,6 @@ class EmulatorTPG1(EmulatorTPG):
             from _tpg.trainer import Trainer2_1
             cls._instance = True
             cls.Trainer = Trainer2_1
-            cls.Trainer._logger=cls._logger
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -869,7 +883,6 @@ class Emulator(EmulatorTPG1):
             
             state = self.env.reset() # get initial state and prep environment
             score = 0
-            _id = agent.id
             for _ in range(self.frames): # run episodes that last 500 frames
                 act = self.env.action_space.sample()
                 img = agent.image(act, state.flatten()).memory
@@ -882,10 +895,9 @@ class Emulator(EmulatorTPG1):
                 unexpectancies+=[unex]
 
                 if isDone: break # end early if losing state
-                if self.show: self.show_state(self.env, _)
 
-            if _scores.get(_id) is None : _scores[_id]=0
-            _scores[_id] += score # store score
+            # if _scores.get(_id) is None : _scores[_id]=0
+            agent.score += score # store score
 
             # if self.logger is not None: self.logger.info(f'{_id},{score}')
 
@@ -899,68 +911,6 @@ class Emulator1(Emulator):
             cls.Trainer = Trainer2_3
 
         return super().__new__(cls, *args, **kwargs)
-
-    def __init__(self, 
-        primitive=None,
-        teamPopSize:int=10,                 # *
-        rootBasedPop:bool=True,             
-        gap:float=0.5,                      
-        inputSize:int=33600,                
-        nRegisters:int=8,                   # *
-        initMaxTeamSize:int=10,             # *
-        initMaxProgSize:int=10,             # *
-        maxTeamSize:int=-1,                 # *
-        pLrnDel:float=0.7,                  # *
-        pLrnAdd:float=0.6,                  # *
-        pLrnMut:float=0.2,                  # *
-        pProgMut:float=0.1,                 # *
-        pMemMut:float=0.1,                  # *
-        pMemAtom:float=0.95,                # *
-        pInstDel:float=0.5,                 # *
-        pInstAdd:float=0.4,                 # *
-        pInstSwp:float=0.2,                 # *
-        pInstMut:float=1.0,                 # *
-        doElites:bool=True, 
-        memMatrixShape:tuple=(100,8),       # *
-        rampancy:tuple=(0,0,0),
-        prevPops=None, mutatePrevs=True,
-        initMaxActProgSize:int=6,           # *
-        nMemRegisters:int=4,
-    ):
-        self.trainer = self.__class__.Trainer(
-            primitive=primitive, 
-            teamPopSize=teamPopSize,               # *
-            rootBasedPop=rootBasedPop,             
-            gap=gap,                      
-            inputSize=inputSize,                
-            nRegisters=nRegisters,                   # *
-            initMaxTeamSize=initMaxTeamSize,             # *
-            initMaxProgSize=initMaxProgSize,             # *
-            maxTeamSize=maxTeamSize,                 # *
-            pLrnDel=pLrnDel,                  # *
-            pLrnAdd=pLrnAdd,                  # *
-            pLrnMut=pLrnMut,                  # *
-            pProgMut=pProgMut,                 # *
-            pMemMut=pMemMut,                  # *
-            pMemAtom=pMemAtom,                # *
-            pInstDel=pInstDel,                 # *
-            pInstAdd=pInstAdd,                 # *
-            pInstSwp=pInstSwp,                 # *
-            pInstMut=pInstMut,                 # *
-            doElites=doElites, 
-            memMatrixShape=memMatrixShape,       # *
-            rampancy=rampancy,
-            prevPops=prevPops, mutatePrevs=mutatePrevs,
-            initMaxActProgSize=initMaxActProgSize,           # *
-            nMemRegisters=nMemRegisters)
-        
-        self.generations=10
-        self.episodes=1
-        self.frames = 500
-        self.show = False
-        self.test = False
-        self.dir = ''
-        self.tasks = set()
 
     def evolve(self, multiTaskType='min', extraTeams=None):
         self.trainer._scoreIndividuals(

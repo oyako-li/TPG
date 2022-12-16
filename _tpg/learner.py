@@ -629,6 +629,10 @@ class Learner2(_Learner):
 
         return _clone
 
+    @property
+    def id(self):
+        return str(self._id)
+
 class Learner2_1(Learner2):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:

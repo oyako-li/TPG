@@ -47,7 +47,6 @@ class TPGTest(unittest.TestCase):
         new_title = tpg.story(_dir='test/', _load=True, _generations=1)
         print(title, new_title)
 
-
     # @unittest.skip('next test case')
     def test_single(self):
         '''test story'''
@@ -378,7 +377,7 @@ class Actor2BiasTest(ActorBiasTest):
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
 
-class EmulatorTPGTest(unittest.TestCase):
+class EmulatorTPGTest(MHTPGTest):
     def setUp(self) -> None:
         from _tpg.tpg import EmulatorTPG
         self.TPG = EmulatorTPG
@@ -422,10 +421,184 @@ class EmulatorTPGTest(unittest.TestCase):
     def test_story(self):
         '''test story'''
         tpg = self.TPG()
-        tpg.setMemories(self.state)
         tpg.setEnv(self.env)
         filename = tpg.story(_dir='test/')
         self.assertIsNotNone(filename)
+
+    def test_single_each(self):
+        """ マルチタスク学習に対応できるように、改良。
+        """
+        tasks=[]
+        if os.path.exists('./.tasks'):
+            with open('./.tasks', 'r') as task_file:
+                tasks = task_file.read().splitlines()
+                random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
+                random.shuffle(tasks)
+                print(tasks, type(tasks))
+        else:
+            raise Exception('tasksDoesntExist')
+        
+        try:
+            for _ in range(10):
+                for task in tasks:
+                    tpg = self.TPG()
+                    tpg.unset_logger()
+                    # tpg.setEnv(gym.make(task))
+                    tpg.story(_task=task, _generations=100, _load=True)
+        except Exception as e:
+            print(e)
+            # os.remove('./tasks.txt')
+        # self.assertTrue(tpg.tasks!=set(tasks))
+    
+    @unittest.skip('test single task')
+    def test_multi(self):
+        """ マルチタスク学習に対応できるように、改良。
+        """
+        tasks=[]
+        if os.path.exists('./.tasks'):
+            with open('./.tasks', 'r') as task_file:
+                tasks = task_file.read().splitlines()
+                print(tasks, type(tasks))
+                random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
+        else:
+            raise Exception('tasksDoesntExist')
+        
+        try:
+            for _ in range(10):
+                tpg = self.TPG()
+                random.shuffle(tasks)
+                tpg.multi(tasks, _generations=100, _load=True)
+                tpg.unset_logger()
+
+        except Exception as e:
+            print(e)
+            # os.remove('./tasks.txt')
+        self.assertEqual(tpg.tasks, set(tasks))
+
+    @unittest.skip('test single task')
+    def test_multi_random(self):
+        """ マルチタスク学習に対応できるように、改良。
+        """
+        tasks=[]
+        if os.path.exists('./.tasks'):
+            with open('./.tasks', 'r') as task_file:
+                tasks = task_file.read().splitlines()
+                random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
+
+                random.shuffle(tasks)
+                print(tasks, type(tasks))
+        else:
+            raise Exception('tasksDoesntExist')
+        
+        tpg = self.TPG()
+        try:
+            for _ in range(10):
+                tpg.multi(tasks, _generations=10, _load=True)
+                tpg.unset_logger()
+                random.shuffle(tasks)
+
+        except Exception as e:
+            print(e)
+            # os.remove('./tasks.txt')
+        self.assertEqual(tpg.tasks, set(tasks))
+
+    @unittest.skip('test single task')
+    def test_multi_chaos(self):
+        """ マルチタスク学習に対応できるように、改良。
+        """
+        tasks=[]
+        if os.path.exists('./.tasks'):
+            with open('./.tasks', 'r') as task_file:
+                tasks = task_file.read().splitlines()
+                random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
+
+                print(tasks, type(tasks))
+        else:
+            raise Exception('tasksDoesntExist')
+        times = 10
+        if args := sys.argv[2:]:
+            for arg in args:
+                if 'times:' in arg:
+                    times = int(arg.split(':')[1])
+        tpg = self.TPG()
+        try:
+            for _ in range(times):
+                tpg.chaos_story(_tasks=tasks, _generations=100, _load=True)
+                tpg.unset_logger()
+                tpg = self.TPG()
+        except Exception as e:
+            print(e)
+            # os.remove('./tasks.txt')
+        self.assertEqual(tpg.tasks, set(tasks))
+
+    @unittest.skip('not implemented')
+    def test_multi_elite(self):
+        """ マルチタスク学習に対応できるように、改良。
+        """
+        tasks=[]
+        title='log/'
+        _title='log/'
+        tpg = self.TPG()
+        if args := sys.argv[2:]:
+            for arg in args:
+                if 'title:' in arg:
+                    title = arg.split(':')[1]
+
+        if os.path.exists('./.tasks'):
+            with open('./.tasks', 'r') as task_file:
+                tasks = task_file.read().splitlines()
+                # random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
+                # random.shuffle(tasks)
+                # print(tasks, type(tasks))
+        else:
+            raise Exception('tasksDoesntExist')
+    
+        if os.path.exists(f'{title}.pickle'):
+            tpg.load_story(title)
+        else:
+            raise Exception('titleDoesntExist')
+        
+        archive = []
+        try:
+            for task in tasks:
+                _title = tpg.success_story(_task=task)
+                archive.append(_title)
+        except Exception as e:
+            print(e)
+            # os.remove('./tasks.txt')
+        print(archive)
+
+    @unittest.skip('test single task')
+    def test_multi_envs(self):
+        """ マルチタスク学習に対応できるように、改良。
+        """
+        tasks=[]
+        if os.path.exists('./tasks.txt'):
+            with open('./tasks.txt', 'r') as task_file:
+                tasks = task_file.read().splitlines()
+                random.seed(datetime.now().strftime('%Y%m%d%H%M%S'))
+                random.shuffle(tasks)
+                print(tasks, type(tasks))
+        else:
+            tasks = random.choices([
+                i.id for i in gym.envs.registry.all()
+            ],k=10)
+            with open(f'./tasks.txt', 'w') as multi:
+                for task in tasks: multi.write(f'{task}\n')
+        
+        tpg = self.TPG()
+        try:
+            tpg.multi(tasks, _generations=1, _load=True)
+            with open(f'./.tasks', 'w') as multi:
+                for task in tasks: multi.write(f'{task}\n')
+        except Exception as e:
+            print(e)
+            os.remove('./tasks.txt')
+        self.assertEqual(tpg.tasks, set(tasks))
+        print(tpg.tasks)
+
+    def test_argv(self):
+        print(sys.argv[2:])
 
 class EmulatorEyeTest(EmulatorTPGTest):
     def setUp(self) -> None:
@@ -451,19 +624,10 @@ class EmulatorPointTest(EmulatorTPG1Test):
         self.env = gym.make(self.task)
         self.state = self.env.observation_space.sample().flatten()
 
-    def test_init(self):
-        '''test initiation'''
-        from _tpg.memory_object import Fragment2_1
-        from _tpg.trainer import Trainer2_2
-        tpg = self.TPG()
-        self.assertEqual(tpg.Trainer, Trainer2_2)
-        tpg.setEnv(self.env)
-        tpg.setMemories(self.state)
-        tpg.setAgents()
-        self.assertEqual(tpg.Trainer.MemoryObject.memories.Fragment, Fragment2_1)
-
 class EmulatorBiasTest(EmulatorTPG1Test):
+
     def setUp(self) -> None:
+        """ emulator test """
         from _tpg.tpg import Emulator
         self.TPG = Emulator
         self.task = "CartPole-v1"
