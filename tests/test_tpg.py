@@ -436,7 +436,6 @@ class Emulator1PointTest(EmulatorPointTest):
         tpg.setEnv(self.env)
         tpg.setMemories(self.state)
         tpg.setAgents()
-        # self.assertEqual(tpg.Trainer.MemoryObject.memories.Fragment, Fragment2_1)
 
 class Emulator1BiasTest(EmulatorBiasTest):
     def setUp(self) -> None:
@@ -455,7 +454,7 @@ class Emulator1BiasTest(EmulatorBiasTest):
         tpg.setMemories(self.state)
         tpg.setAgents()
 
-class AutomataPointTest(unittest.TestCase):
+class AutomataPointTest(MHTPGTest):
     def setUp(self) -> None:
         from _tpg.tpg import Automata
         self.Automata = Automata
@@ -531,10 +530,10 @@ class AutomataPointTest(unittest.TestCase):
     def test_load(self):
         log_show2('log/test/CartPole-v1/2022-09-29_07-44-55')
 
-class AutomataBiasTest(unittest.TestCase):
+class AutomataBiasTest(MHTPGTest):
     def setUp(self) -> None:
         from _tpg.tpg import Automata
-        self.Automata = Automata
+        self.TPG = Automata
         self.task = "CartPole-v1"
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
@@ -544,7 +543,7 @@ class AutomataBiasTest(unittest.TestCase):
         '''test team object creation'''
         from _tpg.trainer import Trainer1, Trainer2
         from _tpg.agent import Agent1, Agent2
-        automata = self.Automata()
+        automata = self.TPG()
 
         self.assertIsNotNone(automata.actor)
         self.assertIsNotNone(automata.emulator)
@@ -610,7 +609,7 @@ class AutomataBiasTest(unittest.TestCase):
 class Automata1PointTest(AutomataPointTest):
     def setUp(self) -> None:
         from _tpg.tpg import Automata1
-        self.Automata = Automata1
+        self.TPG = Automata1
         self.task = "Centipede-v4"
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
@@ -621,7 +620,7 @@ class Automata1PointTest(AutomataPointTest):
         '''test team object creation'''
         from _tpg.trainer import Trainer1_2, Trainer2_2
         from _tpg.agent import Agent1_1, Agent2_1
-        automata = self.Automata()
+        automata = self.TPG()
 
         self.assertIsNotNone(automata.actor)
         self.assertIsNotNone(automata.emulator)
@@ -646,7 +645,7 @@ class Automata1PointTest(AutomataPointTest):
 class Automata1BiasTest(AutomataBiasTest):
     def setUp(self) -> None:
         from _tpg.tpg import Automata1
-        self.Automata = Automata1
+        self.TPG = Automata1
         self.task = "CartPole-v1"
         self.env = gym.make(self.task)
         self.action = self.env.action_space.n
@@ -657,7 +656,7 @@ class Automata1BiasTest(AutomataBiasTest):
         '''test team object creation'''
         from _tpg.trainer import Trainer1_2, Trainer2_2
         from _tpg.agent import Agent1_1, Agent2_1
-        automata = self.Automata()
+        automata = self.TPG()
 
         self.assertIsNotNone(automata.actor)
         self.assertIsNotNone(automata.emulator)
@@ -688,4 +687,7 @@ class LoggingTest(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    try:
+        unittest.main()
+    except ModuleNotFoundError:
+        pass

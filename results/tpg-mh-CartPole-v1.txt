@@ -1,1 +1,1 @@
-min-min:8.36, max-min:37.76, ave-min:13.236, min-max:33.1, max-max:162.38, ave-max:96.27199999999999, min-ave:15.388, max-ave:134.648, ave-ave:79.09305454545455
+min-min:8.36, max-min:37.76, ave-min:13.236, min-max:33.1, max-max:162.38, ave-max:96.27199999999999, min-ave:15.388, max-ave:134.648, ave-ave:79.09305454545455, fh-a:0.6312060150375937, fh-b:104.6657142857143
