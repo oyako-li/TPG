@@ -594,9 +594,9 @@ class Actor(_TPG):
 class Actor1(Actor):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            from _tpg.trainer import Trainer1_2_1
+            from _tpg.trainer import Trainer1_2_2
             cls._instance = True
-            cls.Trainer = Trainer1_2_1
+            cls.Trainer = Trainer1_2_2
 
         return super().__new__(cls, *args, **kwargs)
 
@@ -1446,13 +1446,14 @@ class Automata1(_Automata):
         i = 0
         for action in actions:
             # assert action in self.__class__.Actor.Trainer.ActionObject.actions.values(), f'{action} , {act}'
-            image  = _emulator.image(action, state)
+            image  = _emulator.image(action, state).memory
             memories  += [image]
             predict_rewards += [image.reward]
             state = state+image.state
             # breakpoint(self.thinkingTimeLimit)
             i+=1
             if i > cerebral_cortex['frames']: break
+        _emulator.trace(mem)
         return _actor.id, _emulator.id, act, memories, predict_rewards
 
     def thinker(self):
