@@ -543,7 +543,7 @@ class _Trainer(_Logger):
         trainer = None
         with open(f'{fileName}.pickle', 'rb') as _trainer:
             trainer = pickle.load(_trainer)
-            assert isinstance(trainer, cls), f'this file is not {cls}'
+            assert isinstance(trainer, cls), f'this file({fileName}) is not {cls}'
         
         trainer.ActionObject.actions = trainer._actions
         return trainer

@@ -53,26 +53,48 @@ class TPGTest(unittest.TestCase):
         tpg = self.TPG()
         times = 1
         generations=100
+        graphs = None
         if args := sys.argv[2:]:
             for arg in args:
                 if 'task:' in arg:
                     self.env = gym.make(arg.split(':')[1])
-                if 'times:' in arg:
+                elif 'times:' in arg:
                     times = int(arg.split(':')[1])
-                if 'show' == arg:
+                elif 'show' == arg:
                     tpg.show = True
-                if 'generations:' in arg:
+                elif 'generations:' in arg:
                     generations = int(arg.split(':')[1])
+                elif 'title:' in arg:
+                    tpg.load_story(arg.split(':')[1])
+                elif 'graphs:' in arg:
+                    with open(arg.split(':')[1]+'.txt', 'r') as graph_file:
+                        graphs = graph_file.read().splitlines()
+
         archive = set()
-        for _ in range(times):
-            tpg.setEnv(self.env)
-            title = tpg.story(_dir=f'{tpg.task}'.replace('/','-')+'/', _load=True, _generations=generations)
-            # tpg.restert()
-            tpg = self.TPG()
-            tpg.unset_logger()
-            archive.add(title)
+        if graphs:
+            for graph in graphs:
+                tpg.load_story(graph)
+                tpg.setEnv(self.env)
+                title = tpg.story(_dir=f'{tpg.task}'.replace('/','-')+'/', _load=True, _generations=generations)
+                # tpg.restert()
+                tpg = self.TPG()
+                tpg.unset_logger()
+                archive.add(title)
+        else:
+            for _ in range(times):
+                tpg.setEnv(self.env)
+                title = tpg.story(_dir=f'{tpg.task}'.replace('/','-')+'/', _load=True, _generations=generations)
+                # tpg.restert()
+                tpg = self.TPG()
+                tpg.unset_logger()
+                archive.add(title)
         # self.assertEqual(set(tpg.archive))
-        print(archive)
+        file = f"./log/{self.env.spec.id}/{datetime.now().strftime('%Y-%m-%d/%H-%M-%S')}-{self.TPG.__name__}-archive.txt"
+        with open(file,'w') as f:
+            for a in archive:
+                f.write(f'{a}\n')
+
+        print(file)
 
     def test_single_each(self):
         """ マルチタスク学習に対応できるように、改良。
