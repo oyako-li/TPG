@@ -1308,6 +1308,36 @@ class Trainer1_2_2(Trainer1_2_1):
 
         return super().__new__(cls, *args, **kwargs)
 
+    def _nextEpoch(self):
+        # add in newly added learners, and dec _ide root teams
+        self.rootTeams = []
+        for team in self.teams:
+            # add any new learners to the population
+            # team.extinction*=1.01
+            assert len(team.inLearners)==0 or any(isinstance(i, uuid.UUID) for i in team.inLearners), f'must be uuid in {team.inLearners}, {[i for i in team.inLearners]}'
+            
+            for learner in team.learners:
+                if learner not in self.learners:
+                    #print("Adding {} to trainer learners".format(learner. _id))
+                    self.learners.append(learner)
+
+            # self.debug(f'team_sequences:{team.sequence}')
+            # maybe make root team
+            if team.numLearnersReferencing() == 0 or team in self.elites:
+                self.rootTeams.append(team)
+
+
+        action_code_list = set()
+        for lrnr in self.learners:
+            if lrnr.isActionAtomic():
+                action_code_list.add(lrnr.actionObj.actionCode)
+
+        action_code_list = list(action_code_list)
+        self.__class__.ActionObject.actions.oblivion(action_code_list)
+        self.info(f'gen:{self.generation}, lrns:{len(self.learners)}, acts:{len(self.__class__.ActionObject.actions)}')
+
+        self.generation += 1
+
 class Trainer1_2_3(Trainer1_2_2):
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
