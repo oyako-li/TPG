@@ -2310,7 +2310,6 @@ class _ActionObject(_Logger):
         """
         return self.teamAction is None
 
-
     def mutate(self, mutateParams=None, parentTeam=None, teams=None, pActAtom=None, learner_id=None):
         """
         Change action to team or atomic action.
